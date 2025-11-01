@@ -73,9 +73,26 @@ app.get('/', (req, res) => {
         post_vote: '/api/videos/:id/vote',
         post_approve: '/api/videos/:id/approve',
         post_reject: '/api/videos/:id/reject'
+      },
+      admin: {
+        post_wipe: '/api/admin/wipe-all-data'
       }
     }
   });
+});
+
+// POST /api/admin/wipe-all-data - PUBLIC endpoint to wipe all data (no auth required for emergency access)
+// SECURITY NOTE: In production, you'd want to protect this with a secret key or IP whitelist
+app.post('/api/admin/wipe-all-data', async (req, res) => {
+  try {
+    await db.clearAllData();
+    res.json({ 
+      success: true, 
+      message: 'All data wiped successfully. Database is now empty.'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // POST /api/auth/login {username, password}

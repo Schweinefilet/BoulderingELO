@@ -203,9 +203,24 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 }
 
 export default function App(){
-  const [isAuthenticated, setIsAuthenticated] = useState(api.isAuthenticated());
+  // Validate localStorage on mount - clear if user object is malformed
+  const validateAuth = () => {
+    const user = api.getUser();
+    const token = api.getToken();
+    
+    // If we have a token but user is invalid (missing climberId), clear everything
+    if (token && user && !user.climberId) {
+      console.warn('Invalid user object detected, clearing auth');
+      api.clearToken();
+      return false;
+    }
+    
+    return api.isAuthenticated();
+  };
+
+  const [isAuthenticated, setIsAuthenticated] = useState(validateAuth());
   const [user, setUser] = useState<api.User | null>(api.getUser());
-  const [showLoginScreen, setShowLoginScreen] = useState(!api.isAuthenticated());
+  const [showLoginScreen, setShowLoginScreen] = useState(!validateAuth());
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
