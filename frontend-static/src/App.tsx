@@ -225,6 +225,14 @@ export default function App(){
   const [sessionNotes, setSessionNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
+  
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string|null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
   const totalCounts = combineCounts(wallCounts);
 
@@ -275,6 +283,36 @@ export default function App(){
     api.clearToken();
     setIsAuthenticated(false);
     setUser(null);
+  }
+
+  async function handlePasswordChange(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+    
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowPasswordChange(false);
+        setPasswordSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to change password');
+    }
   }
 
   async function addClimber(){ 
@@ -355,6 +393,19 @@ export default function App(){
               <span style={{color:'#94a3b8'}}>
                 {user.username} {user.role === 'admin' && <span style={{color:'#fbbf24'}}>(Admin)</span>}
               </span>
+              <button
+                onClick={() => setShowPasswordChange(true)}
+                style={{
+                  padding:'8px 16px',
+                  backgroundColor:'#0ea5e9',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  cursor:'pointer'
+                }}
+              >
+                Change Password
+              </button>
               <button
                 onClick={handleLogout}
                 style={{
@@ -915,6 +966,156 @@ export default function App(){
           <button onClick={()=>{ store.clearAll(); window.location.reload(); }}>Clear All</button>
         </div>
       </section>
+      
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          backgroundColor:'rgba(0,0,0,0.7)',
+          display:'flex',
+          justifyContent:'center',
+          alignItems:'center',
+          zIndex:1000
+        }}>
+          <div style={{
+            backgroundColor:'#1e293b',
+            padding:32,
+            borderRadius:8,
+            border:'1px solid #475569',
+            width:400,
+            maxWidth:'90%'
+          }}>
+            <h2 style={{marginTop:0,marginBottom:24}}>Change Password</h2>
+            <form onSubmit={handlePasswordChange}>
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontSize:14}}>Current Password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:12,
+                    borderRadius:6,
+                    border:'1px solid #475569',
+                    backgroundColor:'#0f172a',
+                    color:'white',
+                    fontSize:14
+                  }}
+                  required
+                />
+              </div>
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontSize:14}}>New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:12,
+                    borderRadius:6,
+                    border:'1px solid #475569',
+                    backgroundColor:'#0f172a',
+                    color:'white',
+                    fontSize:14
+                  }}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontSize:14}}>Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:12,
+                    borderRadius:6,
+                    border:'1px solid #475569',
+                    backgroundColor:'#0f172a',
+                    color:'white',
+                    fontSize:14
+                  }}
+                  required
+                />
+              </div>
+              {passwordError && (
+                <div style={{
+                  backgroundColor:'#dc2626',
+                  color:'white',
+                  padding:12,
+                  borderRadius:6,
+                  marginBottom:16,
+                  fontSize:14
+                }}>
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div style={{
+                  backgroundColor:'#10b981',
+                  color:'white',
+                  padding:12,
+                  borderRadius:6,
+                  marginBottom:16,
+                  fontSize:14
+                }}>
+                  Password changed successfully!
+                </div>
+              )}
+              <div style={{display:'flex',gap:12}}>
+                <button
+                  type="submit"
+                  style={{
+                    flex:1,
+                    padding:12,
+                    backgroundColor:'#3b82f6',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:16,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Change Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordChange(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setPasswordError(null);
+                    setPasswordSuccess(false);
+                  }}
+                  style={{
+                    flex:1,
+                    padding:12,
+                    backgroundColor:'#475569',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:16,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

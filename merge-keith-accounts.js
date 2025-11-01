@@ -69,27 +69,13 @@ async function mergeAccounts() {
     );
     console.log(`✓ Transferred ${transferResult.rowCount} sessions from Keith to Keith Duong`);
 
-    // Transfer wall counts
-    const wallTransferResult = await client.query(
-      'UPDATE wall_counts SET session_id = (SELECT id FROM sessions WHERE climber_id = $1 LIMIT 1) WHERE session_id IN (SELECT id FROM sessions WHERE climber_id = $2)',
-      [keithDuongId, keithId]
-    );
-    console.log(`✓ Updated wall counts`);
-
-    // Transfer climb counts
-    const countTransferResult = await client.query(
-      'UPDATE counts SET session_id = (SELECT id FROM sessions WHERE climber_id = $1 LIMIT 1) WHERE session_id IN (SELECT id FROM sessions WHERE climber_id = $2)',
-      [keithDuongId, keithId]
-    );
-    console.log(`✓ Updated counts`);
-
     // Delete old Keith account
     await client.query('DELETE FROM climbers WHERE id = $1', [keithId]);
     console.log(`✓ Deleted old "Keith" account\n`);
 
     // Setup Keith Duong as admin with username/password
     const username = 'keith';
-    const password = 'changeme123'; // User should change this!
+    const password = 'boulder123'; // User should change this after first login!
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await client.query(
@@ -99,7 +85,7 @@ async function mergeAccounts() {
 
     console.log(`✓ Setup Keith Duong as admin account:`);
     console.log(`  Username: ${username}`);
-    console.log(`  Password: ${password} (CHANGE THIS!)`);
+    console.log(`  Password: ${password} (PLEASE CHANGE THIS AFTER LOGIN!)`);
     console.log(`  Role: admin`);
 
     // Commit transaction
@@ -109,7 +95,8 @@ async function mergeAccounts() {
     console.log('\nFinal state:');
     console.log(`  - All sessions now belong to "Keith Duong" (ID ${keithDuongId})`);
     console.log(`  - "Keith Duong" is now the admin account`);
-    console.log(`  - Login with username: keith, password: changeme123`);
+    console.log(`  - Login with username: keith, password: boulder123`);
+    console.log(`  - IMPORTANT: Change your password after logging in!`);
 
   } catch (error) {
     await client.query('ROLLBACK');

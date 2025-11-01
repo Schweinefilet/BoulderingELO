@@ -134,6 +134,41 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// POST /api/auth/change-password {currentPassword, newPassword}
+app.post('/api/auth/change-password', authenticateToken, async (req: any, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'currentPassword and newPassword required' });
+  }
+  
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+  
+  try {
+    // Get current user's data
+    const climber = await db.getClimberByUsername(req.user.username);
+    if (!climber || !climber.password) {
+      return res.status(404).json({ error: 'User account not found' });
+    }
+    
+    // Verify current password
+    const valid = await bcrypt.compare(currentPassword, climber.password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    
+    // Hash new password and update
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.updateClimberPassword(climber.id, hashedPassword);
+    
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/climbers {name} (admin only - for adding climbers without accounts)
 // POST /api/climbers (admin only)
 app.post('/api/climbers', authenticateToken, requireAdmin, async (req: any, res) => {

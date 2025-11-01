@@ -118,6 +118,15 @@ export async function register(username: string, password: string, name: string)
   return handleResponse<{ token: string; user: User }>(response);
 }
 
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/api/auth/change-password`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+  return handleResponse<{ success: boolean; message: string }>(response);
+}
+
 export async function addClimber(name: string): Promise<Climber> {
   const response = await fetch(`${API_URL}/api/climbers`, {
     method: 'POST',
