@@ -15,6 +15,7 @@ const WALL_TOTALS = {
 export default function App(){
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
+  const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [selectedClimber, setSelectedClimber] = useState<number|undefined>(undefined)
   const [newName, setNewName] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
@@ -30,10 +31,33 @@ export default function App(){
   const [dropdownColor, setDropdownColor] = useState<keyof Counts>('yellow')
   const [videoUrl, setVideoUrl] = useState('')
   const [sessionNotes, setSessionNotes] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|null>(null)
 
   const totalCounts = combineCounts(wallCounts);
 
-  useEffect(()=>{ setClimbers(store.listClimbers()); setSessions(store.getSessions()); }, [])
+  useEffect(()=>{ 
+    loadData();
+  }, [])
+  
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
+        store.listClimbers(),
+        store.getSessions(),
+        store.leaderboard()
+      ]);
+      setClimbers(loadedClimbers);
+      setSessions(loadedSessions);
+      setLeaderboard(loadedLeaderboard);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }
   
   // Load selected climber's latest session data
   useEffect(() => {
@@ -48,7 +72,20 @@ export default function App(){
     }
   }, [selectedClimber, sessions]);
 
-  function addClimber(){ if(!newName.trim()) return; const c = store.addClimber(newName.trim()); setClimbers([...climbers,c]); setSelectedClimber(c.id); setNewName(''); }
+  async function addClimber(){ 
+    if(!newName.trim()) return;
+    setLoading(true);
+    try {
+      const c = await store.addClimber(newName.trim());
+      setClimbers([...climbers,c]);
+      setSelectedClimber(c.id);
+      setNewName('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to add climber');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function updateWallCount(wall: 'overhang'|'midWall'|'sideWall', color: keyof Counts, val: string) {
     const nv = Math.max(0, parseInt(val)||0);
@@ -76,19 +113,42 @@ export default function App(){
     }
   }
 
-  function submit(){ 
-    if(!selectedClimber) return; 
-    const score = scoreSession(totalCounts); 
-    store.addSession({climberId:selectedClimber,date,score,notes:sessionNotes}, totalCounts, wallCounts); 
-    setSessions(store.getSessions()); 
-    setWallCounts({overhang:emptyWall(),midWall:emptyWall(),sideWall:emptyWall()}); 
-    setSessionNotes('');
-    setVideoUrl('');
+  async function submit(){ 
+    if(!selectedClimber) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const score = scoreSession(totalCounts); 
+      await store.addSession({climberId:selectedClimber,date,score,notes:sessionNotes}, totalCounts, wallCounts); 
+      const [loadedSessions, loadedLeaderboard] = await Promise.all([
+        store.getSessions(),
+        store.leaderboard()
+      ]);
+      setSessions(loadedSessions);
+      setLeaderboard(loadedLeaderboard); 
+      setWallCounts({overhang:emptyWall(),midWall:emptyWall(),sideWall:emptyWall()}); 
+      setSessionNotes('');
+      setVideoUrl('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit session');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div style={{fontFamily:'Inter, Arial, sans-serif',padding:20,maxWidth:1000,margin:'0 auto'}}>
-      <h1>BoulderingELO (Static)</h1>
+      <h1>BoulderingELO</h1>
+      
+      {error && (
+        <div style={{backgroundColor:'#dc2626',color:'white',padding:12,borderRadius:6,marginBottom:16}}>
+          {error}
+        </div>
+      )}
+      
+      {loading && (
+        <div style={{color:'#3b82f6',marginBottom:16}}>Loading...</div>
+      )}
       
       <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,marginBottom:20}}>
         <h3 style={{marginTop:0}}>Scoring Formula</h3>
@@ -313,7 +373,7 @@ export default function App(){
           <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
             <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Leaderboard</h2>
             <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
-              {store.leaderboard().map((e:any,i:number)=> (
+              {leaderboard.map((e:any,i:number)=> (
                 <li key={i} style={{fontSize:14,lineHeight:'1.5'}}>
                   <span style={{fontWeight:'600',color:'#94a3b8'}}>{e.climber}:</span>
                   <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:16}}>{e.total_score.toFixed(2)}</span>

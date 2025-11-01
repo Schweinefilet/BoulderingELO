@@ -1,100 +1,278 @@
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 import { Counts, Climber, Session, WallCounts } from './types';
 
-const FILE = process.env.JSON_DB_PATH || path.join(process.cwd(), 'data.json');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
+});
 
-type DBShape = {
-  climbers: Climber[];
-  sessions: Array<Session & { score: number }>;
-  counts: Array<{ sessionId: number } & Counts>;
-  wallCounts: Array<{ sessionId: number } & WallCounts>;
-  lastIds: { climber: number; session: number };
-};
+// Initialize database tables
+export async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS climbers (
+      id SERIAL PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL
+    )
+  `);
+  
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id SERIAL PRIMARY KEY,
+      climber_id INTEGER REFERENCES climbers(id),
+      date TEXT NOT NULL,
+      score REAL NOT NULL,
+      notes TEXT
+    )
+  `);
+  
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS counts (
+      session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+      green INTEGER DEFAULT 0,
+      blue INTEGER DEFAULT 0,
+      yellow INTEGER DEFAULT 0,
+      orange INTEGER DEFAULT 0,
+      red INTEGER DEFAULT 0,
+      black INTEGER DEFAULT 0
+    )
+  `);
+  
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wall_counts (
+      session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+      overhang_green INTEGER DEFAULT 0,
+      overhang_blue INTEGER DEFAULT 0,
+      overhang_yellow INTEGER DEFAULT 0,
+      overhang_orange INTEGER DEFAULT 0,
+      overhang_red INTEGER DEFAULT 0,
+      overhang_black INTEGER DEFAULT 0,
+      midwall_green INTEGER DEFAULT 0,
+      midwall_blue INTEGER DEFAULT 0,
+      midwall_yellow INTEGER DEFAULT 0,
+      midwall_orange INTEGER DEFAULT 0,
+      midwall_red INTEGER DEFAULT 0,
+      midwall_black INTEGER DEFAULT 0,
+      sidewall_green INTEGER DEFAULT 0,
+      sidewall_blue INTEGER DEFAULT 0,
+      sidewall_yellow INTEGER DEFAULT 0,
+      sidewall_orange INTEGER DEFAULT 0,
+      sidewall_red INTEGER DEFAULT 0,
+      sidewall_black INTEGER DEFAULT 0
+    )
+  `);
+}
 
-function load(): DBShape {
-  if (!fs.existsSync(FILE)) {
-    const init: DBShape = { climbers: [], sessions: [], counts: [], wallCounts: [], lastIds: { climber: 0, session: 0 } };
-    fs.writeFileSync(FILE, JSON.stringify(init, null, 2));
-    return init;
+export async function addClimber(name: string) {
+  const existing = await pool.query('SELECT * FROM climbers WHERE name = $1', [name]);
+  if (existing.rows.length > 0) return existing.rows[0] as Climber;
+  
+  const result = await pool.query('INSERT INTO climbers (name) VALUES ($1) RETURNING *', [name]);
+  return result.rows[0] as Climber;
+}
+
+export async function listClimbers() {
+  const result = await pool.query('SELECT * FROM climbers ORDER BY name');
+  return result.rows as Climber[];
+}
+
+export async function addSession(session: Session & { score: number }, counts: Counts, wallCounts?: WallCounts) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const sessionResult = await client.query(
+      'INSERT INTO sessions (climber_id, date, score, notes) VALUES ($1, $2, $3, $4) RETURNING *',
+      [session.climberId, session.date, session.score, session.notes || null]
+    );
+    const sessionId = sessionResult.rows[0].id;
+    
+    await client.query(
+      'INSERT INTO counts (session_id, green, blue, yellow, orange, red, black) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [sessionId, counts.green, counts.blue, counts.yellow, counts.orange, counts.red, counts.black]
+    );
+    
+    if (wallCounts) {
+      await client.query(
+        `INSERT INTO wall_counts (
+          session_id,
+          overhang_green, overhang_blue, overhang_yellow, overhang_orange, overhang_red, overhang_black,
+          midwall_green, midwall_blue, midwall_yellow, midwall_orange, midwall_red, midwall_black,
+          sidewall_green, sidewall_blue, sidewall_yellow, sidewall_orange, sidewall_red, sidewall_black
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+        [
+          sessionId,
+          wallCounts.overhang.green, wallCounts.overhang.blue, wallCounts.overhang.yellow,
+          wallCounts.overhang.orange, wallCounts.overhang.red, wallCounts.overhang.black,
+          wallCounts.midWall.green, wallCounts.midWall.blue, wallCounts.midWall.yellow,
+          wallCounts.midWall.orange, wallCounts.midWall.red, wallCounts.midWall.black,
+          wallCounts.sideWall.green, wallCounts.sideWall.blue, wallCounts.sideWall.yellow,
+          wallCounts.sideWall.orange, wallCounts.sideWall.red, wallCounts.sideWall.black
+        ]
+      );
+    }
+    
+    await client.query('COMMIT');
+    return { id: sessionId, ...session };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
   }
-  const raw = fs.readFileSync(FILE, 'utf8');
-  return JSON.parse(raw) as DBShape;
 }
 
-function save(db: DBShape) {
-  fs.writeFileSync(FILE, JSON.stringify(db, null, 2));
-}
-
-export function addClimber(name: string) {
-  const db = load();
-  const existing = db.climbers.find((c) => c.name === name);
-  if (existing) return existing;
-  const id = ++db.lastIds.climber;
-  const c = { id, name };
-  db.climbers.push(c);
-  save(db);
-  return c;
-}
-
-export function listClimbers() {
-  const db = load();
-  return db.climbers.slice().sort((a, b) => a.name.localeCompare(b.name));
-}
-
-export function addSession(session: Session & { score: number }, counts: Counts, wallCounts?: WallCounts) {
-  const db = load();
-  const id = ++db.lastIds.session;
-  db.sessions.push({ ...session, id, score: session.score });
-  db.counts.push({ sessionId: id, ...counts });
-  if (wallCounts) {
-    db.wallCounts.push({ sessionId: id, ...wallCounts });
+export async function getSessions(filter?: { from?: string; to?: string; climberId?: number }) {
+  let query = `
+    SELECT s.*, c.green, c.blue, c.yellow, c.orange, c.red, c.black,
+           w.overhang_green, w.overhang_blue, w.overhang_yellow, w.overhang_orange, w.overhang_red, w.overhang_black,
+           w.midwall_green, w.midwall_blue, w.midwall_yellow, w.midwall_orange, w.midwall_red, w.midwall_black,
+           w.sidewall_green, w.sidewall_blue, w.sidewall_yellow, w.sidewall_orange, w.sidewall_red, w.sidewall_black
+    FROM sessions s
+    LEFT JOIN counts c ON s.id = c.session_id
+    LEFT JOIN wall_counts w ON s.id = w.session_id
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+  let paramCount = 1;
+  
+  if (filter?.climberId) {
+    query += ` AND s.climber_id = $${paramCount++}`;
+    params.push(filter.climberId);
   }
-  save(db);
-  return { id, ...session };
-}
-
-export function getSessions(filter?: { from?: string; to?: string; climberId?: number }) {
-  const db = load();
-  let rows = db.sessions.map((s) => {
-    const baseCounts = db.counts.find((c) => c.sessionId === s.id);
-    const walls = db.wallCounts.find((w) => w.sessionId === s.id);
-    return {
-      ...s,
-      ...baseCounts,
-      wallCounts: walls || undefined
-    };
-  });
-  if (filter) {
-    if (filter.climberId) rows = rows.filter((r) => r.climberId === filter.climberId);
-    if (filter.from) rows = rows.filter((r) => new Date(r.date) >= new Date(filter.from!));
-    if (filter.to) rows = rows.filter((r) => new Date(r.date) <= new Date(filter.to!));
+  if (filter?.from) {
+    query += ` AND s.date >= $${paramCount++}`;
+    params.push(filter.from);
   }
-  rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  return rows;
+  if (filter?.to) {
+    query += ` AND s.date <= $${paramCount++}`;
+    params.push(filter.to);
+  }
+  
+  query += ' ORDER BY s.date DESC';
+  
+  const result = await pool.query(query, params);
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    climberId: row.climber_id,
+    date: row.date,
+    score: row.score,
+    notes: row.notes,
+    green: row.green,
+    blue: row.blue,
+    yellow: row.yellow,
+    orange: row.orange,
+    red: row.red,
+    black: row.black,
+    wallCounts: row.overhang_green !== null ? {
+      overhang: {
+        green: row.overhang_green,
+        blue: row.overhang_blue,
+        yellow: row.overhang_yellow,
+        orange: row.overhang_orange,
+        red: row.overhang_red,
+        black: row.overhang_black
+      },
+      midWall: {
+        green: row.midwall_green,
+        blue: row.midwall_blue,
+        yellow: row.midwall_yellow,
+        orange: row.midwall_orange,
+        red: row.midwall_red,
+        black: row.midwall_black
+      },
+      sideWall: {
+        green: row.sidewall_green,
+        blue: row.sidewall_blue,
+        yellow: row.sidewall_yellow,
+        orange: row.sidewall_orange,
+        red: row.sidewall_red,
+        black: row.sidewall_black
+      }
+    } : undefined
+  }));
 }
 
-export function getSessionById(id: number) {
-  const db = load();
-  const s = db.sessions.find((x) => x.id === id);
-  if (!s) return null;
-  const baseCounts = db.counts.find((c) => c.sessionId === s.id);
-  const walls = db.wallCounts.find((w) => w.sessionId === s.id);
-  return { ...s, ...baseCounts, wallCounts: walls || undefined };
+export async function getSessionById(id: number) {
+  const result = await pool.query(`
+    SELECT s.*, c.green, c.blue, c.yellow, c.orange, c.red, c.black,
+           w.overhang_green, w.overhang_blue, w.overhang_yellow, w.overhang_orange, w.overhang_red, w.overhang_black,
+           w.midwall_green, w.midwall_blue, w.midwall_yellow, w.midwall_orange, w.midwall_red, w.midwall_black,
+           w.sidewall_green, w.sidewall_blue, w.sidewall_yellow, w.sidewall_orange, w.sidewall_red, w.sidewall_black
+    FROM sessions s
+    LEFT JOIN counts c ON s.id = c.session_id
+    LEFT JOIN wall_counts w ON s.id = w.session_id
+    WHERE s.id = $1
+  `, [id]);
+  
+  if (result.rows.length === 0) return null;
+  
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    climberId: row.climber_id,
+    date: row.date,
+    score: row.score,
+    notes: row.notes,
+    green: row.green,
+    blue: row.blue,
+    yellow: row.yellow,
+    orange: row.orange,
+    red: row.red,
+    black: row.black,
+    wallCounts: row.overhang_green !== null ? {
+      overhang: {
+        green: row.overhang_green,
+        blue: row.overhang_blue,
+        yellow: row.overhang_yellow,
+        orange: row.overhang_orange,
+        red: row.overhang_red,
+        black: row.overhang_black
+      },
+      midWall: {
+        green: row.midwall_green,
+        blue: row.midwall_blue,
+        yellow: row.midwall_yellow,
+        orange: row.midwall_orange,
+        red: row.midwall_red,
+        black: row.midwall_black
+      },
+      sideWall: {
+        green: row.sidewall_green,
+        blue: row.sidewall_blue,
+        yellow: row.sidewall_yellow,
+        orange: row.sidewall_orange,
+        red: row.sidewall_red,
+        black: row.sidewall_black
+      }
+    } : undefined
+  };
 }
 
-export function leaderboard(from?: string, to?: string) {
-  const db = load();
-  let rows = db.sessions.slice();
-  if (from) rows = rows.filter((r) => new Date(r.date) >= new Date(from));
-  if (to) rows = rows.filter((r) => new Date(r.date) <= new Date(to));
-  const map = new Map<number, number>();
-  for (const s of rows) map.set(s.climberId, (map.get(s.climberId) || 0) + (s.score || 0));
-  const out = Array.from(map.entries()).map(([climberId, total_score]) => {
-    const c = db.climbers.find((x) => x.id === climberId);
-    return { climber: c ? c.name : String(climberId), total_score };
-  });
-  out.sort((a, b) => b.total_score - a.total_score);
-  return out;
+export async function leaderboard(from?: string, to?: string) {
+  let query = `
+    SELECT c.name as climber, SUM(s.score) as total_score
+    FROM sessions s
+    JOIN climbers c ON s.climber_id = c.id
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+  let paramCount = 1;
+  
+  if (from) {
+    query += ` AND s.date >= $${paramCount++}`;
+    params.push(from);
+  }
+  if (to) {
+    query += ` AND s.date <= $${paramCount++}`;
+    params.push(to);
+  }
+  
+  query += ' GROUP BY c.id, c.name ORDER BY total_score DESC';
+  
+  const result = await pool.query(query, params);
+  return result.rows.map((row: any) => ({
+    climber: row.climber,
+    total_score: parseFloat(row.total_score)
+  }));
 }
 
