@@ -205,6 +205,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 export default function App(){
   const [isAuthenticated, setIsAuthenticated] = useState(api.isAuthenticated());
   const [user, setUser] = useState<api.User | null>(api.getUser());
+  const [showLoginScreen, setShowLoginScreen] = useState(!api.isAuthenticated());
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
@@ -233,6 +234,10 @@ export default function App(){
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string|null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
+  
+  // Admin panel state
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
+  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'tools'>('tools')
 
   const totalCounts = combineCounts(wallCounts);
 
@@ -276,6 +281,7 @@ export default function App(){
   function handleLoginSuccess() {
     setIsAuthenticated(true);
     setUser(api.getUser());
+    setShowLoginScreen(false);
     loadData(); // Reload data after login
   }
 
@@ -283,6 +289,7 @@ export default function App(){
     api.clearToken();
     setIsAuthenticated(false);
     setUser(null);
+    setShowLoginScreen(true);
   }
 
   async function handlePasswordChange(e: React.FormEvent) {
@@ -313,6 +320,42 @@ export default function App(){
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password');
     }
+  }
+
+  async function deleteClimberAccount(climberId: number, climberName: string) {
+    if (!confirm(`Delete ${climberName} and all their sessions? This cannot be undone!`)) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await api.deleteClimber(climberId);
+      await loadData();
+      alert(`Deleted ${climberName}`);
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteSessionById(sessionId: number) {
+    if (!confirm('Delete this session? This cannot be undone!')) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await api.deleteSession(sessionId);
+      await loadData();
+      alert('Session deleted');
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (showLoginScreen) {
+    return <LoginScreen onLogin={handleLoginSuccess} />;
   }
 
   async function addClimber(){ 
@@ -393,6 +436,22 @@ export default function App(){
               <span style={{color:'#94a3b8'}}>
                 {user.username} {user.role === 'admin' && <span style={{color:'#fbbf24'}}>(Admin)</span>}
               </span>
+              {user.role === 'admin' && (
+                <button
+                  onClick={() => setShowAdminPanel(true)}
+                  style={{
+                    padding:'8px 16px',
+                    backgroundColor:'#fbbf24',
+                    color:'#000',
+                    border:'none',
+                    borderRadius:6,
+                    cursor:'pointer',
+                    fontWeight:'600'
+                  }}
+                >
+                  Admin Panel
+                </button>
+              )}
               <button
                 onClick={() => setShowPasswordChange(true)}
                 style={{
@@ -423,7 +482,7 @@ export default function App(){
           )}
           {!isAuthenticated && (
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => setShowLoginScreen(true)}
               style={{
                 padding:'8px 16px',
                 backgroundColor:'#3b82f6',
@@ -1183,6 +1242,279 @@ export default function App(){
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Panel */}
+      {showAdminPanel && user?.role === 'admin' && (
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          backgroundColor:'rgba(0,0,0,0.8)',
+          display:'flex',
+          alignItems:'center',
+          justifyContent:'center',
+          zIndex:1000,
+          padding:20
+        }}>
+          <div style={{
+            backgroundColor:'#0f172a',
+            borderRadius:12,
+            border:'2px solid #fbbf24',
+            width:'100%',
+            maxWidth:900,
+            maxHeight:'90vh',
+            overflow:'hidden',
+            display:'flex',
+            flexDirection:'column'
+          }}>
+            <div style={{
+              padding:'20px 24px',
+              borderBottom:'1px solid #475569',
+              display:'flex',
+              justifyContent:'space-between',
+              alignItems:'center'
+            }}>
+              <h2 style={{margin:0,fontSize:24,fontWeight:'700',color:'#fbbf24'}}>Admin Panel</h2>
+              <button
+                onClick={() => setShowAdminPanel(false)}
+                style={{
+                  padding:'8px 16px',
+                  backgroundColor:'#475569',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  cursor:'pointer',
+                  fontSize:14
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{
+              display:'flex',
+              gap:4,
+              padding:'16px 24px',
+              borderBottom:'1px solid #475569',
+              backgroundColor:'#1e293b'
+            }}>
+              {(['accounts', 'sessions', 'tools'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setAdminTab(tab)}
+                  style={{
+                    padding:'10px 20px',
+                    backgroundColor: adminTab === tab ? '#fbbf24' : 'transparent',
+                    color: adminTab === tab ? '#000' : '#94a3b8',
+                    border:'none',
+                    borderRadius:6,
+                    cursor:'pointer',
+                    fontWeight:'600',
+                    fontSize:14,
+                    textTransform:'capitalize'
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div style={{
+              flex:1,
+              overflow:'auto',
+              padding:24
+            }}>
+              {adminTab === 'accounts' && (
+                <div>
+                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Manage Accounts</h3>
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    {climbers.map(climber => (
+                      <div 
+                        key={climber.id}
+                        style={{
+                          backgroundColor:'#1e293b',
+                          padding:16,
+                          borderRadius:8,
+                          border:'1px solid #475569',
+                          display:'flex',
+                          justifyContent:'space-between',
+                          alignItems:'center'
+                        }}
+                      >
+                        <div>
+                          <div style={{fontSize:16,fontWeight:'600',color:'white'}}>{climber.name}</div>
+                          {climber.username && (
+                            <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                              Username: {climber.username}
+                              {climber.role === 'admin' && (
+                                <span style={{
+                                  marginLeft:8,
+                                  padding:'2px 8px',
+                                  backgroundColor:'#fbbf24',
+                                  color:'#000',
+                                  borderRadius:4,
+                                  fontSize:12,
+                                  fontWeight:'600'
+                                }}>
+                                  ADMIN
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => deleteClimberAccount(climber.id, climber.name)}
+                          style={{
+                            padding:'8px 16px',
+                            backgroundColor:'#dc2626',
+                            color:'white',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14,
+                            fontWeight:'600'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'sessions' && (
+                <div>
+                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Manage Sessions</h3>
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    {sessions.map(session => (
+                      <div 
+                        key={session.id}
+                        style={{
+                          backgroundColor:'#1e293b',
+                          padding:16,
+                          borderRadius:8,
+                          border:'1px solid #475569'
+                        }}
+                      >
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
+                          <div>
+                            <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
+                              {climbers.find(c => c.id === session.climber_id)?.name || 'Unknown'}
+                            </div>
+                            <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                              {new Date(session.date).toLocaleDateString()} • Score: {session.score.toFixed(2)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => deleteSessionById(session.id)}
+                            style={{
+                              padding:'6px 12px',
+                              backgroundColor:'#dc2626',
+                              color:'white',
+                              border:'none',
+                              borderRadius:6,
+                              cursor:'pointer',
+                              fontSize:13,
+                              fontWeight:'600'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        {session.notes && (
+                          <div style={{fontSize:14,color:'#cbd5e1',marginTop:8,fontStyle:'italic'}}>
+                            {session.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'tools' && (
+                <div>
+                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Admin Tools</h3>
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('⚠️ WARNING: This will DELETE ALL DATA and import fresh sessions from Oct 29-31.\n\nAll accounts with usernames will have password "boulder123".\n\nContinue?')) {
+                          return;
+                        }
+                        try {
+                          setLoading(true);
+                          const result = await api.resetAndSeed();
+                          alert(`✅ Success!\n\n${result.message}\n\nYou will be logged out. Please login again.`);
+                          api.clearToken();
+                          window.location.reload();
+                        } catch (err: any) {
+                          alert(`Error: ${err.message}`);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      style={{
+                        padding:'16px 24px',
+                        backgroundColor:'#dc2626',
+                        color:'white',
+                        border:'none',
+                        borderRadius:8,
+                        fontSize:16,
+                        fontWeight:'600',
+                        cursor:'pointer',
+                        textAlign:'left'
+                      }}
+                    >
+                      🗑️ Wipe & Import Fresh Data
+                      <div style={{fontSize:13,fontWeight:'400',marginTop:4,opacity:0.9}}>
+                        Delete all data and seed with Oct 29-31 sessions
+                      </div>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('This will merge Keith account into Keith Duong and set Keith Duong as admin with username "keith" and password "boulder123". Continue?')) {
+                          return;
+                        }
+                        try {
+                          setLoading(true);
+                          const result = await api.mergeKeithAccounts();
+                          alert(`Success! ${result.message}\n\nUsername: ${result.details.username}\nPassword: ${result.details.password}\n\n${result.details.note}`);
+                          loadData();
+                        } catch (err: any) {
+                          alert(`Error: ${err.message}`);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      style={{
+                        padding:'16px 24px',
+                        backgroundColor:'#f59e0b',
+                        color:'white',
+                        border:'none',
+                        borderRadius:8,
+                        fontSize:16,
+                        fontWeight:'600',
+                        cursor:'pointer',
+                        textAlign:'left'
+                      }}
+                    >
+                      Merge Keith → Keith Duong
+                      <div style={{fontSize:13,fontWeight:'400',marginTop:4,opacity:0.9}}>
+                        Consolidate Keith accounts
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

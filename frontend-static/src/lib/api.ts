@@ -180,3 +180,19 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const response = await fetch(`${API_URL}/api/leaderboard`);
   return handleResponse<LeaderboardEntry[]>(response);
 }
+
+export async function deleteClimber(climberId: number): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/api/climbers/${climberId}`, {
+    method: 'DELETE',
+    headers: getHeaders(true)
+  });
+  return handleResponse<{ success: boolean; message: string }>(response);
+}
+
+export async function deleteSession(sessionId: number): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/api/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: getHeaders(true)
+  });
+  return handleResponse<{ success: boolean; message: string }>(response);
+}
