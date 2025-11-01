@@ -557,7 +557,10 @@ export default function App(){
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="date" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
-              <Tooltip contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}} />
+              <Tooltip 
+                contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+              />
               <Legend />
               {climbers.map((c:any,i:number)=>(
                 <Line 
@@ -594,7 +597,10 @@ export default function App(){
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="climber" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
-              <Tooltip contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}} />
+              <Tooltip 
+                contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+              />
               <Legend />
               {ORDER.map((color:any,i:number)=>(
                 <Bar key={color} dataKey={color} fill={['#3b82f6','#a855f7','#ec4899','#f59e0b','#10b981','#06b6d4'][i%6]} />
@@ -627,7 +633,10 @@ export default function App(){
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="climber" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
-              <Tooltip contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}} />
+              <Tooltip 
+                contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+              />
               <Legend />
               <Bar dataKey="overhang" name="Overhang" fill="#ec4899" />
               <Bar dataKey="midWall" name="Mid Wall" fill="#3b82f6" />

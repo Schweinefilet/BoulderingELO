@@ -250,7 +250,9 @@ export async function getSessionById(id: number) {
 
 export async function leaderboard(from?: string, to?: string) {
   let query = `
-    SELECT c.name as climber, SUM(s.score) as total_score
+    SELECT DISTINCT ON (c.id) 
+      c.name as climber, 
+      s.score as total_score
     FROM sessions s
     JOIN climbers c ON s.climber_id = c.id
     WHERE 1=1
@@ -267,13 +269,18 @@ export async function leaderboard(from?: string, to?: string) {
     params.push(to);
   }
   
-  query += ' GROUP BY c.id, c.name ORDER BY total_score DESC';
+  query += ' ORDER BY c.id, s.date DESC';
   
   const result = await pool.query(query, params);
-  return result.rows.map((row: any) => ({
+  const leaderboard = result.rows.map((row: any) => ({
     climber: row.climber,
     total_score: parseFloat(row.total_score)
   }));
+  
+  // Sort by score descending
+  leaderboard.sort((a, b) => b.total_score - a.total_score);
+  
+  return leaderboard;
 }
 
 export async function deleteSession(id: number) {
