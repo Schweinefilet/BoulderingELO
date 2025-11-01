@@ -7,6 +7,12 @@ export type Counts = {
   black: number;
 };
 
+export type WallCounts = {
+  overhang: Counts;
+  midWall: Counts;
+  sideWall: Counts;
+};
+
 export type Climber = { id?: number; name: string };
 
 export type Session = { id?: number; climberId: number; date: string; notes?: string };

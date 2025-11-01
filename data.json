@@ -1,0 +1,32 @@
+{
+  "climbers": [
+    {
+      "id": 1,
+      "name": "Keith"
+    }
+  ],
+  "sessions": [
+    {
+      "climberId": 1,
+      "date": "2024-10-29",
+      "notes": null,
+      "score": 37.56961388881725,
+      "id": 1
+    }
+  ],
+  "counts": [
+    {
+      "sessionId": 1,
+      "green": 0,
+      "blue": 0,
+      "yellow": 15,
+      "orange": 0,
+      "red": 0,
+      "black": 0
+    }
+  ],
+  "lastIds": {
+    "climber": 1,
+    "session": 1
+  }
+}

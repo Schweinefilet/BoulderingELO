@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Counts, Climber, Session } from './types';
+import { Counts, Climber, Session, WallCounts } from './types';
 
 const FILE = process.env.JSON_DB_PATH || path.join(process.cwd(), 'data.json');
 
@@ -8,12 +8,13 @@ type DBShape = {
   climbers: Climber[];
   sessions: Array<Session & { score: number }>;
   counts: Array<{ sessionId: number } & Counts>;
+  wallCounts: Array<{ sessionId: number } & WallCounts>;
   lastIds: { climber: number; session: number };
 };
 
 function load(): DBShape {
   if (!fs.existsSync(FILE)) {
-    const init: DBShape = { climbers: [], sessions: [], counts: [], lastIds: { climber: 0, session: 0 } };
+    const init: DBShape = { climbers: [], sessions: [], counts: [], wallCounts: [], lastIds: { climber: 0, session: 0 } };
     fs.writeFileSync(FILE, JSON.stringify(init, null, 2));
     return init;
   }
@@ -41,21 +42,29 @@ export function listClimbers() {
   return db.climbers.slice().sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function addSession(session: Session & { score: number }, counts: Counts) {
+export function addSession(session: Session & { score: number }, counts: Counts, wallCounts?: WallCounts) {
   const db = load();
   const id = ++db.lastIds.session;
   db.sessions.push({ ...session, id, score: session.score });
   db.counts.push({ sessionId: id, ...counts });
+  if (wallCounts) {
+    db.wallCounts.push({ sessionId: id, ...wallCounts });
+  }
   save(db);
   return { id, ...session };
 }
 
 export function getSessions(filter?: { from?: string; to?: string; climberId?: number }) {
   const db = load();
-  let rows = db.sessions.map((s) => ({
-    ...s,
-    ...db.counts.find((c) => c.sessionId === s.id)
-  }));
+  let rows = db.sessions.map((s) => {
+    const baseCounts = db.counts.find((c) => c.sessionId === s.id);
+    const walls = db.wallCounts.find((w) => w.sessionId === s.id);
+    return {
+      ...s,
+      ...baseCounts,
+      wallCounts: walls || undefined
+    };
+  });
   if (filter) {
     if (filter.climberId) rows = rows.filter((r) => r.climberId === filter.climberId);
     if (filter.from) rows = rows.filter((r) => new Date(r.date) >= new Date(filter.from!));
@@ -69,7 +78,9 @@ export function getSessionById(id: number) {
   const db = load();
   const s = db.sessions.find((x) => x.id === id);
   if (!s) return null;
-  return { ...s, ...db.counts.find((c) => c.sessionId === s.id) };
+  const baseCounts = db.counts.find((c) => c.sessionId === s.id);
+  const walls = db.wallCounts.find((w) => w.sessionId === s.id);
+  return { ...s, ...baseCounts, wallCounts: walls || undefined };
 }
 
 export function leaderboard(from?: string, to?: string) {

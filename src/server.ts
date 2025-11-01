@@ -1,11 +1,32 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import * as db from './db';
-import { scoreSession, validateCounts } from './score';
-import { Counts } from './types';
+import { scoreSession, validateCounts, combineCounts } from './score';
+import { Counts, WallCounts } from './types';
 
 const app = express();
 app.use(bodyParser.json());
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'BoulderingELO API',
+    endpoints: {
+      climbers: {
+        post: '/api/climbers',
+        get: '/api/climbers'
+      },
+      sessions: {
+        post: '/api/sessions',
+        get: '/api/sessions?from=&to=&climberId=',
+        getById: '/api/sessions/:id'
+      },
+      leaderboard: {
+        get: '/api/leaderboard?from=&to='
+      }
+    }
+  });
+});
 
 // POST /api/climbers {name}
 app.post('/api/climbers', (req, res) => {
@@ -25,16 +46,33 @@ app.get('/api/climbers', (req, res) => {
   res.json(rows);
 });
 
-// POST /api/sessions {climberId, date, counts, notes}
+// POST /api/sessions {climberId, date, counts, wallCounts?, notes}
 app.post('/api/sessions', (req, res) => {
   try {
-    const { climberId, date, counts, notes } = req.body;
+    const { climberId, date, counts, wallCounts, notes } = req.body;
     if (!climberId || !date) return res.status(400).json({ error: 'climberId and date required' });
-    const c = validateCounts(counts || {});
-    const score = scoreSession(c);
-    const session = { climberId, date, notes: notes || null, score };
-    const out = db.addSession(session as any, c);
-    res.json({ id: out.id, climberId, date, counts: c, score });
+    
+    let totalCounts: Counts;
+    if (wallCounts) {
+      // If wall counts provided, validate each wall and combine
+      const validatedWalls: WallCounts = {
+        overhang: validateCounts(wallCounts.overhang || {}),
+        midWall: validateCounts(wallCounts.midWall || {}),
+        sideWall: validateCounts(wallCounts.sideWall || {})
+      };
+      totalCounts = combineCounts(validatedWalls);
+      const score = scoreSession(totalCounts);
+      const session = { climberId, date, notes: notes || null, score };
+      const out = db.addSession(session as any, totalCounts, validatedWalls);
+      res.json({ id: out.id, climberId, date, counts: totalCounts, wallCounts: validatedWalls, score });
+    } else {
+      // Legacy: flat counts
+      totalCounts = validateCounts(counts || {});
+      const score = scoreSession(totalCounts);
+      const session = { climberId, date, notes: notes || null, score };
+      const out = db.addSession(session as any, totalCounts);
+      res.json({ id: out.id, climberId, date, counts: totalCounts, score });
+    }
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
