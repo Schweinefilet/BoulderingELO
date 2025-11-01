@@ -51,8 +51,17 @@ export function clearToken(): void {
 }
 
 export function getUser(): User | null {
-  const userStr = localStorage.getItem(USER_KEY);
-  return userStr ? JSON.parse(userStr) : null;
+  try {
+    const userStr = localStorage.getItem(USER_KEY);
+    if (!userStr || userStr === 'undefined' || userStr === 'null') {
+      return null;
+    }
+    return JSON.parse(userStr);
+  } catch (error) {
+    console.error('Error parsing user from localStorage:', error);
+    localStorage.removeItem(USER_KEY);
+    return null;
+  }
 }
 
 export function setUser(user: User): void {
