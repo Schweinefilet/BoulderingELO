@@ -135,6 +135,14 @@ export async function mergeKeithAccounts(): Promise<{ success: boolean; message:
   return handleResponse<{ success: boolean; message: string; details: any }>(response);
 }
 
+export async function resetAndSeed(): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/api/admin/reset-and-seed`, {
+    method: 'POST',
+    headers: getHeaders(true)
+  });
+  return handleResponse<{ success: boolean; message: string }>(response);
+}
+
 export async function addClimber(name: string): Promise<Climber> {
   const response = await fetch(`${API_URL}/api/climbers`, {
     method: 'POST',

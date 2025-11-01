@@ -243,6 +243,224 @@ app.post('/api/admin/merge-keith-accounts', authenticateToken, requireAdmin, asy
   }
 });
 
+// POST /api/admin/reset-and-seed (admin only) - wipe DB and seed with provided sample
+app.post('/api/admin/reset-and-seed', authenticateToken, requireAdmin, async (req: any, res) => {
+  try {
+    // Default sample data (dates use 2025-10-31 and 2025-10-29)
+    const sample = {
+      climbers: [
+        {
+          name: 'Keith Duong',
+          username: 'keith',
+          role: 'admin',
+          sessions: [
+            {
+              date: '2025-10-31',
+              wallCounts: {
+                overhang: { green:0,blue:0,yellow:4,orange:0,red:0,black:0 },
+                midWall: { green:0,blue:0,yellow:10,orange:0,red:0,black:0 },
+                sideWall: { green:0,blue:0,yellow:4,orange:1,red:0,black:0 }
+              },
+              notes: 'Keith Rock Climbing (Oct 31)'
+            },
+            {
+              date: '2025-10-29',
+              wallCounts: {
+                overhang: { green:0,blue:0,yellow:4,orange:0,red:0,black:0 },
+                midWall: { green:0,blue:0,yellow:8,orange:0,red:0,black:0 },
+                sideWall: { green:0,blue:0,yellow:3,orange:0,red:0,black:0 }
+              },
+              notes: 'Keith (Oct 29)'
+            }
+          ]
+        },
+        {
+          name: 'Unmesh',
+          username: 'unmesh',
+          role: 'user',
+          sessions: [
+            {
+              date: '2025-10-31',
+              wallCounts: {
+                overhang: { green:0,blue:0,yellow:2,orange:0,red:0,black:0 },
+                midWall: { green:0,blue:0,yellow:5,orange:0,red:0,black:0 },
+                sideWall: { green:0,blue:0,yellow:2,orange:0,red:0,black:0 }
+              }
+            },
+            {
+              date: '2025-10-29',
+              wallCounts: {
+                overhang: { green:0,blue:0,yellow:1,orange:0,red:0,black:0 },
+                midWall: { green:0,blue:0,yellow:4,orange:0,red:0,black:0 },
+                sideWall: { green:0,blue:0,yellow:2,orange:0,red:0,black:0 }
+              }
+            }
+          ]
+        },
+        {
+          name: 'Rehan',
+          username: 'rehan',
+          role: 'user',
+          sessions: [
+            {
+              date: '2025-10-31',
+              wallCounts: {
+                overhang: { green:0,blue:0,yellow:4,orange:0,red:0,black:0 },
+                midWall: { green:0,blue:0,yellow:10,orange:0,red:0,black:0 },
+                sideWall: { green:0,blue:0,yellow:2,orange:0,red:0,black:0 }
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    await db.clearAllData();
+    await db.seedData(sample);
+    res.json({ success: true, message: 'Database wiped and seeded with sample data' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/wipe-and-import (admin only)
+app.post('/api/admin/wipe-and-import', authenticateToken, requireAdmin, async (req: any, res) => {
+  const client = await db.getClient();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Delete all data in correct order
+    await client.query('DELETE FROM video_reviews');
+    await client.query('DELETE FROM wall_counts');
+    await client.query('DELETE FROM counts');
+    await client.query('DELETE FROM sessions');
+    await client.query('DELETE FROM climbers');
+    
+    // Import fresh data
+    const CLIMBERS = [
+      { name: 'Keith Duong', username: 'keith', password: 'boulder123', role: 'admin' },
+      { name: 'Unmesh', username: 'unmesh', password: 'boulder123', role: 'user' },
+      { name: 'Rehan', username: 'rehan', password: 'boulder123', role: 'user' }
+    ];
+
+    const climberMap: any = {};
+    for (const climber of CLIMBERS) {
+      const hashedPassword = await bcrypt.hash(climber.password, 10);
+      const result = await client.query(
+        'INSERT INTO climbers (name, username, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
+        [climber.name, climber.username, hashedPassword, climber.role]
+      );
+      climberMap[climber.name] = result.rows[0].id;
+    }
+
+    const SESSIONS = [
+      // Keith Oct 31
+      {
+        climber: 'Keith Duong', date: '2024-10-31', notes: 'Rock Climbing session',
+        wallCounts: {
+          midWall: { yellow: 10, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          overhang: { yellow: 4, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          sideWall: { yellow: 4, orange: 1, red: 0, black: 0, blue: 0, green: 0 }
+        }
+      },
+      // Keith Oct 29
+      {
+        climber: 'Keith Duong', date: '2024-10-29', notes: 'Session',
+        wallCounts: {
+          midWall: { yellow: 8, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          overhang: { yellow: 4, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          sideWall: { yellow: 3, orange: 0, red: 0, black: 0, blue: 0, green: 0 }
+        }
+      },
+      // Unmesh Oct 31
+      {
+        climber: 'Unmesh', date: '2024-10-31', notes: 'Session',
+        wallCounts: {
+          midWall: { yellow: 5, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          overhang: { yellow: 2, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          sideWall: { yellow: 2, orange: 0, red: 0, black: 0, blue: 0, green: 0 }
+        }
+      },
+      // Unmesh Oct 29
+      {
+        climber: 'Unmesh', date: '2024-10-29', notes: 'Session',
+        wallCounts: {
+          midWall: { yellow: 4, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          overhang: { yellow: 1, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          sideWall: { yellow: 2, orange: 0, red: 0, black: 0, blue: 0, green: 0 }
+        }
+      },
+      // Rehan Oct 31
+      {
+        climber: 'Rehan', date: '2024-10-31', notes: 'Session',
+        wallCounts: {
+          midWall: { yellow: 10, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          overhang: { yellow: 4, orange: 0, red: 0, black: 0, blue: 0, green: 0 },
+          sideWall: { yellow: 2, orange: 0, red: 0, black: 0, blue: 0, green: 0 }
+        }
+      }
+    ];
+
+    let sessionCount = 0;
+    for (const session of SESSIONS) {
+      const climberId = climberMap[session.climber];
+      
+      // Calculate score
+      const { scoreSession } = require('./score');
+      const totalCounts: any = { black: 0, red: 0, orange: 0, yellow: 0, blue: 0, green: 0 };
+      for (const wall of ['midWall', 'overhang', 'sideWall']) {
+        const wc = (session.wallCounts as any)[wall];
+        for (const color of Object.keys(totalCounts)) {
+          totalCounts[color] += wc[color] || 0;
+        }
+      }
+      const score = scoreSession(totalCounts);
+      
+      // Insert session
+      const sessionResult = await client.query(
+        'INSERT INTO sessions (climber_id, date, score, notes, status) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+        [climberId, session.date, score, session.notes, 'approved']
+      );
+      const sessionId = sessionResult.rows[0].id;
+      
+      // Insert wall counts
+      for (const wall of ['midWall', 'overhang', 'sideWall']) {
+        const counts = (session.wallCounts as any)[wall];
+        await client.query(
+          'INSERT INTO wall_counts (session_id, wall, green, blue, yellow, orange, red, black) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+          [sessionId, wall, counts.green, counts.blue, counts.yellow, counts.orange, counts.red, counts.black]
+        );
+      }
+      
+      // Insert total counts
+      await client.query(
+        'INSERT INTO counts (session_id, green, blue, yellow, orange, red, black) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [sessionId, totalCounts.green, totalCounts.blue, totalCounts.yellow, totalCounts.orange, totalCounts.red, totalCounts.black]
+      );
+      
+      sessionCount++;
+    }
+
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      message: 'Database wiped and fresh data imported successfully',
+      details: {
+        climbersCreated: CLIMBERS.length,
+        sessionsImported: sessionCount,
+        defaultPassword: 'boulder123'
+      }
+    });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 // POST /api/climbers {name} (admin only - for adding climbers without accounts)
 // POST /api/climbers (admin only)
 app.post('/api/climbers', authenticateToken, requireAdmin, async (req: any, res) => {

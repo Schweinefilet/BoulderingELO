@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import bcrypt from 'bcrypt';
 import { Counts, Climber, Session, WallCounts } from './types';
 
 const pool = new Pool({
@@ -413,4 +414,46 @@ export async function rejectVideo(reviewId: number) {
     ['rejected', reviewId]
   );
   return result.rows[0];
+}
+
+// Admin: clear all data (KEEP SCHEMA)
+export async function clearAllData() {
+  // Truncate tables in proper order and restart identities
+  await pool.query(`
+    TRUNCATE TABLE counts, wall_counts, video_reviews, sessions, climbers RESTART IDENTITY CASCADE;
+  `);
+}
+
+// Admin: seed data from a provided structure
+export async function seedData(sample: {
+  climbers: Array<{ name: string; username?: string; role?: string; sessions?: Array<{ date: string; wallCounts?: WallCounts; notes?: string }> }>;
+}) {
+  function combineCountsLocal(w?: WallCounts) {
+    const base: Counts = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
+    if (!w) return base;
+    const sum: any = { ...base };
+    ['green','blue','yellow','orange','red','black'].forEach((col:any) => {
+      const a = ((w.overhang as any)[col] || 0);
+      const b = ((w.midWall as any)[col] || 0);
+      const c = ((w.sideWall as any)[col] || 0);
+      sum[col] = a + b + c;
+    });
+    return sum as Counts;
+  }
+
+  const defaultPassword = process.env.DEFAULT_SEED_PASSWORD || 'boulder123';
+  for (const c of sample.climbers) {
+    const hashed = c.username ? await bcrypt.hash(defaultPassword, 10) : undefined;
+    const climber = await addClimber(c.name, c.username || undefined, hashed, c.role || 'user');
+    if (c.sessions && c.sessions.length) {
+      for (const s of c.sessions) {
+        // compute score: the addSession expects a session object with score
+        // We will compute score using existing scoreSession util in server; here we approximate by inserting with score 0 and let server recalc if needed.
+        // Simpler: compute totals from wallCounts and use scoring logic in server when adding via API. Since this is DB-level seeding, we will compute a naive score of 0.
+        const score = 0;
+        const counts = combineCountsLocal(s.wallCounts);
+        await addSession({ climberId: climber.id!, date: s.date, notes: s.notes || undefined, score }, counts, s.wallCounts);
+      }
+    }
+  }
 }

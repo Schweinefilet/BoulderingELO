@@ -496,6 +496,36 @@ export default function App(){
             <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
               <button
                 onClick={async () => {
+                  if (!confirm('⚠️ WARNING: This will DELETE ALL DATA and import fresh sessions from Oct 29-31.\n\nAll accounts with usernames will have password "boulder123".\n\nContinue?')) {
+                    return;
+                  }
+                  try {
+                    setLoading(true);
+                    const result = await api.resetAndSeed();
+                    alert(`✅ Success!\n\n${result.message}\n\nYou will be logged out. Please login again.`);
+                    api.clearToken();
+                    window.location.reload();
+                  } catch (err: any) {
+                    alert(`Error: ${err.message}`);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                style={{
+                  padding:'12px 20px',
+                  backgroundColor:'#dc2626',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  fontSize:14,
+                  fontWeight:'600',
+                  cursor:'pointer'
+                }}
+              >
+                🗑️ Wipe & Import Fresh Data
+              </button>
+              <button
+                onClick={async () => {
                   if (!confirm('This will merge Keith account into Keith Duong and set Keith Duong as admin with username "keith" and password "boulder123". Continue?')) {
                     return;
                   }
