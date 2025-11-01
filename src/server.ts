@@ -105,8 +105,7 @@ app.post('/api/auth/login', async (req, res) => {
       token,
       success: true,
       user: {
-        id: climber.id,
-        name: climber.name,
+        climberId: climber.id,
         username: climber.username,
         role: climber.role
       }
@@ -128,7 +127,21 @@ app.post('/api/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const climber = await db.addClimber(name, username, hashedPassword, 'user');
     
-    res.json({ success: true, climber: { id: climber.id, name: climber.name, username: climber.username } });
+    const token = jwt.sign(
+      { climberId: climber.id, username: climber.username, role: climber.role },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    res.json({
+      token,
+      success: true,
+      user: {
+        climberId: climber.id,
+        username: climber.username,
+        role: climber.role
+      }
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
