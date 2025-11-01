@@ -488,6 +488,46 @@ export default function App(){
         </div>
       </section>
       
+      {/* Admin Tools */}
+      {isAuthenticated && user?.role === 'admin' && (
+        <section style={{marginBottom:20}}>
+          <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'2px solid #fbbf24'}}>
+            <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600',color:'#fbbf24'}}>Admin Tools</h2>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+              <button
+                onClick={async () => {
+                  if (!confirm('This will merge Keith account into Keith Duong and set Keith Duong as admin with username "keith" and password "boulder123". Continue?')) {
+                    return;
+                  }
+                  try {
+                    setLoading(true);
+                    const result = await api.mergeKeithAccounts();
+                    alert(`Success! ${result.message}\n\nUsername: ${result.details.username}\nPassword: ${result.details.password}\n\n${result.details.note}`);
+                    loadData(); // Reload to see updated data
+                  } catch (err: any) {
+                    alert(`Error: ${err.message}`);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                style={{
+                  padding:'12px 20px',
+                  backgroundColor:'#f59e0b',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  fontSize:14,
+                  fontWeight:'600',
+                  cursor:'pointer'
+                }}
+              >
+                Merge Keith → Keith Duong
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+      
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
           <div style={{flex:1,minWidth:300}}>

@@ -102,6 +102,10 @@ export async function initDB() {
   `);
 }
 
+export async function getClient() {
+  return pool.connect();
+}
+
 export async function addClimber(name: string, username?: string, password?: string, role: string = 'user') {
   const existing = await pool.query('SELECT * FROM climbers WHERE name = $1', [name]);
   if (existing.rows.length > 0) return existing.rows[0] as Climber;

@@ -169,6 +169,80 @@ app.post('/api/auth/change-password', authenticateToken, async (req: any, res) =
   }
 });
 
+// POST /api/admin/merge-keith-accounts (admin only)
+app.post('/api/admin/merge-keith-accounts', authenticateToken, requireAdmin, async (req: any, res) => {
+  const client = await db.getClient();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Find both climbers
+    const keithResult = await client.query(
+      "SELECT id, name FROM climbers WHERE name = 'Keith'"
+    );
+    
+    const keithDuongResult = await client.query(
+      "SELECT id, name FROM climbers WHERE name = 'Keith Duong'"
+    );
+
+    if (keithResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: '"Keith" account not found' });
+    }
+
+    if (keithDuongResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: '"Keith Duong" account not found' });
+    }
+
+    const keithId = keithResult.rows[0].id;
+    const keithDuongId = keithDuongResult.rows[0].id;
+
+    // Count sessions
+    const keithSessions = await client.query(
+      'SELECT COUNT(*) as count FROM sessions WHERE climber_id = $1',
+      [keithId]
+    );
+
+    // Transfer all Keith's sessions to Keith Duong
+    const transferResult = await client.query(
+      'UPDATE sessions SET climber_id = $1 WHERE climber_id = $2',
+      [keithDuongId, keithId]
+    );
+
+    // Delete old Keith account
+    await client.query('DELETE FROM climbers WHERE id = $1', [keithId]);
+
+    // Setup Keith Duong as admin with username/password
+    const username = 'keith';
+    const password = 'boulder123';
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await client.query(
+      'UPDATE climbers SET username = $1, password = $2, role = $3 WHERE id = $4',
+      [username, hashedPassword, 'admin', keithDuongId]
+    );
+
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      message: 'Keith account merged into Keith Duong successfully',
+      details: {
+        sessionsMoved: transferResult.rowCount,
+        username: 'keith',
+        password: 'boulder123',
+        note: 'Please change password after login'
+      }
+    });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 // POST /api/climbers {name} (admin only - for adding climbers without accounts)
 // POST /api/climbers (admin only)
 app.post('/api/climbers', authenticateToken, requireAdmin, async (req: any, res) => {
