@@ -204,6 +204,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
 export default function App(){
   const [isAuthenticated, setIsAuthenticated] = useState(api.isAuthenticated());
+  const [user, setUser] = useState<api.User | null>(api.getUser());
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
@@ -227,10 +228,6 @@ export default function App(){
 
   const totalCounts = combineCounts(wallCounts);
 
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
-  }
-
   useEffect(()=>{ 
     loadData();
   }, [])
@@ -240,14 +237,15 @@ export default function App(){
     setError(null);
     try {
       const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
-        store.listClimbers(),
-        store.getSessions(),
-        store.leaderboard()
+        api.getClimbers(),
+        api.getSessions(),
+        api.getLeaderboard()
       ]);
       setClimbers(loadedClimbers);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard);
     } catch (err: any) {
+      console.error('Failed to load data:', err);
       setError(err.message || 'Failed to load data');
     } finally {
       setLoading(false);
@@ -267,11 +265,23 @@ export default function App(){
     }
   }, [selectedClimber, sessions]);
 
+  function handleLoginSuccess() {
+    setIsAuthenticated(true);
+    setUser(api.getUser());
+    loadData(); // Reload data after login
+  }
+
+  function handleLogout() {
+    api.clearToken();
+    setIsAuthenticated(false);
+    setUser(null);
+  }
+
   async function addClimber(){ 
     if(!newName.trim()) return;
     setLoading(true);
     try {
-      const c = await store.addClimber(newName.trim());
+      const c = await api.addClimber(newName.trim());
       setClimbers([...climbers,c]);
       setSelectedClimber(c.id);
       setNewName('');
@@ -313,11 +323,15 @@ export default function App(){
     setLoading(true);
     setError(null);
     try {
-      const score = scoreSession(totalCounts); 
-      await store.addSession({climberId:selectedClimber,date,score,notes:sessionNotes}, totalCounts, wallCounts); 
+      await api.addSession({
+        climberId: selectedClimber,
+        date,
+        wallCounts,
+        notes: sessionNotes
+      });
       const [loadedSessions, loadedLeaderboard] = await Promise.all([
-        store.getSessions(),
-        store.leaderboard()
+        api.getSessions(),
+        api.getLeaderboard()
       ]);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard); 
@@ -333,7 +347,46 @@ export default function App(){
 
   return (
     <div style={{fontFamily:'Inter, Arial, sans-serif',padding:20,maxWidth:1000,margin:'0 auto'}}>
-      <h1>BoulderingELO</h1>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h1 style={{margin:0}}>BoulderingELO</h1>
+        <div style={{display:'flex',gap:12,alignItems:'center'}}>
+          {isAuthenticated && user && (
+            <>
+              <span style={{color:'#94a3b8'}}>
+                {user.username} {user.role === 'admin' && <span style={{color:'#fbbf24'}}>(Admin)</span>}
+              </span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding:'8px 16px',
+                  backgroundColor:'#475569',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  cursor:'pointer'
+                }}
+              >
+                Logout
+              </button>
+            </>
+          )}
+          {!isAuthenticated && (
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding:'8px 16px',
+                backgroundColor:'#3b82f6',
+                color:'white',
+                border:'none',
+                borderRadius:6,
+                cursor:'pointer'
+              }}
+            >
+              Login
+            </button>
+          )}
+        </div>
+      </div>
       
       {error && (
         <div style={{backgroundColor:'#dc2626',color:'white',padding:12,borderRadius:6,marginBottom:16}}>
@@ -343,6 +396,13 @@ export default function App(){
       
       {loading && (
         <div style={{color:'#3b82f6',marginBottom:16}}>Loading...</div>
+      )}
+      
+      {!isAuthenticated && !loading && (
+        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20,border:'2px solid #3b82f6'}}>
+          <h2 style={{marginTop:0,color:'#3b82f6'}}>Welcome to BoulderingELO</h2>
+          <p>Track your climbing progress with our weighted scoring system. View stats below or login to add your sessions!</p>
+        </div>
       )}
       
       <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,marginBottom:20}}>
@@ -362,35 +422,38 @@ export default function App(){
         </div>
       </div>
       
-      <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-        <div style={{flex:1,minWidth:300}}>
-          <h2 style={{marginBottom:16}}>New Session</h2>
-          
-          <div style={{marginBottom:16}}>
-            <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
-            <select 
-              value={selectedClimber||''} 
-              onChange={e=>setSelectedClimber(parseInt(e.target.value)||undefined)}
-              style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-            >
-              <option value="">Select...</option>
-              {climbers.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-            <div style={{marginTop:8,display:'flex',gap:8}}>
-              <input 
-                placeholder="New name" 
-                value={newName} 
-                onChange={e=>setNewName(e.target.value)}
-                style={{flex:1,padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-              />
-              <button 
-                onClick={addClimber}
-                style={{padding:'10px 20px',borderRadius:6,backgroundColor:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:'500',fontSize:14,whiteSpace:'nowrap'}}
+      {isAuthenticated && (
+        <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+          <div style={{flex:1,minWidth:300}}>
+            <h2 style={{marginBottom:16}}>New Session</h2>
+            
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
+              <select 
+                value={selectedClimber||''} 
+                onChange={e=>setSelectedClimber(parseInt(e.target.value)||undefined)}
+                style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
               >
-                Add climber
-              </button>
+                <option value="">Select...</option>
+                {climbers.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
+              {user?.role === 'admin' && (
+                <div style={{marginTop:8,display:'flex',gap:8}}>
+                  <input 
+                    placeholder="New name" 
+                    value={newName} 
+                    onChange={e=>setNewName(e.target.value)}
+                    style={{flex:1,padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                  />
+                  <button 
+                    onClick={addClimber}
+                    style={{padding:'10px 20px',borderRadius:6,backgroundColor:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:'500',fontSize:14,whiteSpace:'nowrap'}}
+                  >
+                    Add climber
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
 
           <div style={{marginBottom:16}}>
             <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Date</label>
@@ -578,6 +641,7 @@ export default function App(){
           </div>
         </div>
       </section>
+      )}
 
       <section style={{marginTop:32}}>
         <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,border:'1px solid #475569'}}>
