@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { scoreSession, marginalGain, ORDER, BASE, combineCounts, type Counts, type WallCounts } from './lib/scoring'
 import * as store from './lib/storage'
+import * as api from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
@@ -12,7 +13,102 @@ const WALL_TOTALS = {
   sideWall: { yellow: 11, orange: 8, red: 0, black: 0, blue: 0, green: 0 }
 };
 
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      const result = await api.login(password);
+      api.setToken(result.token);
+      onLogin();
+    } catch (err: any) {
+      setError(err.message || 'Invalid password');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{
+      display:'flex',
+      justifyContent:'center',
+      alignItems:'center',
+      minHeight:'100vh',
+      backgroundColor:'#0f172a',
+      fontFamily:'Inter, Arial, sans-serif'
+    }}>
+      <div style={{
+        backgroundColor:'#1e293b',
+        padding:40,
+        borderRadius:8,
+        border:'1px solid #475569',
+        width:400,
+        maxWidth:'90%'
+      }}>
+        <h1 style={{marginTop:0,marginBottom:24,textAlign:'center'}}>BoulderingELO</h1>
+        <form onSubmit={handleLogin}>
+          <div style={{marginBottom:16}}>
+            <label style={{display:'block',marginBottom:8,fontSize:14}}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              style={{
+                width:'100%',
+                padding:12,
+                borderRadius:6,
+                border:'1px solid #475569',
+                backgroundColor:'#0f172a',
+                color:'white',
+                fontSize:16
+              }}
+              placeholder="Enter password"
+              autoFocus
+            />
+          </div>
+          {error && (
+            <div style={{
+              backgroundColor:'#dc2626',
+              color:'white',
+              padding:12,
+              borderRadius:6,
+              marginBottom:16,
+              fontSize:14
+            }}>
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={loading || !password}
+            style={{
+              width:'100%',
+              padding:12,
+              backgroundColor:loading || !password ? '#475569' : '#3b82f6',
+              color:'white',
+              border:'none',
+              borderRadius:6,
+              fontSize:16,
+              fontWeight:'600',
+              cursor:loading || !password ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
+  const [isAuthenticated, setIsAuthenticated] = useState(api.isAuthenticated());
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
@@ -35,6 +131,10 @@ export default function App(){
   const [error, setError] = useState<string|null>(null)
 
   const totalCounts = combineCounts(wallCounts);
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   useEffect(()=>{ 
     loadData();

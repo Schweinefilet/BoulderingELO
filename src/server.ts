@@ -1,11 +1,16 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
 import * as db from './db';
 import { scoreSession, validateCounts, combineCounts } from './score';
 import { Counts, WallCounts } from './types';
 
 const app = express();
+
+// JWT Secret (set in environment variable)
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
+const APP_PASSWORD = process.env.APP_PASSWORD || 'climbing123';
 
 // CORS configuration - allow GitHub Pages
 app.use(cors({
@@ -18,11 +23,28 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
+// Middleware to verify JWT token
+function authenticateToken(req: any, res: any, next: any) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ error: 'Access denied' });
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+}
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'BoulderingELO API',
     endpoints: {
+      auth: {
+        post: '/api/auth/login'
+      },
       climbers: {
         post: '/api/climbers',
         get: '/api/climbers'
@@ -39,8 +61,20 @@ app.get('/', (req, res) => {
   });
 });
 
+// POST /api/auth/login {password}
+app.post('/api/auth/login', (req, res) => {
+  const { password } = req.body;
+  
+  if (password === APP_PASSWORD) {
+    const token = jwt.sign({ authorized: true }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, success: true });
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
+});
+
 // POST /api/climbers {name}
-app.post('/api/climbers', async (req, res) => {
+app.post('/api/climbers', authenticateToken, async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'name required' });
   try {
@@ -58,7 +92,7 @@ app.get('/api/climbers', async (req, res) => {
 });
 
 // POST /api/sessions {climberId, date, counts, wallCounts?, notes}
-app.post('/api/sessions', async (req, res) => {
+app.post('/api/sessions', authenticateToken, async (req, res) => {
   try {
     const { climberId, date, counts, wallCounts, notes } = req.body;
     if (!climberId || !date) return res.status(400).json({ error: 'climberId and date required' });
@@ -112,7 +146,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // DELETE /api/sessions/:id
-app.delete('/api/sessions/:id', async (req, res) => {
+app.delete('/api/sessions/:id', authenticateToken, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const deleted = await db.deleteSession(id);
@@ -124,7 +158,7 @@ app.delete('/api/sessions/:id', async (req, res) => {
 });
 
 // DELETE /api/climbers/:id
-app.delete('/api/climbers/:id', async (req, res) => {
+app.delete('/api/climbers/:id', authenticateToken, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const deleted = await db.deleteClimber(id);
