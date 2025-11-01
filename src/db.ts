@@ -276,3 +276,13 @@ export async function leaderboard(from?: string, to?: string) {
   }));
 }
 
+export async function deleteSession(id: number) {
+  const result = await pool.query('DELETE FROM sessions WHERE id = $1 RETURNING id', [id]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deleteClimber(id: number) {
+  // This will also delete all sessions due to foreign key constraint
+  const result = await pool.query('DELETE FROM climbers WHERE id = $1 RETURNING id', [id]);
+  return (result.rowCount ?? 0) > 0;
+}

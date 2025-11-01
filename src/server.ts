@@ -111,6 +111,30 @@ app.get('/api/leaderboard', async (req, res) => {
   res.json(rows);
 });
 
+// DELETE /api/sessions/:id
+app.delete('/api/sessions/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const deleted = await db.deleteSession(id);
+    if (!deleted) return res.status(404).json({ error: 'Session not found' });
+    res.json({ success: true, message: 'Session deleted' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/climbers/:id
+app.delete('/api/climbers/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const deleted = await db.deleteClimber(id);
+    if (!deleted) return res.status(404).json({ error: 'Climber not found' });
+    res.json({ success: true, message: 'Climber deleted' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 // Initialize database and start server
