@@ -14,7 +14,10 @@ const WALL_TOTALS = {
 };
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,11 +27,29 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     setError('');
     
     try {
-      const result = await api.login(password);
+      const result = await api.login(username, password);
       api.setToken(result.token);
+      api.setUser(result.user);
       onLogin();
     } catch (err: any) {
-      setError(err.message || 'Invalid password');
+      setError(err.message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      const result = await api.register(username, password, name);
+      api.setToken(result.token);
+      api.setUser(result.user);
+      onLogin();
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -52,7 +73,62 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         maxWidth:'90%'
       }}>
         <h1 style={{marginTop:0,marginBottom:24,textAlign:'center'}}>BoulderingELO</h1>
-        <form onSubmit={handleLogin}>
+        
+        <div style={{display:'flex',gap:8,marginBottom:24}}>
+          <button
+            onClick={() => setMode('login')}
+            style={{
+              flex:1,
+              padding:8,
+              backgroundColor:mode === 'login' ? '#3b82f6' : '#475569',
+              color:'white',
+              border:'none',
+              borderRadius:6,
+              fontSize:14,
+              fontWeight:'600',
+              cursor:'pointer'
+            }}
+          >
+            Login
+          </button>
+          <button
+            onClick={() => setMode('register')}
+            style={{
+              flex:1,
+              padding:8,
+              backgroundColor:mode === 'register' ? '#3b82f6' : '#475569',
+              color:'white',
+              border:'none',
+              borderRadius:6,
+              fontSize:14,
+              fontWeight:'600',
+              cursor:'pointer'
+            }}
+          >
+            Register
+          </button>
+        </div>
+
+        <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
+          <div style={{marginBottom:16}}>
+            <label style={{display:'block',marginBottom:8,fontSize:14}}>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              style={{
+                width:'100%',
+                padding:12,
+                borderRadius:6,
+                border:'1px solid #475569',
+                backgroundColor:'#0f172a',
+                color:'white',
+                fontSize:16
+              }}
+              placeholder="Enter username"
+              autoFocus
+            />
+          </div>
           <div style={{marginBottom:16}}>
             <label style={{display:'block',marginBottom:8,fontSize:14}}>Password</label>
             <input
@@ -69,9 +145,28 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                 fontSize:16
               }}
               placeholder="Enter password"
-              autoFocus
             />
           </div>
+          {mode === 'register' && (
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',marginBottom:8,fontSize:14}}>Full Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                style={{
+                  width:'100%',
+                  padding:12,
+                  borderRadius:6,
+                  border:'1px solid #475569',
+                  backgroundColor:'#0f172a',
+                  color:'white',
+                  fontSize:16
+                }}
+                placeholder="Enter your name"
+              />
+            </div>
+          )}
           {error && (
             <div style={{
               backgroundColor:'#dc2626',
@@ -86,20 +181,20 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           )}
           <button
             type="submit"
-            disabled={loading || !password}
+            disabled={loading || !username || !password || (mode === 'register' && !name)}
             style={{
               width:'100%',
               padding:12,
-              backgroundColor:loading || !password ? '#475569' : '#3b82f6',
+              backgroundColor:loading || !username || !password || (mode === 'register' && !name) ? '#475569' : '#3b82f6',
               color:'white',
               border:'none',
               borderRadius:6,
               fontSize:16,
               fontWeight:'600',
-              cursor:loading || !password ? 'not-allowed' : 'pointer'
+              cursor:loading || !username || !password || (mode === 'register' && !name) ? 'not-allowed' : 'pointer'
             }}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? (mode === 'login' ? 'Logging in...' : 'Creating account...') : (mode === 'login' ? 'Login' : 'Create Account')}
           </button>
         </form>
       </div>

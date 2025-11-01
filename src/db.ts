@@ -8,10 +8,15 @@ const pool = new Pool({
 
 // Initialize database tables
 export async function initDB() {
+  // Add password and role columns to climbers table
   await pool.query(`
     CREATE TABLE IF NOT EXISTS climbers (
       id SERIAL PRIMARY KEY,
-      name TEXT UNIQUE NOT NULL
+      name TEXT UNIQUE NOT NULL,
+      username TEXT UNIQUE,
+      password TEXT,
+      role TEXT DEFAULT 'user',
+      created_at TIMESTAMP DEFAULT NOW()
     )
   `);
   
@@ -21,7 +26,9 @@ export async function initDB() {
       climber_id INTEGER REFERENCES climbers(id),
       date TEXT NOT NULL,
       score REAL NOT NULL,
-      notes TEXT
+      notes TEXT,
+      status TEXT DEFAULT 'approved',
+      created_at TIMESTAMP DEFAULT NOW()
     )
   `);
   
@@ -60,13 +67,49 @@ export async function initDB() {
       sidewall_black INTEGER DEFAULT 0
     )
   `);
+  
+  // Video reviews table for red/black climbs
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS video_reviews (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+      video_url TEXT NOT NULL,
+      color TEXT NOT NULL,
+      wall TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      votes JSONB DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  
+  // Add columns if they don't exist (migration-safe)
+  await pool.query(`
+    DO $$ 
+    BEGIN 
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='username') THEN
+        ALTER TABLE climbers ADD COLUMN username TEXT UNIQUE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='password') THEN
+        ALTER TABLE climbers ADD COLUMN password TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='role') THEN
+        ALTER TABLE climbers ADD COLUMN role TEXT DEFAULT 'user';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='status') THEN
+        ALTER TABLE sessions ADD COLUMN status TEXT DEFAULT 'approved';
+      END IF;
+    END $$;
+  `);
 }
 
-export async function addClimber(name: string) {
+export async function addClimber(name: string, username?: string, password?: string, role: string = 'user') {
   const existing = await pool.query('SELECT * FROM climbers WHERE name = $1', [name]);
   if (existing.rows.length > 0) return existing.rows[0] as Climber;
   
-  const result = await pool.query('INSERT INTO climbers (name) VALUES ($1) RETURNING *', [name]);
+  const result = await pool.query(
+    'INSERT INTO climbers (name, username, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
+    [name, username || null, password || null, role]
+  );
   return result.rows[0] as Climber;
 }
 
@@ -292,4 +335,78 @@ export async function deleteClimber(id: number) {
   // This will also delete all sessions due to foreign key constraint
   const result = await pool.query('DELETE FROM climbers WHERE id = $1 RETURNING id', [id]);
   return (result.rowCount ?? 0) > 0;
+}
+
+// User authentication functions
+export async function getClimberByUsername(username: string) {
+  const result = await pool.query('SELECT * FROM climbers WHERE username = $1', [username]);
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+export async function updateClimberPassword(climberId: number, password: string) {
+  await pool.query('UPDATE climbers SET password = $1 WHERE id = $2', [password, climberId]);
+}
+
+export async function setClimberRole(climberId: number, role: string) {
+  await pool.query('UPDATE climbers SET role = $1 WHERE id = $2', [role, climberId]);
+}
+
+// Video review functions
+export async function addVideoReview(sessionId: number, videoUrl: string, color: string, wall: string) {
+  const result = await pool.query(
+    'INSERT INTO video_reviews (session_id, video_url, color, wall) VALUES ($1, $2, $3, $4) RETURNING *',
+    [sessionId, videoUrl, color, wall]
+  );
+  return result.rows[0];
+}
+
+export async function getVideoReviews(status?: string) {
+  let query = 'SELECT vr.*, s.climber_id, c.name as climber_name, s.date FROM video_reviews vr JOIN sessions s ON vr.session_id = s.id JOIN climbers c ON s.climber_id = c.id';
+  const params: any[] = [];
+  
+  if (status) {
+    query += ' WHERE vr.status = $1';
+    params.push(status);
+  }
+  
+  query += ' ORDER BY vr.created_at DESC';
+  
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
+export async function voteOnVideo(reviewId: number, climberId: number, vote: 'up' | 'down') {
+  const review = await pool.query('SELECT votes FROM video_reviews WHERE id = $1', [reviewId]);
+  if (review.rows.length === 0) return null;
+  
+  const votes = review.rows[0].votes || [];
+  const existingVoteIndex = votes.findIndex((v: any) => v.climberId === climberId);
+  
+  if (existingVoteIndex >= 0) {
+    votes[existingVoteIndex].vote = vote;
+  } else {
+    votes.push({ climberId, vote });
+  }
+  
+  const result = await pool.query(
+    'UPDATE video_reviews SET votes = $1 WHERE id = $2 RETURNING *',
+    [JSON.stringify(votes), reviewId]
+  );
+  return result.rows[0];
+}
+
+export async function approveVideo(reviewId: number) {
+  const result = await pool.query(
+    'UPDATE video_reviews SET status = $1 WHERE id = $2 RETURNING *',
+    ['approved', reviewId]
+  );
+  return result.rows[0];
+}
+
+export async function rejectVideo(reviewId: number) {
+  const result = await pool.query(
+    'UPDATE video_reviews SET status = $1 WHERE id = $2 RETURNING *',
+    ['rejected', reviewId]
+  );
+  return result.rows[0];
 }

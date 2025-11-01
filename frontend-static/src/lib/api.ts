@@ -2,10 +2,19 @@
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
 
 const TOKEN_KEY = 'boulderingelo_token';
+const USER_KEY = 'boulderingelo_user';
 
 export interface Climber {
   id: number;
   name: string;
+  username?: string;
+  role?: 'admin' | 'user';
+}
+
+export interface User {
+  climberId: number;
+  username: string;
+  role: 'admin' | 'user';
 }
 
 export interface Session {
@@ -38,10 +47,25 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+export function getUser(): User | null {
+  const userStr = localStorage.getItem(USER_KEY);
+  return userStr ? JSON.parse(userStr) : null;
+}
+
+export function setUser(user: User): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function isAuthenticated(): boolean {
-  return !!getToken();
+  return !!getToken() && !!getUser();
+}
+
+export function isAdmin(): boolean {
+  const user = getUser();
+  return user?.role === 'admin';
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -67,13 +91,22 @@ function getHeaders(includeAuth: boolean = false): HeadersInit {
   return headers;
 }
 
-export async function login(password: string): Promise<{ token: string; success: boolean }> {
+export async function login(username: string, password: string): Promise<{ token: string; user: User }> {
   const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ password })
+    body: JSON.stringify({ username, password })
   });
-  return handleResponse<{ token: string; success: boolean }>(response);
+  return handleResponse<{ token: string; user: User }>(response);
+}
+
+export async function register(username: string, password: string, name: string): Promise<{ token: string; user: User }> {
+  const response = await fetch(`${API_URL}/api/auth/register`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ username, password, name })
+  });
+  return handleResponse<{ token: string; user: User }>(response);
 }
 
 export async function addClimber(name: string): Promise<Climber> {

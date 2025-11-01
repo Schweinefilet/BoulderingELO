@@ -13,6 +13,12 @@ export type WallCounts = {
   sideWall: Counts;
 };
 
-export type Climber = { id?: number; name: string };
+export type Climber = {
+  id?: number;
+  name: string;
+  username?: string;
+  password?: string;
+  role?: string;
+};
 
-export type Session = { id?: number; climberId: number; date: string; notes?: string };
+export type Session = { id?: number; climberId: number; date: string; notes?: string; status?: string };
