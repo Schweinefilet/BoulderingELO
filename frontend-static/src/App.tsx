@@ -422,6 +422,21 @@ export default function App(){
         </div>
       </div>
       
+      {/* Leaderboard - visible to everyone */}
+      <section style={{marginBottom:20}}>
+        <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
+          <h2 style={{marginTop:0,marginBottom:16,fontSize:24,fontWeight:'600'}}>Leaderboard</h2>
+          <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
+            {leaderboard.map((e:any,i:number)=> (
+              <li key={i} style={{fontSize:16,lineHeight:'1.5'}}>
+                <span style={{fontWeight:'600',color:'#94a3b8'}}>{e.climber}:</span>
+                <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:18}}>{e.total_score.toFixed(2)}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+      
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
           <div style={{flex:1,minWidth:300}}>
@@ -626,18 +641,6 @@ export default function App(){
                 ))}
               </div>
             </div>
-          </div>
-
-          <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
-            <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Leaderboard</h2>
-            <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
-              {leaderboard.map((e:any,i:number)=> (
-                <li key={i} style={{fontSize:14,lineHeight:'1.5'}}>
-                  <span style={{fontWeight:'600',color:'#94a3b8'}}>{e.climber}:</span>
-                  <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:16}}>{e.total_score.toFixed(2)}</span>
-                </li>
-              ))}
-            </ol>
           </div>
         </div>
       </section>
