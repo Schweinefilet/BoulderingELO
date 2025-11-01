@@ -2,19 +2,26 @@
 
 A web app that scores bouldering sessions using osu-style weighted top scores with live previews, leaderboards, and analytics.
 
+🌐 **Live App**: https://schweinefilet.github.io/BoulderingELO/
+
 ## Architecture
 
-- **Backend**: Node.js + Express + TypeScript (port 3000)
-- **Frontend**: Next.js 14 + TypeScript + Tailwind + Aceternity UI (port 3001)
-- **Storage**: JSON file-based (data.json) for quick prototyping
+- **Backend**: Node.js + Express + PostgreSQL (Render.com)
+- **Frontend**: React + Vite + TypeScript (GitHub Pages)
+- **Storage**: PostgreSQL for shared data across all users
 
 ## Quick Start
 
-### 1. Backend API
+### Local Development
 
+#### Backend
 ```bash
 # Install dependencies
 npm install
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your local PostgreSQL URL
 
 # Run in development mode
 npm run dev
@@ -22,38 +29,39 @@ npm run dev
 
 Backend runs on `http://localhost:3000`
 
-### 2. Frontend
-
+#### Frontend
 ```bash
 # Navigate to frontend directory
-cd frontend
+cd frontend-static
 
 # Install dependencies
 npm install
 
 # Run development server
-npm run dev -- -p 3001
+npm run dev
 ```
 
-Frontend runs on `http://localhost:3001`
+Frontend runs on `http://localhost:5173`
 
-### 3. Open the App
+### Deployment
 
-Visit `http://localhost:3001` in your browser
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions to Render + GitHub Pages.
 
 ## Features
 
-### Pages
-
-1. **Sessions** - Add new sessions with live score preview and marginal gains calculator
-2. **Leaderboard** - View rankings by date range or lifetime totals
-3. **Analytics** - Charts showing score trends, color breakdowns, and top sessions
+- **Wall Section Tracking** - Separate counts for overhang, mid wall, and side wall
+- **Video Evidence** - Required for red/black climbs
+- **Live Preview** - Real-time score calculation with marginal gains
+- **Leaderboard** - Latest session scores for all climbers
+- **Analytics** - Score trends, sends by color, and wall section breakdowns
+- **Shared Data** - All users see the same sessions and leaderboard
 
 ### Scoring Model
 
 - Decay per placement: r = 0.95
-- Base points: Green (0.25), Blue (0.75), Yellow (3.5), Orange (12), Red (48), Black (192)
-- Weighted sum formula applies decay to each send based on placement
+- Base points: Green (0.25), Blue (0.75), Yellow (3.5), Orange (12.5), Red (56), Black (120)
+- Weighted sum formula: Score = Σ (base × (W(cumulative+count) - W(cumulative)))
+- Where W(n) = (1 - r^n) / (1 - r)
 
 ## API Endpoints
 
