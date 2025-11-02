@@ -3,6 +3,7 @@ import { scoreSession, marginalGain, ORDER, BASE, combineCounts, type Counts, ty
 import * as store from './lib/storage'
 import * as api from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { GlowingCard } from './components/ui/glowing-card'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -534,60 +535,66 @@ export default function App(){
       )}
       
       {!isAuthenticated && !loading && (
-        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20,border:'2px solid #3b82f6'}}>
-          <h2 style={{marginTop:0,color:'#3b82f6'}}>Welcome to BoulderingELO</h2>
-          <p>Track your climbing progress with our weighted scoring system. View stats below or login to add your sessions!</p>
-        </div>
+        <GlowingCard>
+          <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20,border:'2px solid #3b82f6'}}>
+            <h2 style={{marginTop:0,color:'#3b82f6'}}>Welcome to BoulderingELO</h2>
+            <p>Track your climbing progress with our weighted scoring system. View stats below or login to add your sessions!</p>
+          </div>
+        </GlowingCard>
       )}
       
-      <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,marginBottom:20}}>
-        <h3 style={{marginTop:0}}>Scoring Formula</h3>
-        <p style={{fontFamily:'monospace',fontSize:14}}>
-          Score = Σ (base_points × (W(cmltve + count) - W(cmltve)))
-        </p>
-        <p style={{fontSize:14,marginBottom:8}}>
-          Where W(n) = (1 - r^n) / (1 - r), r = 0.95
-        </p>
-        <div style={{fontSize:13,color:'#94a3b8'}}>
-          <strong>Base Points:</strong> Black(120), Red(56), Orange(12.5), Yellow(3.5), Blue(0.75), Green(0.25)
-          <br/>
-          <strong>cmltve</strong> = cumulative count of all higher-ranked colors processed so far
-          <br/>
-          Colors are processed in order: Black (≥V9) → Red (V7-V8) → Orange (V5-V6) → Yellow (V3-V4) → Blue (V1-V2) → Green (V0-V1)
+      <GlowingCard>
+        <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,marginBottom:20}}>
+          <h3 style={{marginTop:0}}>Scoring Formula</h3>
+          <p style={{fontFamily:'monospace',fontSize:14}}>
+            Score = Σ (base_points × (W(cmltve + count) - W(cmltve)))
+          </p>
+          <p style={{fontSize:14,marginBottom:8}}>
+            Where W(n) = (1 - r^n) / (1 - r), r = 0.95
+          </p>
+          <div style={{fontSize:13,color:'#94a3b8'}}>
+            <strong>Base Points:</strong> Black(120), Red(56), Orange(12.5), Yellow(3.5), Blue(0.75), Green(0.25)
+            <br/>
+            <strong>cmltve</strong> = cumulative count of all higher-ranked colors processed so far
+            <br/>
+            Colors are processed in order: Black (≥V9) → Red (V7-V8) → Orange (V5-V6) → Yellow (V3-V4) → Blue (V1-V2) → Green (V0-V1)
+          </div>
         </div>
-      </div>
+      </GlowingCard>
       
       {/* Leaderboard - visible to everyone */}
       <section style={{marginBottom:20}}>
-        <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
-          <h2 style={{marginTop:0,marginBottom:16,fontSize:24,fontWeight:'600'}}>Leaderboard</h2>
-          <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
-            {leaderboard.map((e:any,i:number)=> {
-              const climber = climbers.find((c:any) => c.name === e.climber);
-              return (
-                <li key={i} style={{fontSize:16,lineHeight:'1.5'}}>
-                  <button
-                    onClick={() => climber && setViewingProfile(climber.id)}
-                    style={{
-                      background:'none',
-                      border:'none',
-                      padding:0,
-                      fontWeight:'600',
-                      color:'#94a3b8',
-                      cursor:'pointer',
-                      textDecoration:'underline',
-                      fontSize:16
-                    }}
-                  >
-                    {e.climber}
-                  </button>
-                  :
-                  <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:18}}>{e.total_score.toFixed(2)}</span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
+        <GlowingCard>
+          <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
+            <h2 style={{marginTop:0,marginBottom:16,fontSize:24,fontWeight:'600'}}>Leaderboard</h2>
+            <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
+              {leaderboard.map((e:any,i:number)=> {
+                const climber = climbers.find((c:any) => c.name === e.climber);
+                return (
+                  <li key={i} style={{fontSize:16,lineHeight:'1.5'}}>
+                    <button
+                      onClick={() => climber && setViewingProfile(climber.id)}
+                      style={{
+                        background:'none',
+                        border:'none',
+                        padding:0,
+                        fontWeight:'600',
+                        color:'#94a3b8',
+                        cursor:'pointer',
+                        textDecoration:'underline',
+                        fontSize:16
+                      }}
+                    >
+                      {e.climber}
+                    </button>
+                    :
+                    <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:18}}>{e.total_score.toFixed(2)}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </GlowingCard>
       </section>
       
       {/* Admin Tools */}
