@@ -1,6 +1,6 @@
 # BoulderingELO
 
-A web app that scores bouldering sessions using osu-style weighted top scores with live previews, leaderboards, and analytics.
+A web app that scores bouldering sessions using weighted top scores with live previews, leaderboards, and analytics.
 
 🌐 **Live App**: https://schweinefilet.github.io/BoulderingELO/
 
