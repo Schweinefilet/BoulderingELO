@@ -59,18 +59,18 @@ sudo -u postgres createdb boulderingelo_dev
 echo "✅ Database 'boulderingelo_dev' created"
 
 # Check if user exists, create if not
-USER_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='postgres'")
-if [ -z "$USER_EXISTS" ]; then
-  sudo -u postgres psql -c "CREATE USER postgres WITH PASSWORD 'postgres';"
-  echo "✅ User 'postgres' created"
+if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='boulderingelo_user'" | grep -q 1; then
+  # Update password for existing user
+  sudo -u postgres psql -c "ALTER USER boulderingelo_user WITH PASSWORD 'postgres';"
+  echo "✅ User 'boulderingelo_user' password updated"
 else
-  # Update password
-  sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-  echo "✅ User 'postgres' password updated"
+  # Create new user
+  sudo -u postgres psql -c "CREATE USER boulderingelo_user WITH PASSWORD 'postgres';"
+  echo "✅ User 'boulderingelo_user' created"
 fi
 
 # Grant privileges
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE boulderingelo_dev TO postgres;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE boulderingelo_dev TO boulderingelo_user;"
 echo "✅ Privileges granted"
 
 # Update .env file
@@ -78,7 +78,7 @@ echo ""
 echo "📝 Updating .env file..."
 if [ -f .env ]; then
   # Replace DATABASE_URL line
-  sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://postgres:postgres@localhost:5432/boulderingelo_dev|' .env
+  sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://boulderingelo_user:postgres@localhost:5432/boulderingelo_dev|' .env
   echo "✅ .env file updated"
 else
   echo "⚠️  .env file not found. Run ./setup-codespace.sh first"
@@ -92,11 +92,11 @@ echo "Database connection details:"
 echo "  Host: localhost"
 echo "  Port: 5432"
 echo "  Database: boulderingelo_dev"
-echo "  User: postgres"
+echo "  User: boulderingelo_user"
 echo "  Password: postgres"
 echo ""
 echo "Connection string:"
-echo "  postgresql://postgres:postgres@localhost:5432/boulderingelo_dev"
+echo "  postgresql://boulderingelo_user:postgres@localhost:5432/boulderingelo_dev"
 echo ""
 echo "Next steps:"
 echo "  1. Build backend: npm run build"

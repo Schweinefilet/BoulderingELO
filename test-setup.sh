@@ -44,12 +44,13 @@ echo ""
 echo "2. Testing backend startup..."
 echo "   Starting backend server..."
 
-# Start backend in background
-timeout 10s npm start &
+# Start backend in background with configurable timeout
+STARTUP_TIMEOUT=${BACKEND_STARTUP_TIMEOUT:-15}
+timeout ${STARTUP_TIMEOUT}s npm start &
 BACKEND_PID=$!
 
 # Wait for backend to start
-echo "   Waiting for backend to initialize..."
+echo "   Waiting for backend to initialize (timeout: ${STARTUP_TIMEOUT}s)..."
 sleep 5
 
 # Check if backend is still running

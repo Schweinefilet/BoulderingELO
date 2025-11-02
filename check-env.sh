@@ -113,12 +113,13 @@ fi
 echo ""
 echo "6. Testing database connection..."
 if [ -f .env ]; then
-  source .env
+  # Export DATABASE_URL for Node.js to use
+  export $(grep DATABASE_URL .env | xargs)
   if [ -n "$DATABASE_URL" ]; then
-    # Try to connect to the database using Node.js
+    # Try to connect to the database using Node.js with environment variable
     node -e "
     const { Pool } = require('pg');
-    const pool = new Pool({ connectionString: '$DATABASE_URL' });
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     pool.query('SELECT NOW()')
       .then(() => {
         console.log('   ✅ Database connection successful');

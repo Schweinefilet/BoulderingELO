@@ -56,8 +56,16 @@ echo ""
 cleanup() {
   echo ""
   echo "🛑 Stopping services..."
-  kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
-  wait $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+  # Stop backend if running
+  if [ -n "$BACKEND_PID" ] && ps -p $BACKEND_PID > /dev/null 2>&1; then
+    kill $BACKEND_PID 2>/dev/null || true
+    wait $BACKEND_PID 2>/dev/null || true
+  fi
+  # Stop frontend if running
+  if [ -n "$FRONTEND_PID" ] && ps -p $FRONTEND_PID > /dev/null 2>&1; then
+    kill $FRONTEND_PID 2>/dev/null || true
+    wait $FRONTEND_PID 2>/dev/null || true
+  fi
   echo "✅ Services stopped"
   exit 0
 }
