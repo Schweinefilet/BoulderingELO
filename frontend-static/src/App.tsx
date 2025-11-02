@@ -253,12 +253,22 @@ export default function App(){
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'tools'>('tools')
+  
+  // Profile view state
+  const [viewingProfile, setViewingProfile] = useState<number | null>(null)
 
   const totalCounts = combineCounts(wallCounts);
 
   useEffect(()=>{ 
     loadData();
   }, [])
+  
+  // Auto-select climber for non-admin users
+  useEffect(() => {
+    if (user && user.role !== 'admin' && user.climberId && climbers.length > 0) {
+      setSelectedClimber(user.climberId);
+    }
+  }, [user, climbers]);
   
   async function loadData() {
     setLoading(true);
@@ -552,12 +562,30 @@ export default function App(){
         <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
           <h2 style={{marginTop:0,marginBottom:16,fontSize:24,fontWeight:'600'}}>Leaderboard</h2>
           <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
-            {leaderboard.map((e:any,i:number)=> (
-              <li key={i} style={{fontSize:16,lineHeight:'1.5'}}>
-                <span style={{fontWeight:'600',color:'#94a3b8'}}>{e.climber}:</span>
-                <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:18}}>{e.total_score.toFixed(2)}</span>
-              </li>
-            ))}
+            {leaderboard.map((e:any,i:number)=> {
+              const climber = climbers.find((c:any) => c.name === e.climber);
+              return (
+                <li key={i} style={{fontSize:16,lineHeight:'1.5'}}>
+                  <button
+                    onClick={() => climber && setViewingProfile(climber.id)}
+                    style={{
+                      background:'none',
+                      border:'none',
+                      padding:0,
+                      fontWeight:'600',
+                      color:'#94a3b8',
+                      cursor:'pointer',
+                      textDecoration:'underline',
+                      fontSize:16
+                    }}
+                  >
+                    {e.climber}
+                  </button>
+                  :
+                  <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:18}}>{e.total_score.toFixed(2)}</span>
+                </li>
+              );
+            })}
           </ol>
         </div>
       </section>
@@ -568,65 +596,6 @@ export default function App(){
           <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'2px solid #fbbf24'}}>
             <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600',color:'#fbbf24'}}>Admin Tools</h2>
             <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-              <button
-                onClick={async () => {
-                  if (!confirm('⚠️ WARNING: This will DELETE ALL DATA and import fresh sessions from Oct 29-31.\n\nAll accounts with usernames will have password "boulder123".\n\nContinue?')) {
-                    return;
-                  }
-                  try {
-                    setLoading(true);
-                    const result = await api.resetAndSeed();
-                    alert(`✅ Success!\n\n${result.message}\n\nYou will be logged out. Please login again.`);
-                    api.clearToken();
-                    window.location.reload();
-                  } catch (err: any) {
-                    alert(`Error: ${err.message}`);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                style={{
-                  padding:'12px 20px',
-                  backgroundColor:'#dc2626',
-                  color:'white',
-                  border:'none',
-                  borderRadius:6,
-                  fontSize:14,
-                  fontWeight:'600',
-                  cursor:'pointer'
-                }}
-              >
-                🗑️ Wipe & Import Fresh Data
-              </button>
-              <button
-                onClick={async () => {
-                  if (!confirm('This will merge Keith account into Keith Duong and set Keith Duong as admin with username "keith" and password "boulder123". Continue?')) {
-                    return;
-                  }
-                  try {
-                    setLoading(true);
-                    const result = await api.mergeKeithAccounts();
-                    alert(`Success! ${result.message}\n\nUsername: ${result.details.username}\nPassword: ${result.details.password}\n\n${result.details.note}`);
-                    loadData(); // Reload to see updated data
-                  } catch (err: any) {
-                    alert(`Error: ${err.message}`);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                style={{
-                  padding:'12px 20px',
-                  backgroundColor:'#f59e0b',
-                  color:'white',
-                  border:'none',
-                  borderRadius:6,
-                  fontSize:14,
-                  fontWeight:'600',
-                  cursor:'pointer'
-                }}
-              >
-                Merge Keith → Keith Duong
-              </button>
             </div>
           </div>
         </section>
@@ -639,14 +608,20 @@ export default function App(){
             
             <div style={{marginBottom:16}}>
               <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
-              <select 
-                value={selectedClimber||''} 
-                onChange={e=>setSelectedClimber(parseInt(e.target.value)||undefined)}
-                style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-              >
-                <option value="">Select...</option>
-                {climbers.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
-              </select>
+              {user?.role === 'admin' ? (
+                <select 
+                  value={selectedClimber||''} 
+                  onChange={e=>setSelectedClimber(parseInt(e.target.value)||undefined)}
+                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                >
+                  <option value="">Select...</option>
+                  {climbers.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              ) : (
+                <div style={{padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'#94a3b8',fontSize:14}}>
+                  {climbers.find(c => c.id === user?.climberId)?.name || 'Loading...'}
+                </div>
+              )}
               {user?.role === 'admin' && (
                 <div style={{marginTop:8,display:'flex',gap:8}}>
                   <input 
@@ -675,18 +650,20 @@ export default function App(){
             />
           </div>
 
-          <div style={{marginBottom:16,display:'flex',alignItems:'center',gap:8}}>
-            <input 
-              type="checkbox" 
-              checked={manualMode} 
-              onChange={e=>setManualMode(e.target.checked)}
-              id="manual-mode"
-              style={{width:18,height:18,cursor:'pointer'}}
-            />
-            <label htmlFor="manual-mode" style={{fontWeight:'500',cursor:'pointer',userSelect:'none'}}>
-              Manual Input Mode
-            </label>
-          </div>
+          {user?.role === 'admin' && (
+            <div style={{marginBottom:16,display:'flex',alignItems:'center',gap:8}}>
+              <input 
+                type="checkbox" 
+                checked={manualMode} 
+                onChange={e=>setManualMode(e.target.checked)}
+                id="manual-mode"
+                style={{width:18,height:18,cursor:'pointer'}}
+              />
+              <label htmlFor="manual-mode" style={{fontWeight:'500',cursor:'pointer',userSelect:'none'}}>
+                Manual Input Mode
+              </label>
+            </div>
+          )}
 
           {!manualMode ? (
             // Dropdown mode
@@ -1261,6 +1238,160 @@ export default function App(){
         </div>
       )}
 
+      {/* User Profile Modal */}
+      {viewingProfile !== null && (() => {
+        const profileClimber = climbers.find((c:any) => c.id === viewingProfile);
+        const profileSessions = sessions
+          .filter((s:any) => s.climberId === viewingProfile)
+          .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const profileLeaderboardEntry = leaderboard.find((e:any) => e.climber === profileClimber?.name);
+        
+        if (!profileClimber) return null;
+        
+        return (
+          <div style={{
+            position:'fixed',
+            top:0,
+            left:0,
+            right:0,
+            bottom:0,
+            backgroundColor:'rgba(0,0,0,0.8)',
+            display:'flex',
+            justifyContent:'center',
+            alignItems:'center',
+            zIndex:1000,
+            padding:20,
+            overflowY:'auto'
+          }}>
+            <div style={{
+              backgroundColor:'#1e293b',
+              padding:32,
+              borderRadius:8,
+              border:'1px solid #475569',
+              maxWidth:800,
+              width:'100%',
+              maxHeight:'90vh',
+              overflowY:'auto'
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+                <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>{profileClimber.name}</h2>
+                <button
+                  onClick={() => setViewingProfile(null)}
+                  style={{
+                    padding:'8px 16px',
+                    backgroundColor:'#475569',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:14,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              
+              {/* Stats */}
+              <div style={{
+                backgroundColor:'#0f172a',
+                padding:20,
+                borderRadius:8,
+                marginBottom:24,
+                border:'1px solid #475569'
+              }}>
+                <h3 style={{marginTop:0,marginBottom:16,fontSize:20}}>Stats</h3>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))',gap:16}}>
+                  <div>
+                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Total Score</div>
+                    <div style={{fontSize:24,fontWeight:'700',color:'#3b82f6'}}>
+                      {profileLeaderboardEntry?.total_score.toFixed(2) || '0.00'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Sessions</div>
+                    <div style={{fontSize:24,fontWeight:'700',color:'#10b981'}}>
+                      {profileSessions.length}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Leaderboard Rank</div>
+                    <div style={{fontSize:24,fontWeight:'700',color:'#fbbf24'}}>
+                      #{(leaderboard.findIndex((e:any) => e.climber === profileClimber.name) + 1) || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Session History */}
+              <div>
+                <h3 style={{marginTop:0,marginBottom:16,fontSize:20}}>Session History</h3>
+                {profileSessions.length > 0 ? (
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    {profileSessions.map((session:any) => (
+                      <div 
+                        key={session.id}
+                        style={{
+                          backgroundColor:'#0f172a',
+                          padding:16,
+                          borderRadius:8,
+                          border:'1px solid #475569'
+                        }}
+                      >
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
+                          <div>
+                            <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
+                              {new Date(session.date).toLocaleDateString('en-US', { 
+                                weekday: 'short', 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </div>
+                            <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                              Score: {session.score.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{display:'flex',gap:16,flexWrap:'wrap',marginTop:12,fontSize:14}}>
+                          {session.black > 0 && <span style={{color:'#d1d5db'}}>⚫ Black: {session.black}</span>}
+                          {session.red > 0 && <span style={{color:'#ef4444'}}>🔴 Red: {session.red}</span>}
+                          {session.orange > 0 && <span style={{color:'#f97316'}}>🟠 Orange: {session.orange}</span>}
+                          {session.yellow > 0 && <span style={{color:'#eab308'}}>🟡 Yellow: {session.yellow}</span>}
+                          {session.blue > 0 && <span style={{color:'#3b82f6'}}>🔵 Blue: {session.blue}</span>}
+                          {session.green > 0 && <span style={{color:'#10b981'}}>🟢 Green: {session.green}</span>}
+                        </div>
+                        {session.notes && (
+                          <div style={{
+                            marginTop:12,
+                            fontSize:14,
+                            color:'#cbd5e1',
+                            fontStyle:'italic',
+                            borderTop:'1px solid #475569',
+                            paddingTop:12
+                          }}>
+                            {session.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{
+                    textAlign:'center',
+                    padding:32,
+                    color:'#64748b',
+                    fontSize:16
+                  }}>
+                    No sessions yet
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Admin Panel */}
       {showAdminPanel && user?.role === 'admin' && (
         <div style={{
@@ -1422,7 +1553,7 @@ export default function App(){
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
                           <div>
                             <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
-                              {climbers.find(c => c.id === session.climber_id)?.name || 'Unknown'}
+                              {climbers.find(c => c.id === session.climberId)?.name || 'Unknown'}
                             </div>
                             <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
                               {new Date(session.date).toLocaleDateString()} • Score: {session.score.toFixed(2)}
@@ -1459,73 +1590,7 @@ export default function App(){
                 <div>
                   <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Admin Tools</h3>
                   <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('⚠️ WARNING: This will DELETE ALL DATA and import fresh sessions from Oct 29-31.\n\nAll accounts with usernames will have password "boulder123".\n\nContinue?')) {
-                          return;
-                        }
-                        try {
-                          setLoading(true);
-                          const result = await api.resetAndSeed();
-                          alert(`✅ Success!\n\n${result.message}\n\nYou will be logged out. Please login again.`);
-                          api.clearToken();
-                          window.location.reload();
-                        } catch (err: any) {
-                          alert(`Error: ${err.message}`);
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      style={{
-                        padding:'16px 24px',
-                        backgroundColor:'#dc2626',
-                        color:'white',
-                        border:'none',
-                        borderRadius:8,
-                        fontSize:16,
-                        fontWeight:'600',
-                        cursor:'pointer',
-                        textAlign:'left'
-                      }}
-                    >
-                      🗑️ Wipe & Import Fresh Data
-                      <div style={{fontSize:13,fontWeight:'400',marginTop:4,opacity:0.9}}>
-                        Delete all data and seed with Oct 29-31 sessions
-                      </div>
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('This will merge Keith account into Keith Duong and set Keith Duong as admin with username "keith" and password "boulder123". Continue?')) {
-                          return;
-                        }
-                        try {
-                          setLoading(true);
-                          const result = await api.mergeKeithAccounts();
-                          alert(`Success! ${result.message}\n\nUsername: ${result.details.username}\nPassword: ${result.details.password}\n\n${result.details.note}`);
-                          loadData();
-                        } catch (err: any) {
-                          alert(`Error: ${err.message}`);
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      style={{
-                        padding:'16px 24px',
-                        backgroundColor:'#f59e0b',
-                        color:'white',
-                        border:'none',
-                        borderRadius:8,
-                        fontSize:16,
-                        fontWeight:'600',
-                        cursor:'pointer',
-                        textAlign:'left'
-                      }}
-                    >
-                      Merge Keith → Keith Duong
-                      <div style={{fontSize:13,fontWeight:'400',marginTop:4,opacity:0.9}}>
-                        Consolidate Keith accounts
-                      </div>
-                    </button>
+                    {/* Admin tools removed - no longer needed */}
                   </div>
                 </div>
               )}
