@@ -2,6 +2,8 @@
 
 This guide will help you set up and run BoulderingELO in a GitHub Codespace environment.
 
+> **Experiencing "ERR_CONNECTION_REFUSED" errors?** This happens when the backend server is not running. Follow the setup steps below to configure your database and start both servers. Jump to [Troubleshooting](#troubleshooting) for quick fixes.
+
 ## Quick Setup (5 minutes)
 
 ### Step 1: Run the Setup Script
@@ -101,18 +103,72 @@ The Codespace will automatically forward these ports and make them accessible vi
 
 ### "ERR_CONNECTION_REFUSED" Errors
 
-This means the frontend can't reach the backend. Common causes:
+**Example error in browser console:**
+```
+localhost:3000/api/climbers:1 Failed to load resource: net::ERR_CONNECTION_REFUSED
+App.tsx:286 Failed to load data: TypeError: Failed to fetch
+```
 
-1. **Backend not running:** Make sure you've started the backend (`npm start`)
-2. **Database not configured:** Check that `DATABASE_URL` in `.env` is correct
-3. **Backend failed to start:** Check backend terminal for error messages
-4. **Dependencies not installed:** Run `./setup-codespace.sh` again
+This means the frontend can't reach the backend. Common causes and solutions:
+
+1. **Backend not running:** 
+   - **Solution:** Start the backend in a separate terminal: `npm start`
+   - Check the backend terminal for any startup errors
+
+2. **Database not configured:** 
+   - **Solution:** Check that `DATABASE_URL` in `.env` is a valid PostgreSQL connection string
+   - Use `./check-env.sh` to diagnose database connection issues
+   - See Step 2 above for database setup instructions
+
+3. **Backend failed to start:** 
+   - **Solution:** Check backend terminal for error messages
+   - Common error: "password authentication failed" → DATABASE_URL has wrong credentials
+   - Common error: "database does not exist" → Create the database in your PostgreSQL instance
+
+4. **Dependencies not installed:** 
+   - **Solution:** Run `./setup-codespace.sh` again
+
+**Quick diagnostic:**
+```bash
+# Run the diagnostic script to check your setup
+./check-env.sh
+
+# Test if backend is running
+curl http://localhost:3000/
+
+# Check if backend process is running
+lsof -i :3000
+```
 
 ### "Failed to connect to database" Error
 
+**Example error in backend console:**
+```
+Error: password authentication failed for user "postgres"
+```
+
+Solutions:
+
 1. **Check DATABASE_URL:** Make sure it's correct in `.env` or environment variable
+   ```bash
+   # Check current value
+   grep DATABASE_URL .env
+   
+   # Set it as environment variable instead
+   export DATABASE_URL='postgresql://user:pass@host:5432/dbname'
+   ```
+
 2. **Cloud database:** Verify the connection string from your cloud provider
-3. **Local database:** Make sure PostgreSQL service is running (`sudo service postgresql status`)
+   - For Neon: Use the connection string from project dashboard
+   - For Supabase: Use "Transaction pooling" connection string
+   - Make sure to include password in the connection string
+
+3. **Local database:** Make sure PostgreSQL service is running
+   ```bash
+   sudo service postgresql status
+   # If not running:
+   sudo service postgresql start
+   ```
 
 ### Port Already in Use
 
