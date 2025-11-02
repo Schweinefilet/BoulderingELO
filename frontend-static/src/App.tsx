@@ -576,11 +576,11 @@ export default function App(){
   }
 
   return (
-    <div style={{fontFamily:'Inter, Arial, sans-serif',padding:20,maxWidth:1000,margin:'0 auto',position:'relative'}}>
+    <div style={{fontFamily:'Inter, Arial, sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
       <BackgroundBeams />
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-        <div style={{display:'flex',alignItems:'center',gap:16}}>
-          <h1 style={{margin:0}}>BoulderingELO</h1>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+          <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
           <a 
             href="https://github.com/Schweinefilet/BoulderingELO" 
             target="_blank" 
@@ -589,7 +589,7 @@ export default function App(){
               color:'#3b82f6',
               textDecoration:'none',
               fontWeight:'600',
-              fontSize:14,
+              fontSize:'clamp(12px, 2.5vw, 14px)',
               transition:'color 0.2s'
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
@@ -726,7 +726,7 @@ export default function App(){
             <div style={{
               backgroundColor:'#0f172a',
               borderRadius:8,
-              overflow:'hidden',
+              overflow:'auto',
               border:'1px solid #334155'
             }}>
               {/* Header */}
@@ -740,11 +740,12 @@ export default function App(){
                 fontSize:13,
                 color:'#94a3b8',
                 borderBottom:'1px solid #334155',
-                alignItems:'center'
+                alignItems:'center',
+                minWidth:700
               }}>
                 <div style={{textAlign:'center'}}>#</div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
-                  <span style={{display:'inline-block',width:24,height:24,borderRadius:'50%',backgroundColor:'transparent'}} />
+                  <div style={{display:'inline-block',width:24,height:24,flexShrink:0}} />
                   <span>Climber</span>
                 </div>
                 <div style={{textAlign:'center'}}>Global Ranking</div>
@@ -789,7 +790,8 @@ export default function App(){
                         borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
                         alignItems:'center',
                         transition:'background-color 0.2s',
-                        cursor:'pointer'
+                        cursor:'pointer',
+                        minWidth:700
                       }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? '#0f172a' : '#1a1f2e'}
@@ -1300,7 +1302,7 @@ export default function App(){
           </div>
           
           {/* Video Grid */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(400px, 1fr))',gap:16}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(min(400px, 100%), 1fr))',gap:16}}>
             {videos.map(video => {
               const votes = video.votes || [];
               const upvotes = votes.filter(v => v.vote === 'up').length;
@@ -1670,13 +1672,17 @@ export default function App(){
           display:'flex',
           justifyContent:'center',
           alignItems:'center',
-          zIndex:1000
+          zIndex:1000,
+          padding:20,
+          overflowY:'auto'
         }}>
           <GlowBorder glowColor="rgba(16, 185, 129, 0.5)" borderRadius={12} backgroundColor="#1e293b">
             <div style={{
               padding:32,
               width:500,
-              maxWidth:'90%'
+              maxWidth:'100%',
+              maxHeight:'90vh',
+              overflowY:'auto'
             }}>
               <h2 style={{marginTop:0,marginBottom:24}}>Account Settings</h2>
               <form onSubmit={async (e) => {
@@ -2082,7 +2088,7 @@ export default function App(){
               {/* Header Section - osu! style */}
               <div style={{
                 background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                padding: '32px',
+                padding: 'clamp(16px, 4vw, 32px)',
                 borderTopLeftRadius: 10,
                 borderTopRightRadius: 10,
                 position: 'relative'
@@ -2100,17 +2106,18 @@ export default function App(){
                     borderRadius:6,
                     fontSize:14,
                     fontWeight:'600',
-                    cursor:'pointer'
+                    cursor:'pointer',
+                    zIndex:10
                   }}
                 >
                   ✕
                 </button>
                 
-                <div style={{display:'flex', gap:24, alignItems:'flex-start'}}>
-                  <div style={{flex:1}}>
-                    <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8}}>
+                <div style={{display:'flex', gap:24, alignItems:'flex-start', flexWrap:'wrap'}}>
+                  <div style={{flex:1, minWidth:200}}>
+                    <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8, flexWrap:'wrap'}}>
                       <FlagEmoji countryCode={profileClimber?.country} size={40} />
-                      <h1 style={{margin:0, fontSize:36, fontWeight:'700', color:'white'}}>
+                      <h1 style={{margin:0, fontSize:'clamp(24px, 5vw, 36px)', fontWeight:'700', color:'white'}}>
                         {profileClimber.name}
                       </h1>
                     </div>
@@ -2130,7 +2137,7 @@ export default function App(){
                     borderRadius:8,
                     minWidth:200,
                     border:'1px solid rgba(255,255,255,0.1)',
-                    marginRight:60
+                    marginRight:0
                   }}>
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranked Score</div>
