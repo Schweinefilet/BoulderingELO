@@ -561,7 +561,7 @@ export default function App(){
             onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
           >
-            ⭐ GitHub
+            ⭐ GitHub Repository (please give it a star!)
           </a>
         </div>
         <div style={{display:'flex',gap:12,alignItems:'center'}}>
