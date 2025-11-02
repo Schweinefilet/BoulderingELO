@@ -814,16 +814,34 @@ export default function App(){
                 </button>
               </div>
 
-              <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:14,border:'1px solid #475569'}}>
+              <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:13,border:'1px solid #475569'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
-                <div style={{marginBottom:10,lineHeight:'1.6'}}>
-                  <strong style={{color:'#94a3b8'}}>Mid Wall:</strong> <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{WALL_TOTALS.midWall.yellow}</span> yellows, <span style={{color:'#f59e0b',fontWeight:'600'}}>{wallCounts.midWall.orange}/{WALL_TOTALS.midWall.orange}</span> oranges
+                <div style={{marginBottom:8,lineHeight:'1.6'}}>
+                  <strong style={{color:'#94a3b8'}}>Mid Wall:</strong>{' '}
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.midWall.green}/{WALL_TOTALS.midWall.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.blue}/{WALL_TOTALS.midWall.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{WALL_TOTALS.midWall.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.midWall.orange}/{WALL_TOTALS.midWall.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.midWall.red}/{WALL_TOTALS.midWall.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.midWall.black}/{WALL_TOTALS.midWall.black || '?'}</span> black
                 </div>
-                <div style={{marginBottom:10,lineHeight:'1.6'}}>
-                  <strong style={{color:'#94a3b8'}}>Overhang:</strong> <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{WALL_TOTALS.overhang.yellow}</span> yellows, <span style={{color:'#f59e0b',fontWeight:'600'}}>{wallCounts.overhang.orange}/{WALL_TOTALS.overhang.orange}</span> oranges
+                <div style={{marginBottom:8,lineHeight:'1.6'}}>
+                  <strong style={{color:'#94a3b8'}}>Overhang:</strong>{' '}
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.overhang.green}/{WALL_TOTALS.overhang.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.blue}/{WALL_TOTALS.overhang.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{WALL_TOTALS.overhang.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.overhang.orange}/{WALL_TOTALS.overhang.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.overhang.red}/{WALL_TOTALS.overhang.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.overhang.black}/{WALL_TOTALS.overhang.black || '?'}</span> black
                 </div>
                 <div style={{lineHeight:'1.6'}}>
-                  <strong style={{color:'#94a3b8'}}>Side Wall:</strong> <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{WALL_TOTALS.sideWall.yellow}</span> yellows, <span style={{color:'#f59e0b',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{WALL_TOTALS.sideWall.orange}</span> oranges
+                  <strong style={{color:'#94a3b8'}}>Side Wall:</strong>{' '}
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.sideWall.green}/{WALL_TOTALS.sideWall.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.blue}/{WALL_TOTALS.sideWall.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{WALL_TOTALS.sideWall.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{WALL_TOTALS.sideWall.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.sideWall.red}/{WALL_TOTALS.sideWall.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.sideWall.black}/{WALL_TOTALS.sideWall.black || '?'}</span> black
                 </div>
               </div>
             </div>
@@ -1577,10 +1595,27 @@ export default function App(){
           .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const profileLeaderboardEntry = leaderboard.find((e:any) => e.climber === profileClimber?.name);
         
-        // Calculate peak rank by simulating historical rankings
-        let peakRank = null;
+        // Calculate total climbs by color
+        const totalClimbs = {
+          green: 0,
+          blue: 0,
+          yellow: 0,
+          orange: 0,
+          red: 0,
+          black: 0
+        };
+        profileSessions.forEach((s:any) => {
+          totalClimbs.green += s.green || 0;
+          totalClimbs.blue += s.blue || 0;
+          totalClimbs.yellow += s.yellow || 0;
+          totalClimbs.orange += s.orange || 0;
+          totalClimbs.red += s.red || 0;
+          totalClimbs.black += s.black || 0;
+        });
+        
+        // Calculate rank history
+        const rankHistory: {date: string, rank: number}[] = [];
         if (profileSessions.length > 0) {
-          // Group all sessions by date and calculate cumulative scores
           const allSessionsByDate = sessions
             .map((s:any) => ({...s, date: new Date(s.date)}))
             .sort((a:any, b:any) => a.date.getTime() - b.date.getTime());
@@ -1594,7 +1629,6 @@ export default function App(){
             const currentScore = climberScores.get(session.climberId) || 0;
             climberScores.set(session.climberId, currentScore + session.score);
             
-            // Calculate rankings at this point in time
             const rankings = Array.from(climberScores.entries())
               .map(([id, score]) => ({id, score}))
               .sort((a, b) => b.score - a.score);
@@ -1603,12 +1637,21 @@ export default function App(){
             if (currentRank > 0 && currentRank < bestRank) {
               bestRank = currentRank;
             }
+            
+            if (session.climberId === viewingProfile) {
+              rankHistory.push({
+                date: new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                rank: currentRank
+              });
+            }
           });
           
-          peakRank = bestRank !== Infinity ? bestRank : null;
+          var peakRank = bestRank !== Infinity ? bestRank : null;
         }
         
         if (!profileClimber) return null;
+        
+        const currentRank = leaderboard.findIndex((e:any) => e.climber === profileClimber.name) + 1;
         
         return (
           <div style={{
@@ -1627,133 +1670,227 @@ export default function App(){
           }}>
             <div style={{
               backgroundColor:'#1e293b',
-              padding:32,
-              borderRadius:8,
-              border:'1px solid #475569',
-              maxWidth:800,
+              borderRadius:12,
+              border:'2px solid #475569',
+              maxWidth:1000,
               width:'100%',
               maxHeight:'90vh',
               overflowY:'auto'
             }}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-                <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>{profileClimber.name}</h2>
+              {/* Header Section - osu! style */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+                padding: '32px',
+                borderTopLeftRadius: 10,
+                borderTopRightRadius: 10,
+                position: 'relative'
+              }}>
                 <button
                   onClick={() => setViewingProfile(null)}
                   style={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
                     padding:'8px 16px',
-                    backgroundColor:'#475569',
+                    backgroundColor:'rgba(0,0,0,0.3)',
                     color:'white',
-                    border:'none',
+                    border:'1px solid rgba(255,255,255,0.2)',
                     borderRadius:6,
                     fontSize:14,
                     fontWeight:'600',
                     cursor:'pointer'
                   }}
                 >
-                  Close
+                  ✕
                 </button>
-              </div>
-              
-              {/* Stats */}
-              <div style={{
-                backgroundColor:'#0f172a',
-                padding:20,
-                borderRadius:8,
-                marginBottom:24,
-                border:'1px solid #475569'
-              }}>
-                <h3 style={{marginTop:0,marginBottom:16,fontSize:20}}>Stats</h3>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))',gap:16}}>
-                  <div>
-                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Total Score</div>
-                    <div style={{fontSize:24,fontWeight:'700',color:'#3b82f6'}}>
-                      {profileLeaderboardEntry?.total_score.toFixed(2) || '0.00'}
+                
+                <div style={{display:'flex', gap:24, alignItems:'flex-start'}}>
+                  <div style={{flex:1}}>
+                    <h1 style={{margin:0, fontSize:36, fontWeight:'700', color:'white', marginBottom:8}}>
+                      {profileClimber.name}
+                    </h1>
+                    <div style={{display:'flex', gap:32, marginTop:16}}>
+                      <div>
+                        <div style={{fontSize:14, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Global Ranking</div>
+                        <div style={{fontSize:32, fontWeight:'700', color:'white'}}>
+                          #{currentRank || 'N/A'}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Sessions</div>
-                    <div style={{fontSize:24,fontWeight:'700',color:'#10b981'}}>
-                      {profileSessions.length}
+                  
+                  <div style={{
+                    backgroundColor:'rgba(0,0,0,0.2)',
+                    padding:20,
+                    borderRadius:8,
+                    minWidth:200,
+                    border:'1px solid rgba(255,255,255,0.1)'
+                  }}>
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranked Score</div>
+                      <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
+                        {profileLeaderboardEntry?.total_score.toFixed(2) || '0.00'}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Current Rank</div>
-                    <div style={{fontSize:24,fontWeight:'700',color:'#fbbf24'}}>
-                      #{(leaderboard.findIndex((e:any) => e.climber === profileClimber.name) + 1) || 'N/A'}
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Play Count</div>
+                      <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
+                        {profileSessions.length}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Peak Rank</div>
-                    <div style={{fontSize:24,fontWeight:'700',color:'#a855f7'}}>
-                      {peakRank ? `#${peakRank}` : 'N/A'}
+                    <div>
+                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Peak Rank</div>
+                      <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
+                        {peakRank ? `#${peakRank}` : 'N/A'}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Session History */}
-              <div>
-                <h3 style={{marginTop:0,marginBottom:16,fontSize:20}}>Session History</h3>
-                {profileSessions.length > 0 ? (
-                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                    {profileSessions.map((session:any) => (
-                      <div 
-                        key={session.id}
-                        style={{
-                          backgroundColor:'#0f172a',
-                          padding:16,
-                          borderRadius:8,
-                          border:'1px solid #475569'
-                        }}
-                      >
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
-                          <div>
-                            <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
-                              {new Date(session.date).toLocaleDateString('en-US', { 
-                                weekday: 'short', 
-                                year: 'numeric', 
-                                month: 'short', 
-                                day: 'numeric' 
-                              })}
-                            </div>
-                            <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
-                              Score: {session.score.toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{display:'flex',gap:16,flexWrap:'wrap',marginTop:12,fontSize:14}}>
-                          {session.black > 0 && <span style={{color:'#d1d5db'}}>⚫ Black: {session.black}</span>}
-                          {session.red > 0 && <span style={{color:'#ef4444'}}>🔴 Red: {session.red}</span>}
-                          {session.orange > 0 && <span style={{color:'#f97316'}}>🟠 Orange: {session.orange}</span>}
-                          {session.yellow > 0 && <span style={{color:'#eab308'}}>🟡 Yellow: {session.yellow}</span>}
-                          {session.blue > 0 && <span style={{color:'#3b82f6'}}>🔵 Blue: {session.blue}</span>}
-                          {session.green > 0 && <span style={{color:'#10b981'}}>🟢 Green: {session.green}</span>}
-                        </div>
-                        {session.notes && (
-                          <div style={{
-                            marginTop:12,
-                            fontSize:14,
-                            color:'#cbd5e1',
-                            fontStyle:'italic',
-                            borderTop:'1px solid #475569',
-                            paddingTop:12
-                          }}>
-                            {session.notes}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+
+              {/* Stats Section */}
+              <div style={{padding:32}}>
+                {/* Total Climbs by Color */}
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:24,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:24
+                }}>
+                  <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>TOTAL CLIMBS</h3>
+                  <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16}}>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.green}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.green + WALL_TOTALS.midWall.green + WALL_TOTALS.sideWall.green || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.blue}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.blue + WALL_TOTALS.midWall.blue + WALL_TOTALS.sideWall.blue || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.yellow}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.yellow + WALL_TOTALS.midWall.yellow + WALL_TOTALS.sideWall.yellow || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.orange}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.orange + WALL_TOTALS.midWall.orange + WALL_TOTALS.sideWall.orange || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.red}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.red + WALL_TOTALS.midWall.red + WALL_TOTALS.sideWall.red || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.black}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.black + WALL_TOTALS.midWall.black + WALL_TOTALS.sideWall.black || '?'}</div>
+                    </div>
                   </div>
-                ) : (
+                </div>
+
+                {/* Rank History Graph */}
+                {rankHistory.length > 0 && (
                   <div style={{
-                    textAlign:'center',
-                    padding:32,
-                    color:'#64748b',
-                    fontSize:16
+                    backgroundColor:'#0f172a',
+                    padding:24,
+                    borderRadius:8,
+                    border:'1px solid #475569',
+                    marginBottom:24
                   }}>
-                    No sessions yet
+                    <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RANK HISTORY</h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={rankHistory}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                        <XAxis 
+                          dataKey="date" 
+                          stroke="#94a3b8"
+                          style={{fontSize:12}}
+                        />
+                        <YAxis 
+                          stroke="#94a3b8"
+                          reversed
+                          domain={[1, 'dataMax']}
+                          style={{fontSize:12}}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor:'#1e293b',
+                            border:'1px solid #475569',
+                            borderRadius:6
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="rank" 
+                          stroke="#3b82f6" 
+                          strokeWidth={3}
+                          dot={{fill:'#3b82f6', r:4}}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
+
+                {/* Session History */}
+                <div>
+                  <h3 style={{marginTop:0, marginBottom:16, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RECENT SESSIONS</h3>
+                  {profileSessions.length > 0 ? (
+                    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                      {profileSessions.slice(0, 5).map((session:any) => (
+                        <div 
+                          key={session.id}
+                          style={{
+                            backgroundColor:'#0f172a',
+                            padding:16,
+                            borderRadius:8,
+                            border:'1px solid #475569'
+                          }}
+                        >
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
+                            <div>
+                              <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
+                                {new Date(session.date).toLocaleDateString('en-US', { 
+                                  weekday: 'short', 
+                                  year: 'numeric', 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                })}
+                              </div>
+                              <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                                Score: {session.score.toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{display:'flex',gap:16,flexWrap:'wrap',marginTop:12,fontSize:14}}>
+                            {session.green > 0 && <span style={{color:'#10b981'}}>🟢 {session.green}</span>}
+                            {session.blue > 0 && <span style={{color:'#3b82f6'}}>� {session.blue}</span>}
+                            {session.yellow > 0 && <span style={{color:'#eab308'}}>� {session.yellow}</span>}
+                            {session.orange > 0 && <span style={{color:'#f97316'}}>� {session.orange}</span>}
+                            {session.red > 0 && <span style={{color:'#ef4444'}}>� {session.red}</span>}
+                            {session.black > 0 && <span style={{color:'#d1d5db'}}>⚫ {session.black}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      textAlign:'center',
+                      padding:32,
+                      color:'#64748b',
+                      fontSize:16,
+                      backgroundColor:'#0f172a',
+                      borderRadius:8,
+                      border:'1px solid #475569'
+                    }}>
+                      No sessions yet
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
