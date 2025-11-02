@@ -33,7 +33,8 @@ export async function getSessions(params?: {
 export async function createSession(data: {
   climberId: number;
   date: string;
-  counts: Counts;
+  counts?: Counts;
+  wallCounts?: any;
   notes?: string;
 }): Promise<Session> {
   const res = await fetch(`${API_BASE}/api/sessions`, {
