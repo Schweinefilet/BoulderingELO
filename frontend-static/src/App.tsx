@@ -1710,8 +1710,14 @@ export default function App(){
                   setSettingsError(err.message || 'Failed to update settings');
                 }
               }}>
-                <div style={{marginBottom:16}}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Country</label>
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:16,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:16
+                }}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Country</label>
                   <select
                     value={settingsCountry}
                     onChange={e => setSettingsCountry(e.target.value)}
@@ -1720,7 +1726,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#0f172a',
+                      backgroundColor:'#1e293b',
                       color:'white',
                       fontSize:14
                     }}
@@ -1739,8 +1745,15 @@ export default function App(){
                     </div>
                   )}
                 </div>
-                <div style={{marginBottom:16}}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14}}>When Did You Start Bouldering?</label>
+                
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:16,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:16
+                }}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>When Did You Start Bouldering?</label>
                   <input
                     type="text"
                     value={settingsStarted}
@@ -1751,14 +1764,21 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#0f172a',
+                      backgroundColor:'#1e293b',
                       color:'white',
                       fontSize:14
                     }}
                   />
                 </div>
-                <div style={{marginBottom:16}}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Bio</label>
+                
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:16,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:16
+                }}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Bio</label>
                   <textarea
                     value={settingsBio}
                     onChange={e => setSettingsBio(e.target.value)}
@@ -1769,7 +1789,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#0f172a',
+                      backgroundColor:'#1e293b',
                       color:'white',
                       fontSize:14,
                       fontFamily:'inherit',
@@ -1780,13 +1800,15 @@ export default function App(){
                 
                 {/* Change Password Section */}
                 <div style={{
-                  marginTop:24,
-                  paddingTop:24,
-                  borderTop:'1px solid #475569'
+                  backgroundColor:'#0f172a',
+                  padding:16,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginTop:8
                 }}>
                   <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Change Password</h3>
                   <div style={{marginBottom:16}}>
-                    <label style={{display:'block',marginBottom:8,fontSize:14}}>Current Password</label>
+                    <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Current Password</label>
                     <input
                       type="password"
                       value={currentPassword}
@@ -1796,14 +1818,14 @@ export default function App(){
                         padding:12,
                         borderRadius:6,
                         border:'1px solid #475569',
-                        backgroundColor:'#0f172a',
+                        backgroundColor:'#1e293b',
                         color:'white',
                         fontSize:14
                       }}
                     />
                   </div>
                   <div style={{marginBottom:16}}>
-                    <label style={{display:'block',marginBottom:8,fontSize:14}}>New Password</label>
+                    <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>New Password</label>
                     <input
                       type="password"
                       value={newPassword}
@@ -1813,7 +1835,7 @@ export default function App(){
                         padding:12,
                         borderRadius:6,
                         border:'1px solid #475569',
-                        backgroundColor:'#0f172a',
+                        backgroundColor:'#1e293b',
                         color:'white',
                         fontSize:14
                       }}
@@ -1821,7 +1843,7 @@ export default function App(){
                     />
                   </div>
                   <div style={{marginBottom:16}}>
-                    <label style={{display:'block',marginBottom:8,fontSize:14}}>Confirm New Password</label>
+                    <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Confirm New Password</label>
                     <input
                       type="password"
                       value={confirmPassword}
@@ -1831,7 +1853,7 @@ export default function App(){
                         padding:12,
                         borderRadius:6,
                         border:'1px solid #475569',
-                        backgroundColor:'#0f172a',
+                        backgroundColor:'#1e293b',
                         color:'white',
                         fontSize:14
                       }}
@@ -2137,7 +2159,7 @@ export default function App(){
                     borderRadius:8,
                     minWidth:200,
                     border:'1px solid rgba(255,255,255,0.1)',
-                    marginRight:0
+                    marginRight:60
                   }}>
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranked Score</div>

@@ -229,7 +229,8 @@ export function FlagEmoji({ countryCode, size = 20 }: FlagEmojiProps) {
         borderRadius: 2,
         display: 'inline-block',
         verticalAlign: 'middle',
-        filter: isIsrael ? 'grayscale(100%)' : 'none'
+        filter: isIsrael ? 'grayscale(100%) brightness(0.3)' : 'none',
+        opacity: isIsrael ? 0.15 : 1
       }}
       onError={() => setErrored(true)}
     />
