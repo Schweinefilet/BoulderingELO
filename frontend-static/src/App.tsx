@@ -4,6 +4,7 @@ import * as store from './lib/storage'
 import * as api from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { GlowingCard } from './components/ui/glowing-card'
+import { HoverBorderGradient } from './components/ui/hover-border-gradient'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -704,12 +705,15 @@ export default function App(){
                 </div>
               )}
 
-              <button 
-                onClick={addClimb} 
-                style={{width:'100%',padding:'12px',borderRadius:6,backgroundColor:'#10b981',color:'white',border:'none',cursor:'pointer',fontWeight:'600',fontSize:14,marginBottom:16}}
-              >
-                Add Climb
-              </button>
+              <div style={{marginBottom:16}}>
+                <HoverBorderGradient
+                  onClick={addClimb}
+                  containerClassName="w-full"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-600 text-white px-4 py-3 font-semibold text-sm"
+                >
+                  Add Climb
+                </HoverBorderGradient>
+              </div>
 
               <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:14,border:'1px solid #475569'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
@@ -785,12 +789,13 @@ export default function App(){
             </div>
           )}
 
-          <button 
+          <HoverBorderGradient
             onClick={submit}
-            style={{width:'100%',padding:'14px',borderRadius:6,backgroundColor:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:'600',fontSize:16,marginTop:16}}
+            containerClassName="w-full mt-4"
+            className="w-full bg-blue-600 hover:bg-blue-500 dark:bg-blue-600 text-white px-4 py-3.5 font-semibold text-base"
           >
             Add Session
-          </button>
+          </HoverBorderGradient>
         </div>
 
         <div style={{width:300}}>

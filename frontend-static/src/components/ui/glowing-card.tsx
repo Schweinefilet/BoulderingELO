@@ -17,9 +17,9 @@ interface GlowingCardProps {
 
 export const GlowingCard = ({
   children,
-  blur = 15,
-  borderWidth = 3,
-  spread = 300,
+  blur = 20,
+  borderWidth = 5,
+  spread = 350,
   glow = true,
   disabled = false,
   proximity = 200,
