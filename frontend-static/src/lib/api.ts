@@ -9,6 +9,9 @@ export interface Climber {
   name: string;
   username?: string;
   role?: 'admin' | 'user';
+  country?: string;
+  started_bouldering?: string;
+  bio?: string;
 }
 
 export interface User {
@@ -146,6 +149,15 @@ export async function changePassword(currentPassword: string, newPassword: strin
     body: JSON.stringify({ currentPassword, newPassword })
   });
   return handleResponse<{ success: boolean; message: string }>(response);
+}
+
+export async function updateUserSettings(settings: { country?: string; started_bouldering?: string; bio?: string }): Promise<{ success: boolean; user: any }> {
+  const response = await fetch(`${API_URL}/api/user/settings`, {
+    method: 'PUT',
+    headers: getHeaders(true),
+    body: JSON.stringify(settings)
+  });
+  return handleResponse<{ success: boolean; user: any }>(response);
 }
 
 export async function mergeKeithAccounts(): Promise<{ success: boolean; message: string; details: any }> {

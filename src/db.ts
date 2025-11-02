@@ -121,6 +121,15 @@ export async function initDB() {
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='status') THEN
         ALTER TABLE sessions ADD COLUMN status TEXT DEFAULT 'approved';
       END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='country') THEN
+        ALTER TABLE climbers ADD COLUMN country TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='started_bouldering') THEN
+        ALTER TABLE climbers ADD COLUMN started_bouldering TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='bio') THEN
+        ALTER TABLE climbers ADD COLUMN bio TEXT;
+      END IF;
     END $$;
   `);
 }
@@ -372,6 +381,15 @@ export async function getClimberByUsername(username: string) {
 
 export async function updateClimberPassword(climberId: number, password: string) {
   await pool.query('UPDATE climbers SET password = $1 WHERE id = $2', [password, climberId]);
+}
+
+export async function updateUserSettings(climberId: number, settings: { country?: string; started_bouldering?: string; bio?: string }) {
+  const { country, started_bouldering, bio } = settings;
+  const result = await pool.query(
+    'UPDATE climbers SET country = $1, started_bouldering = $2, bio = $3 WHERE id = $4 RETURNING *',
+    [country || null, started_bouldering || null, bio || null, climberId]
+  );
+  return result.rows[0];
 }
 
 export async function setClimberRole(climberId: number, role: string) {

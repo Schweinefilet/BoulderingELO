@@ -5,6 +5,7 @@ import * as api from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
+import { GlowBorder } from './components/ui/glow-border'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -300,6 +301,17 @@ export default function App(){
   // Video review state
   const [videos, setVideos] = useState<api.VideoReview[]>([])
   const [videoFilter, setVideoFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  
+  // Settings modal state
+  const [showSettings, setShowSettings] = useState(false)
+  const [settingsCountry, setSettingsCountry] = useState('')
+  const [settingsStarted, setSettingsStarted] = useState('')
+  const [settingsBio, setSettingsBio] = useState('')
+  const [settingsError, setSettingsError] = useState<string|null>(null)
+  const [settingsSuccess, setSettingsSuccess] = useState(false)
+  
+  // Leaderboard pagination
+  const [showAllLeaderboard, setShowAllLeaderboard] = useState(false)
 
   const totalCounts = combineCounts(wallCounts);
 
@@ -587,6 +599,28 @@ export default function App(){
                 </button>
               )}
               <button
+                onClick={() => {
+                  // Load current settings when opening modal
+                  const currentClimber = climbers.find(c => c.id === user?.climberId);
+                  if (currentClimber) {
+                    setSettingsCountry(currentClimber.country || '');
+                    setSettingsStarted(currentClimber.started_bouldering || '');
+                    setSettingsBio(currentClimber.bio || '');
+                  }
+                  setShowSettings(true);
+                }}
+                style={{
+                  padding:'8px 16px',
+                  backgroundColor:'#10b981',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  cursor:'pointer'
+                }}
+              >
+                Settings
+              </button>
+              <button
                 onClick={() => setShowPasswordChange(true)}
                 style={{
                   padding:'8px 16px',
@@ -675,44 +709,188 @@ export default function App(){
       
       {/* Leaderboard - visible to everyone */}
       <section style={{marginBottom:20}}>
-        <GlowingCard>
-          <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569'}}>
-            <h2 style={{marginTop:0,marginBottom:16,fontSize:24,fontWeight:'600'}}>Leaderboard</h2>
-            <ol style={{margin:0,paddingLeft:24,display:'flex',flexDirection:'column',gap:12}}>
-              {leaderboard.map((e:any,i:number)=> {
+        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+          <div style={{padding:24}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Scoring Formula</h2>
+            </div>
+            <div style={{
+              backgroundColor:'#0f172a',
+              borderRadius:8,
+              overflow:'hidden',
+              border:'1px solid #334155'
+            }}>
+              {/* Header */}
+              <div style={{
+                display:'grid',
+                gridTemplateColumns:'60px 2fr 1fr 1fr 1fr 60px 60px 60px',
+                gap:16,
+                padding:'16px 20px',
+                backgroundColor:'#1e293b',
+                fontWeight:'600',
+                fontSize:13,
+                color:'#94a3b8',
+                borderBottom:'1px solid #334155'
+              }}>
+                <div style={{textAlign:'center'}}>#</div>
+                <div>Player</div>
+                <div style={{textAlign:'right'}}>Accuracy</div>
+                <div style={{textAlign:'right'}}>Play Count</div>
+                <div style={{textAlign:'right'}}>Ranked Score</div>
+                <div style={{textAlign:'right',color:'#10b981'}}>Performance</div>
+                <div style={{textAlign:'center'}}>SS</div>
+                <div style={{textAlign:'center'}}>S</div>
+                <div style={{textAlign:'center'}}>A</div>
+              </div>
+              
+              {/* Rows */}
+              {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 10)).map((e:any,i:number)=> {
                 const climber = climbers.find((c:any) => c.name === e.climber);
+                const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
+                const playCount = climberSessions.length;
+                
+                // Calculate accuracy (placeholder - you can customize this)
+                const accuracy = '97.40%';
+                
+                // Calculate performance (example: based on recent score gains)
+                const performance = playCount > 1 
+                  ? Math.round((climberSessions[0]?.score - climberSessions[1]?.score) || 0)
+                  : 0;
+                  
+                const performanceColor = performance > 0 ? '#10b981' : performance < 0 ? '#ef4444' : '#64748b';
+                
+                // Get country flag (if set)
+                const countryFlag = climber?.country || '🌐';
+                
                 return (
-                  <li key={i} style={{fontSize:16,lineHeight:'1.5'}}>
-                    <button
-                      onClick={() => climber && setViewingProfile(climber.id)}
-                      style={{
-                        background:'none',
-                        border:'none',
-                        padding:0,
-                        fontWeight:'600',
-                        color:'#94a3b8',
-                        cursor:'pointer',
-                        textDecoration:'underline',
-                        fontSize:16
-                      }}
-                    >
-                      {e.climber}
-                    </button>
-                    :
-                    <span style={{marginLeft:8,color:'#3b82f6',fontWeight:'700',fontSize:18}}>{e.total_score.toFixed(2)}</span>
-                  </li>
+                  <div 
+                    key={i}
+                    style={{
+                      display:'grid',
+                      gridTemplateColumns:'60px 2fr 1fr 1fr 1fr 60px 60px 60px',
+                      gap:16,
+                      padding:'16px 20px',
+                      backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
+                      borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
+                      alignItems:'center',
+                      transition:'background-color 0.2s',
+                      cursor:'pointer'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? '#0f172a' : '#1a1f2e'}
+                    onClick={() => climber && setViewingProfile(climber.id)}
+                  >
+                    {/* Rank */}
+                    <div style={{
+                      textAlign:'center',
+                      fontWeight:'700',
+                      fontSize:16,
+                      color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b'
+                    }}>
+                      #{i + 1}
+                    </div>
+                    
+                    {/* Player with flag */}
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <span style={{fontSize:20}}>{countryFlag}</span>
+                      <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
+                    </div>
+                    
+                    {/* Accuracy */}
+                    <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{accuracy}</div>
+                    
+                    {/* Play Count */}
+                    <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{playCount.toLocaleString()}</div>
+                    
+                    {/* Ranked Score */}
+                    <div style={{textAlign:'right',fontWeight:'700',fontSize:16,color:'#3b82f6'}}>
+                      {e.total_score.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                    </div>
+                    
+                    {/* Performance */}
+                    <div style={{
+                      textAlign:'right',
+                      fontWeight:'700',
+                      fontSize:14,
+                      color:performanceColor
+                    }}>
+                      {performance > 0 ? `+${performance}` : performance}
+                    </div>
+                    
+                    {/* Grade badges (placeholder) */}
+                    <div style={{textAlign:'center',fontSize:14,color:'#64748b'}}>-</div>
+                    <div style={{textAlign:'center',fontSize:14,color:'#64748b'}}>-</div>
+                    <div style={{textAlign:'center',fontSize:14,color:'#64748b'}}>-</div>
+                  </div>
                 );
               })}
-            </ol>
+              
+              {/* Show All button */}
+              {!showAllLeaderboard && leaderboard.length > 10 && (
+                <div style={{
+                  padding:16,
+                  textAlign:'center',
+                  backgroundColor:'#1e293b',
+                  borderTop:'1px solid #334155'
+                }}>
+                  <button
+                    onClick={() => setShowAllLeaderboard(true)}
+                    style={{
+                      padding:'10px 32px',
+                      backgroundColor:'#3b82f6',
+                      color:'white',
+                      border:'none',
+                      borderRadius:8,
+                      fontSize:14,
+                      fontWeight:'600',
+                      cursor:'pointer',
+                      transition:'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                  >
+                    Show All ({leaderboard.length} players)
+                  </button>
+                </div>
+              )}
+              
+              {showAllLeaderboard && leaderboard.length > 10 && (
+                <div style={{
+                  padding:16,
+                  textAlign:'center',
+                  backgroundColor:'#1e293b',
+                  borderTop:'1px solid #334155'
+                }}>
+                  <button
+                    onClick={() => setShowAllLeaderboard(false)}
+                    style={{
+                      padding:'10px 32px',
+                      backgroundColor:'#475569',
+                      color:'white',
+                      border:'none',
+                      borderRadius:8,
+                      fontSize:14,
+                      fontWeight:'600',
+                      cursor:'pointer',
+                      transition:'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#64748b'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#475569'}
+                  >
+                    Show Less
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </GlowingCard>
+        </GlowBorder>
       </section>
-      
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-          <div style={{flex:1,minWidth:300,backgroundColor:'#1e293b',padding:24,borderRadius:12,border:'2px solid #475569'}}>
-            <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>New Session</h2>
+          <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+            <div style={{flex:1,minWidth:300,padding:24}}>
+              <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>New Session</h2>
             
             <div style={{marginBottom:16}}>
               <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
@@ -992,12 +1170,14 @@ export default function App(){
             </div>
           </div>
         </div>
-      </section>
+          </GlowBorder>
+        </section>
       )}
 
       <section style={{marginTop:32}}>
-        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,border:'1px solid #475569'}}>
-          <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>Sessions</h2>
+        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+          <div style={{padding:24}}>
+            <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>Sessions</h2>
           <div>
             {(() => {
               // Group sessions by date
@@ -1057,12 +1237,14 @@ export default function App(){
               ));
             })()}
           </div>
-        </div>
+          </div>
+        </GlowBorder>
       </section>
 
       <section style={{marginTop:32}}>
-        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,border:'1px solid #475569'}}>
-          <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>🎥 Video Evidence Review</h2>
+        <GlowBorder glowColor="rgba(168, 85, 247, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+          <div style={{padding:24}}>
+            <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>🎥 Video Evidence Review</h2>
           
           {!api.isAuthenticated() && (
             <div style={{
@@ -1328,7 +1510,8 @@ export default function App(){
               {videoFilter === 'all' && 'No video submissions yet'}
             </p>
           )}
-        </div>
+          </div>
+        </GlowBorder>
       </section>
 
       <section style={{marginTop:24}}>
@@ -1607,6 +1790,180 @@ export default function App(){
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          backgroundColor:'rgba(0,0,0,0.7)',
+          display:'flex',
+          justifyContent:'center',
+          alignItems:'center',
+          zIndex:1000
+        }}>
+          <GlowBorder glowColor="rgba(16, 185, 129, 0.5)" borderRadius={12} backgroundColor="#1e293b">
+            <div style={{
+              padding:32,
+              width:500,
+              maxWidth:'90%'
+            }}>
+              <h2 style={{marginTop:0,marginBottom:24}}>Account Settings</h2>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setSettingsError(null);
+                setSettingsSuccess(false);
+                
+                try {
+                  await api.updateUserSettings({
+                    country: settingsCountry,
+                    started_bouldering: settingsStarted,
+                    bio: settingsBio
+                  });
+                  setSettingsSuccess(true);
+                  
+                  // Reload climbers data to reflect changes
+                  const loadedClimbers = await api.getClimbers();
+                  setClimbers(loadedClimbers);
+                  
+                  setTimeout(() => {
+                    setShowSettings(false);
+                    setSettingsSuccess(false);
+                  }, 2000);
+                } catch (err: any) {
+                  setSettingsError(err.message || 'Failed to update settings');
+                }
+              }}>
+                <div style={{marginBottom:16}}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Country Flag (emoji)</label>
+                  <input
+                    type="text"
+                    value={settingsCountry}
+                    onChange={e => setSettingsCountry(e.target.value)}
+                    placeholder="e.g., 🇺🇸, 🇬🇧, 🇨🇦"
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#0f172a',
+                      color:'white',
+                      fontSize:14
+                    }}
+                  />
+                </div>
+                <div style={{marginBottom:16}}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14}}>When Did You Start Bouldering?</label>
+                  <input
+                    type="text"
+                    value={settingsStarted}
+                    onChange={e => setSettingsStarted(e.target.value)}
+                    placeholder="e.g., 2020, January 2021"
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#0f172a',
+                      color:'white',
+                      fontSize:14
+                    }}
+                  />
+                </div>
+                <div style={{marginBottom:16}}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Bio</label>
+                  <textarea
+                    value={settingsBio}
+                    onChange={e => setSettingsBio(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    rows={4}
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#0f172a',
+                      color:'white',
+                      fontSize:14,
+                      fontFamily:'inherit',
+                      resize:'vertical'
+                    }}
+                  />
+                </div>
+                {settingsError && (
+                  <div style={{
+                    backgroundColor:'#dc2626',
+                    color:'white',
+                    padding:12,
+                    borderRadius:6,
+                    marginBottom:16,
+                    fontSize:14
+                  }}>
+                    {settingsError}
+                  </div>
+                )}
+                {settingsSuccess && (
+                  <div style={{
+                    backgroundColor:'#10b981',
+                    color:'white',
+                    padding:12,
+                    borderRadius:6,
+                    marginBottom:16,
+                    fontSize:14
+                  }}>
+                    Settings updated successfully!
+                  </div>
+                )}
+                <div style={{display:'flex',gap:12}}>
+                  <button
+                    type="submit"
+                    style={{
+                      flex:1,
+                      padding:12,
+                      backgroundColor:'#10b981',
+                      color:'white',
+                      border:'none',
+                      borderRadius:6,
+                      fontSize:16,
+                      fontWeight:'600',
+                      cursor:'pointer'
+                    }}
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSettings(false);
+                      setSettingsCountry('');
+                      setSettingsStarted('');
+                      setSettingsBio('');
+                      setSettingsError(null);
+                      setSettingsSuccess(false);
+                    }}
+                    style={{
+                      flex:1,
+                      padding:12,
+                      backgroundColor:'#475569',
+                      color:'white',
+                      border:'none',
+                      borderRadius:6,
+                      fontSize:16,
+                      fontWeight:'600',
+                      cursor:'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </GlowBorder>
         </div>
       )}
 

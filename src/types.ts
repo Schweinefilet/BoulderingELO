@@ -19,6 +19,9 @@ export type Climber = {
   username?: string;
   password?: string;
   role?: string;
+  country?: string;
+  started_bouldering?: string;
+  bio?: string;
 };
 
 export type Session = { id?: number; climberId: number; date: string; notes?: string; status?: string };

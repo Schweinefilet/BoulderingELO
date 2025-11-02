@@ -715,6 +715,17 @@ app.post('/api/videos/:id/reject', authenticateToken, requireAdmin, async (req: 
   }
 });
 
+// PUT /api/user/settings - Update user profile settings
+app.put('/api/user/settings', authenticateToken, async (req: any, res) => {
+  try {
+    const { country, started_bouldering, bio } = req.body;
+    const result = await db.updateUserSettings(req.user.climberId, { country, started_bouldering, bio });
+    res.json({ success: true, user: result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 // Initialize database and start server
