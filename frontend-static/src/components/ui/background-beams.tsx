@@ -3,11 +3,19 @@ import { motion } from "framer-motion";
 
 export function BackgroundBeams() {
   const beams = [
+    // Top area beams
+    { x1: "-20%", y1: "-10%", x2: "80%", y2: "90%" },
+    { x1: "-15%", y1: "0%", x2: "85%", y2: "100%" },
+    { x1: "-10%", y1: "5%", x2: "90%", y2: "105%" },
     { x1: "0%", y1: "0%", x2: "100%", y2: "100%" },
-    { x1: "-10%", y1: "10%", x2: "90%", y2: "110%" },
     { x1: "10%", y1: "-10%", x2: "110%", y2: "90%" },
-    { x1: "-5%", y1: "20%", x2: "95%", y2: "120%" },
-    { x1: "5%", y1: "-5%", x2: "105%", y2: "95%" }
+    { x1: "20%", y1: "-15%", x2: "120%", y2: "85%" },
+    
+    // Bottom area beams
+    { x1: "-10%", y1: "10%", x2: "90%", y2: "110%" },
+    { x1: "-5%", y1: "15%", x2: "95%", y2: "115%" },
+    { x1: "5%", y1: "-5%", x2: "105%", y2: "95%" },
+    { x1: "15%", y1: "5%", x2: "115%", y2: "105%" }
   ];
 
   return (
@@ -60,9 +68,9 @@ export function BackgroundBeams() {
               pathLength: [0, 1]
             }}
             transition={{
-              duration: 5 + index * 0.5,
+              duration: 5 + (index % 5) * 0.5,
               repeat: Infinity,
-              delay: index * 0.8,
+              delay: index * 0.6,
               ease: "easeInOut"
             }}
           />
