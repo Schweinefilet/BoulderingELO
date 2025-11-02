@@ -709,7 +709,7 @@ export default function App(){
                 <HoverBorderGradient
                   onClick={addClimb}
                   containerClassName=""
-                  className="bg-black dark:bg-black text-white px-6 py-2 font-semibold text-sm"
+                  className="bg-black dark:bg-black text-white px-8 py-3 font-semibold text-sm"
                 >
                   Add Climb
                 </HoverBorderGradient>
@@ -793,7 +793,7 @@ export default function App(){
             <HoverBorderGradient
               onClick={submit}
               containerClassName=""
-              className="bg-black dark:bg-black text-white px-8 py-2.5 font-semibold text-base"
+              className="bg-black dark:bg-black text-white px-10 py-3 font-semibold text-base"
             >
               Add Session
             </HoverBorderGradient>
