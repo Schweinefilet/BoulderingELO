@@ -705,11 +705,11 @@ export default function App(){
                 </div>
               )}
 
-              <div style={{marginBottom:16}}>
+              <div style={{marginBottom:16,display:'flex',justifyContent:'center'}}>
                 <HoverBorderGradient
                   onClick={addClimb}
-                  containerClassName="w-full"
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-600 text-white px-6 py-2 font-semibold text-sm"
+                  containerClassName=""
+                  className="bg-black dark:bg-black text-white px-6 py-2 font-semibold text-sm"
                 >
                   Add Climb
                 </HoverBorderGradient>
@@ -789,13 +789,15 @@ export default function App(){
             </div>
           )}
 
-          <HoverBorderGradient
-            onClick={submit}
-            containerClassName="w-full mt-4"
-            className="w-full bg-blue-600 hover:bg-blue-500 dark:bg-blue-600 text-white px-6 py-2.5 font-semibold text-base"
-          >
-            Add Session
-          </HoverBorderGradient>
+          <div style={{marginTop:16,display:'flex',justifyContent:'center'}}>
+            <HoverBorderGradient
+              onClick={submit}
+              containerClassName=""
+              className="bg-black dark:bg-black text-white px-8 py-2.5 font-semibold text-base"
+            >
+              Add Session
+            </HoverBorderGradient>
+          </div>
         </div>
 
         <div style={{width:300}}>
