@@ -120,7 +120,8 @@ app.post('/api/admin/create-account', async (req, res) => {
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const climber = await db.addClimber(name, username, hashedPassword, role || 'user');
+    // Convert username to lowercase for case-insensitive storage
+    const climber = await db.addClimber(name, username.toLowerCase(), hashedPassword, role || 'user');
     
     res.json({
       success: true,
@@ -141,7 +142,8 @@ app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   
   try {
-    const climber = await db.getClimberByUsername(username);
+    // Convert username to lowercase for case-insensitive lookup
+    const climber = await db.getClimberByUsername(username.toLowerCase());
     
     if (!climber || !climber.password) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -183,7 +185,8 @@ app.post('/api/auth/register', async (req, res) => {
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const climber = await db.addClimber(name, username, hashedPassword, 'user');
+    // Convert username to lowercase for case-insensitive storage
+    const climber = await db.addClimber(name, username.toLowerCase(), hashedPassword, 'user');
     
     const token = jwt.sign(
       { climberId: climber.id, username: climber.username, role: climber.role },
