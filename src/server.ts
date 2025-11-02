@@ -95,6 +95,47 @@ app.post('/api/admin/wipe-all-data', async (req, res) => {
   }
 });
 
+// POST /api/admin/promote-user - PUBLIC endpoint to promote first user to admin
+app.post('/api/admin/promote-user', async (req, res) => {
+  const { climberId } = req.body;
+  
+  try {
+    await db.setClimberRole(climberId, 'admin');
+    res.json({ 
+      success: true, 
+      message: `User promoted to admin successfully`
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/create-account - PUBLIC endpoint to create accounts
+app.post('/api/admin/create-account', async (req, res) => {
+  const { name, username, password, role } = req.body;
+  
+  if (!name || !username || !password) {
+    return res.status(400).json({ error: 'name, username, and password required' });
+  }
+  
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const climber = await db.addClimber(name, username, hashedPassword, role || 'user');
+    
+    res.json({
+      success: true,
+      climber: {
+        id: climber.id,
+        name: climber.name,
+        username: climber.username,
+        role: climber.role
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/auth/login {username, password}
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
