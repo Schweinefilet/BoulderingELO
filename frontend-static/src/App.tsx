@@ -2150,9 +2150,6 @@ export default function App(){
         color:'#94a3b8',
         fontSize:14
       }}>
-        <div style={{marginBottom:8}}>
-          Made with ❤️ for the climbing community
-        </div>
         <div>
           <a 
             href="https://github.com/Schweinefilet/BoulderingELO" 
@@ -2167,7 +2164,7 @@ export default function App(){
             onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
           >
-            ⭐ View on GitHub
+            View on GitHub (please star the repository :D)
           </a>
         </div>
       </footer>
