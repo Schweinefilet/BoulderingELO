@@ -1600,27 +1600,21 @@ export default function App(){
           .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const profileLeaderboardEntry = leaderboard.find((e:any) => e.climber === profileClimber?.name);
         
-        // Calculate total climbs by color
+        // Calculate total climbs by color from LATEST session only
+        const latestSession = profileSessions[0];
         const totalClimbs = {
-          green: 0,
-          blue: 0,
-          yellow: 0,
-          orange: 0,
-          red: 0,
-          black: 0
+          green: latestSession?.green || 0,
+          blue: latestSession?.blue || 0,
+          yellow: latestSession?.yellow || 0,
+          orange: latestSession?.orange || 0,
+          red: latestSession?.red || 0,
+          black: latestSession?.black || 0
         };
-        profileSessions.forEach((s:any) => {
-          totalClimbs.green += s.green || 0;
-          totalClimbs.blue += s.blue || 0;
-          totalClimbs.yellow += s.yellow || 0;
-          totalClimbs.orange += s.orange || 0;
-          totalClimbs.red += s.red || 0;
-          totalClimbs.black += s.black || 0;
-        });
         
-        // Calculate rank history
+        // Calculate rank history and peak score
         const rankHistory: {date: string, rank: number}[] = [];
         let peakRank: number | null = null;
+        let peakScore: number | null = null;
         
         if (profileSessions.length > 0) {
           const allSessionsByDate = sessions
@@ -1631,6 +1625,7 @@ export default function App(){
           climbers.forEach((c:any) => climberScores.set(c.id, 0));
           
           let bestRank = Infinity;
+          let highestScore = 0;
           
           allSessionsByDate.forEach((session:any) => {
             const currentScore = climberScores.get(session.climberId) || 0;
@@ -1645,7 +1640,13 @@ export default function App(){
               bestRank = currentRank;
             }
             
+            // Track peak score
             if (session.climberId === viewingProfile) {
+              const userScore = climberScores.get(viewingProfile) || 0;
+              if (userScore > highestScore) {
+                highestScore = userScore;
+              }
+              
               rankHistory.push({
                 date: new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                 rank: currentRank
@@ -1654,6 +1655,7 @@ export default function App(){
           });
           
           peakRank = bestRank !== Infinity ? bestRank : null;
+          peakScore = highestScore > 0 ? highestScore : null;
         }
         
         if (!profileClimber) return null;
@@ -1740,15 +1742,21 @@ export default function App(){
                       </div>
                     </div>
                     <div style={{marginBottom:12}}>
-                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Play Count</div>
+                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Session Count</div>
                       <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
                         {profileSessions.length}
                       </div>
                     </div>
-                    <div>
+                    <div style={{marginBottom:12}}>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Peak Rank</div>
                       <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
                         {peakRank ? `#${peakRank}` : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Peak Score</div>
+                      <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
+                        {peakScore ? peakScore.toFixed(2) : 'N/A'}
                       </div>
                     </div>
                   </div>
