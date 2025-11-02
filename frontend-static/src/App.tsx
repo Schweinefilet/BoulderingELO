@@ -545,7 +545,25 @@ export default function App(){
     <div style={{fontFamily:'Inter, Arial, sans-serif',padding:20,maxWidth:1000,margin:'0 auto',position:'relative'}}>
       <BackgroundBeams />
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-        <h1 style={{margin:0}}>BoulderingELO</h1>
+        <div style={{display:'flex',alignItems:'center',gap:16}}>
+          <h1 style={{margin:0}}>BoulderingELO</h1>
+          <a 
+            href="https://github.com/Schweinefilet/BoulderingELO" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{
+              color:'#3b82f6',
+              textDecoration:'none',
+              fontWeight:'600',
+              fontSize:14,
+              transition:'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
+          >
+            ⭐ GitHub
+          </a>
+        </div>
         <div style={{display:'flex',gap:12,alignItems:'center'}}>
           {isAuthenticated && user && (
             <>
@@ -2148,34 +2166,6 @@ export default function App(){
           </div>
         </div>
       )}
-      
-      {/* Footer with GitHub Link */}
-      <footer style={{
-        marginTop:80,
-        paddingTop:20,
-        borderTop:'1px solid #475569',
-        textAlign:'center',
-        color:'#94a3b8',
-        fontSize:14
-      }}>
-        <div>
-          <a 
-            href="https://github.com/Schweinefilet/BoulderingELO" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{
-              color:'#3b82f6',
-              textDecoration:'none',
-              fontWeight:'600',
-              transition:'color 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
-          >
-            View on GitHub (please star the repository :D)
-          </a>
-        </div>
-      </footer>
     </div>
   )
 }
