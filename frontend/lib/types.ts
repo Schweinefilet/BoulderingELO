@@ -37,3 +37,17 @@ export type LeaderboardEntry = {
   climber: string;
   total_score: number;
 };
+
+export type VideoReview = {
+  id: number;
+  session_id: number;
+  video_url: string;
+  color: string;
+  wall: string;
+  status: 'pending' | 'approved' | 'rejected';
+  votes: { climberId: number; vote: 'up' | 'down' }[];
+  created_at: string;
+  climber_id: number;
+  climber_name: string;
+  date: string;
+};

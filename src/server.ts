@@ -649,7 +649,8 @@ app.delete('/api/climbers/:id', authenticateToken, requireAdmin, async (req: any
 });
 
 // GET /api/videos?status=pending|approved|rejected
-app.get('/api/videos', authenticateToken, async (req, res) => {
+// Public endpoint - anyone can view videos
+app.get('/api/videos', async (req, res) => {
   try {
     const { status } = req.query as any;
     const videos = await db.getVideoReviews(status);
@@ -660,6 +661,7 @@ app.get('/api/videos', authenticateToken, async (req, res) => {
 });
 
 // POST /api/videos/:id/vote
+// Authenticated users can vote
 app.post('/api/videos/:id/vote', authenticateToken, async (req: any, res) => {
   try {
     const reviewId = Number(req.params.id);

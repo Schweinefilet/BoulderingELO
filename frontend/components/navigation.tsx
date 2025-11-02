@@ -17,6 +17,7 @@ export function Navigation() {
     { href: "/", label: "Home", icon: "🏠" },
     { href: "/leaderboard", label: "Leaderboard", icon: "🏆" },
     { href: "/analytics", label: "Analytics", icon: "📊" },
+    { href: "/videos", label: "Videos", icon: "🎥" },
   ];
 
   return (
