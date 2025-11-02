@@ -2,10 +2,32 @@ import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import { Counts, Climber, Session, WallCounts } from './types';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
-});
+// Parse DATABASE_URL manually to avoid issues with special characters in password
+const dbUrl = process.env.DATABASE_URL || '';
+let poolConfig: any = {};
+
+if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
+  try {
+    const url = new URL(dbUrl);
+    poolConfig = {
+      user: url.username,
+      password: decodeURIComponent(url.password),
+      host: url.hostname,
+      port: parseInt(url.port) || 5432,
+      database: url.pathname.slice(1),
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+      connectionTimeoutMillis: 5000,
+    };
+    console.log('Database config:', { ...poolConfig, password: '***' });
+  } catch (e) {
+    console.error('Failed to parse DATABASE_URL:', e);
+    poolConfig = { connectionString: dbUrl };
+  }
+} else {
+  poolConfig = { connectionString: dbUrl };
+}
+
+const pool = new Pool(poolConfig);
 
 // Initialize database tables
 export async function initDB() {
