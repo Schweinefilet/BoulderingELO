@@ -723,7 +723,7 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px 2fr 120px 120px 90px 70px 70px 70px 70px 70px 70px',
+                gridTemplateColumns:'60px 2fr 120px 120px 90px 240px',
                 gap:12,
                 padding:'16px 20px',
                 backgroundColor:'#1e293b',
@@ -737,12 +737,7 @@ export default function App(){
                 <div style={{textAlign:'right'}}>Global Ranking</div>
                 <div style={{textAlign:'right'}}>Ranked Score</div>
                 <div style={{textAlign:'right'}}>Sessions</div>
-                <div style={{textAlign:'center',color:'#10b981'}}>GREEN</div>
-                <div style={{textAlign:'center',color:'#3b82f6'}}>BLUE</div>
-                <div style={{textAlign:'center',color:'#eab308'}}>YELLOW</div>
-                <div style={{textAlign:'center',color:'#f97316'}}>ORANGE</div>
-                <div style={{textAlign:'center',color:'#ef4444'}}>RED</div>
-                <div style={{textAlign:'center',color:'#d1d5db'}}>BLACK</div>
+                <div style={{textAlign:'center'}}>CLIMBS</div>
               </div>
               
               {/* Rows */}
@@ -764,7 +759,7 @@ export default function App(){
                     key={i}
                     style={{
                       display:'grid',
-                      gridTemplateColumns:'60px 2fr 120px 120px 90px 70px 70px 70px 70px 70px 70px',
+                      gridTemplateColumns:'60px 2fr 120px 120px 90px 240px',
                       gap:12,
                       padding:'16px 20px',
                       backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
@@ -806,40 +801,60 @@ export default function App(){
                     {/* Sessions */}
                     <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{playCount}</div>
                     
-                    {/* Green */}
-                    <div style={{textAlign:'center',fontSize:12,color:'#10b981'}}>
-                      <div>{latestSession?.green || 0}</div>
-                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
-                    </div>
-                    
-                    {/* Blue */}
-                    <div style={{textAlign:'center',fontSize:12,color:'#3b82f6'}}>
-                      <div>{latestSession?.blue || 0}</div>
-                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
-                    </div>
-                    
-                    {/* Yellow */}
-                    <div style={{textAlign:'center',fontSize:12,color:'#eab308'}}>
-                      <div>{latestSession?.yellow || 0}</div>
-                      <div style={{color:'#64748b',fontSize:11}}>0/{WALL_TOTALS.overhang.yellow + WALL_TOTALS.midWall.yellow + WALL_TOTALS.sideWall.yellow}</div>
-                    </div>
-                    
-                    {/* Orange */}
-                    <div style={{textAlign:'center',fontSize:12,color:'#f97316'}}>
-                      <div>{latestSession?.orange || 0}</div>
-                      <div style={{color:'#64748b',fontSize:11}}>0/{WALL_TOTALS.overhang.orange + WALL_TOTALS.midWall.orange + WALL_TOTALS.sideWall.orange}</div>
-                    </div>
-                    
-                    {/* Red */}
-                    <div style={{textAlign:'center',fontSize:12,color:'#ef4444'}}>
-                      <div>{latestSession?.red || 0}</div>
-                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
-                    </div>
-                    
-                    {/* Black */}
-                    <div style={{textAlign:'center',fontSize:12,color:'#d1d5db'}}>
-                      <div>{latestSession?.black || 0}</div>
-                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
+                    {/* Climbs Grid - Black to Yellow */}
+                    <div style={{
+                      display:'grid',
+                      gridTemplateColumns:'repeat(4, 1fr)',
+                      gap:8,
+                      justifyContent:'center'
+                    }}>
+                      {/* Black */}
+                      <div style={{
+                        backgroundColor:'#1e293b',
+                        borderRadius:6,
+                        padding:'8px',
+                        border:'1px solid #334155',
+                        textAlign:'center'
+                      }}>
+                        <div style={{fontSize:10,color:'#d1d5db',marginBottom:4,fontWeight:'600'}}>BLACK</div>
+                        <div style={{fontSize:16,color:'#d1d5db',fontWeight:'700'}}>{latestSession?.black || 0}</div>
+                      </div>
+                      
+                      {/* Red */}
+                      <div style={{
+                        backgroundColor:'#1e293b',
+                        borderRadius:6,
+                        padding:'8px',
+                        border:'1px solid #334155',
+                        textAlign:'center'
+                      }}>
+                        <div style={{fontSize:10,color:'#ef4444',marginBottom:4,fontWeight:'600'}}>RED</div>
+                        <div style={{fontSize:16,color:'#ef4444',fontWeight:'700'}}>{latestSession?.red || 0}</div>
+                      </div>
+                      
+                      {/* Orange */}
+                      <div style={{
+                        backgroundColor:'#1e293b',
+                        borderRadius:6,
+                        padding:'8px',
+                        border:'1px solid #334155',
+                        textAlign:'center'
+                      }}>
+                        <div style={{fontSize:10,color:'#f97316',marginBottom:4,fontWeight:'600'}}>ORANGE</div>
+                        <div style={{fontSize:16,color:'#f97316',fontWeight:'700'}}>{latestSession?.orange || 0}</div>
+                      </div>
+                      
+                      {/* Yellow */}
+                      <div style={{
+                        backgroundColor:'#1e293b',
+                        borderRadius:6,
+                        padding:'8px',
+                        border:'1px solid #334155',
+                        textAlign:'center'
+                      }}>
+                        <div style={{fontSize:10,color:'#eab308',marginBottom:4,fontWeight:'600'}}>YELLOW</div>
+                        <div style={{fontSize:16,color:'#eab308',fontWeight:'700'}}>{latestSession?.yellow || 0}</div>
+                      </div>
                     </div>
                   </div>
                 );
