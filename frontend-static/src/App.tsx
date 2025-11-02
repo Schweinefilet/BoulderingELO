@@ -253,7 +253,7 @@ export default function App(){
   
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'tools'>('tools')
+  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions'>('accounts')
   
   // Profile view state
   const [viewingProfile, setViewingProfile] = useState<number | null>(null)
@@ -597,16 +597,6 @@ export default function App(){
         </GlowingCard>
       </section>
       
-      {/* Admin Tools */}
-      {isAuthenticated && user?.role === 'admin' && (
-        <section style={{marginBottom:20}}>
-          <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'2px solid #fbbf24'}}>
-            <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600',color:'#fbbf24'}}>Admin Tools</h2>
-            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-            </div>
-          </div>
-        </section>
-      )}
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
@@ -1494,7 +1484,7 @@ export default function App(){
               borderBottom:'1px solid #475569',
               backgroundColor:'#1e293b'
             }}>
-              {(['accounts', 'sessions', 'tools'] as const).map(tab => (
+              {(['accounts', 'sessions'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setAdminTab(tab)}
@@ -1626,15 +1616,6 @@ export default function App(){
                         )}
                       </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {adminTab === 'tools' && (
-                <div>
-                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Admin Tools</h3>
-                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                    {/* Admin tools removed - no longer needed */}
                   </div>
                 </div>
               )}
