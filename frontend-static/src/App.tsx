@@ -795,8 +795,10 @@ export default function App(){
               <div style={{marginBottom:16,display:'flex',justifyContent:'center'}}>
                 <HoverBorderGradient
                   onClick={addClimb}
-                  containerClassName=""
-                  className="bg-black dark:bg-black text-white px-16 py-4.5 font-semibold text-base"
+                  containerClassName="w-full"
+                  className="bg-black text-white w-full font-semibold text-base"
+                  duration={3}
+                  style={{padding: '12px'}}
                 >
                   Add Climb
                 </HoverBorderGradient>
@@ -900,8 +902,10 @@ export default function App(){
           <div style={{marginTop:16,display:'flex',justifyContent:'center'}}>
             <HoverBorderGradient
               onClick={submit}
-              containerClassName=""
-              className="bg-black dark:bg-black text-white px-18 py-5 font-semibold text-lg"
+              containerClassName="w-full"
+              className="bg-black text-white w-full font-semibold text-base"
+              duration={3}
+              style={{padding: '12px'}}
             >
               Add Session
             </HoverBorderGradient>

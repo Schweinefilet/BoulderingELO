@@ -85,7 +85,7 @@ export function HoverBorderGradient({
           "flex-none inset-0 overflow-hidden absolute z-0 rounded-[inherit]"
         )}
         style={{
-          filter: "blur(2px)",
+          filter: "blur(1px)",
           position: "absolute",
           width: "100%",
           height: "100%",
