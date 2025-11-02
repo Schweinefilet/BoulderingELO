@@ -4,7 +4,6 @@ import * as store from './lib/storage'
 import * as api from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { GlowingCard } from './components/ui/glowing-card'
-import { HoverBorderGradient } from './components/ui/hover-border-gradient'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -181,14 +180,15 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             disabled={loading || !username || !password || (mode === 'register' && !name)}
             style={{
               width:'100%',
-              padding:12,
+              padding:'12px 16px',
               backgroundColor:loading || !username || !password || (mode === 'register' && !name) ? '#475569' : '#3b82f6',
               color:'white',
               border:'none',
-              borderRadius:6,
+              borderRadius:8,
               fontSize:16,
               fontWeight:'600',
-              cursor:loading || !username || !password || (mode === 'register' && !name) ? 'not-allowed' : 'pointer'
+              cursor:loading || !username || !password || (mode === 'register' && !name) ? 'not-allowed' : 'pointer',
+              transition:'background-color 0.2s'
             }}
           >
             {loading ? (mode === 'login' ? 'Logging in...' : 'Creating account...') : (mode === 'login' ? 'Login' : 'Create Account')}
@@ -793,15 +793,25 @@ export default function App(){
               )}
 
               <div style={{marginBottom:16,display:'flex',justifyContent:'center'}}>
-                <HoverBorderGradient
+                <button
                   onClick={addClimb}
-                  containerClassName="w-full"
-                  className="bg-black text-white w-full font-semibold text-base"
-                  duration={3}
-                  style={{padding: '12px'}}
+                  style={{
+                    width:'100%',
+                    padding:'12px 16px',
+                    backgroundColor:'#3b82f6',
+                    color:'white',
+                    border:'none',
+                    borderRadius:8,
+                    fontSize:16,
+                    fontWeight:'600',
+                    cursor:'pointer',
+                    transition:'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
                 >
                   Add Climb
-                </HoverBorderGradient>
+                </button>
               </div>
 
               <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:14,border:'1px solid #475569'}}>
@@ -900,15 +910,25 @@ export default function App(){
           )}
 
           <div style={{marginTop:16,display:'flex',justifyContent:'center'}}>
-            <HoverBorderGradient
+            <button
               onClick={submit}
-              containerClassName="w-full"
-              className="bg-black text-white w-full font-semibold text-base"
-              duration={3}
-              style={{padding: '12px'}}
+              style={{
+                width:'100%',
+                padding:'14px 18px',
+                backgroundColor:'#3b82f6',
+                color:'white',
+                border:'none',
+                borderRadius:8,
+                fontSize:18,
+                fontWeight:'600',
+                cursor:'pointer',
+                transition:'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
             >
               Add Session
-            </HoverBorderGradient>
+            </button>
           </div>
         </div>
 

@@ -12,6 +12,7 @@ export function HoverBorderGradient({
   as: Tag = "button",
   duration = 1,
   clockwise = true,
+  disabled,
   ...props
 }: React.PropsWithChildren<
   {
@@ -20,6 +21,7 @@ export function HoverBorderGradient({
     className?: string;
     duration?: number;
     clockwise?: boolean;
+    disabled?: boolean;
   } & React.HTMLAttributes<HTMLElement>
 >) {
   const [hovered, setHovered] = useState<boolean>(false);
@@ -60,7 +62,7 @@ export function HoverBorderGradient({
     <Tag
       ref={ref}
       onMouseEnter={(event: React.MouseEvent<HTMLDivElement>) => {
-        if (!ref.current) return;
+        if (!ref.current || disabled) return;
         const direction = getDirection(event, ref.current);
         setDirection(direction);
         setHovered(true);
@@ -68,8 +70,10 @@ export function HoverBorderGradient({
       onMouseLeave={() => setHovered(false)}
       className={cn(
         "relative inline-flex rounded-xl border content-center bg-black/20 hover:bg-black/10 transition duration-500 dark:bg-white/20 items-center flex-row flex-nowrap gap-2 h-min justify-center overflow-visible p-px decoration-clone",
+        disabled && "opacity-50 cursor-not-allowed",
         containerClassName
       )}
+      disabled={disabled}
       {...props}
     >
       <div
