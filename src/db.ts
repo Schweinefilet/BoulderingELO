@@ -450,16 +450,28 @@ export async function approveVideo(reviewId: number) {
       ['approved', reviewId]
     );
     
-    // Add the climb to the session's wall_counts
-    const wallColumnPrefix = wall.toLowerCase().replace('wall', 'wall');
-    const colorColumn = `${wallColumnPrefix}_${color}`;
+    // Map wall names to database column prefixes
+    const wallMapping: { [key: string]: string } = {
+      'overhang': 'overhang',
+      'midWall': 'midwall',
+      'sideWall': 'sidewall'
+    };
     
-    await client.query(
-      `UPDATE wall_counts 
-       SET ${colorColumn} = ${colorColumn} + 1 
-       WHERE session_id = $1`,
-      [session_id]
-    );
+    const wallPrefix = wallMapping[wall] || wall.toLowerCase();
+    
+    // Build column name (ensure it's safe - no SQL injection since we control the mapping)
+    const validColors = ['green', 'blue', 'yellow', 'orange', 'red', 'black'];
+    if (!validColors.includes(color)) {
+      throw new Error(`Invalid color: ${color}`);
+    }
+    
+    const columnName = `${wallPrefix}_${color}`;
+    
+    console.log(`Updating wall_counts: ${columnName} for session ${session_id}`);
+    
+    // Use string interpolation for column name (safe since validated above)
+    const updateQuery = `UPDATE wall_counts SET ${columnName} = ${columnName} + 1 WHERE session_id = $1`;
+    await client.query(updateQuery, [session_id]);
     
     // Recalculate the session score
     const sessionResult = await client.query(`
@@ -507,13 +519,19 @@ export async function approveVideo(reviewId: number) {
       const totalCounts = combineCounts(wallCounts);
       const newScore = scoreSession(totalCounts);
       
+      console.log(`Session ${session_id}: Old score from DB, New score: ${newScore}`);
+      console.log('Total counts:', totalCounts);
+      
       await client.query(
         'UPDATE sessions SET score = $1 WHERE id = $2',
         [newScore, session_id]
       );
+      
+      console.log(`Score updated successfully for session ${session_id}`);
     }
     
     await client.query('COMMIT');
+    console.log(`Video ${reviewId} approved successfully`);
     return reviewResult.rows[0];
   } catch (error) {
     await client.query('ROLLBACK');

@@ -1177,7 +1177,14 @@ export default function App(){
                           onClick={async () => {
                             try {
                               await api.approveVideo(video.id);
-                              await loadVideos();
+                              // Reload sessions and leaderboard to reflect score update
+                              const [loadedSessions, loadedLeaderboard] = await Promise.all([
+                                api.getSessions(),
+                                api.getLeaderboard(),
+                                loadVideos()
+                              ]);
+                              setSessions(loadedSessions);
+                              setLeaderboard(loadedLeaderboard);
                             } catch (err: any) {
                               alert('Failed to approve: ' + err.message);
                             }
