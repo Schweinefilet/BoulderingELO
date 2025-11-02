@@ -222,7 +222,7 @@ export default function App(){
 
   const [isAuthenticated, setIsAuthenticated] = useState(validateAuth());
   const [user, setUser] = useState<api.User | null>(api.getUser());
-  const [showLoginScreen, setShowLoginScreen] = useState(!validateAuth());
+  const [showLoginScreen, setShowLoginScreen] = useState(false); // Don't show login modal by default
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
