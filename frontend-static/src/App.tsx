@@ -1253,6 +1253,37 @@ export default function App(){
           .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const profileLeaderboardEntry = leaderboard.find((e:any) => e.climber === profileClimber?.name);
         
+        // Calculate peak rank by simulating historical rankings
+        let peakRank = null;
+        if (profileSessions.length > 0) {
+          // Group all sessions by date and calculate cumulative scores
+          const allSessionsByDate = sessions
+            .map((s:any) => ({...s, date: new Date(s.date)}))
+            .sort((a:any, b:any) => a.date.getTime() - b.date.getTime());
+          
+          const climberScores = new Map<number, number>();
+          climbers.forEach((c:any) => climberScores.set(c.id, 0));
+          
+          let bestRank = Infinity;
+          
+          allSessionsByDate.forEach((session:any) => {
+            const currentScore = climberScores.get(session.climberId) || 0;
+            climberScores.set(session.climberId, currentScore + session.score);
+            
+            // Calculate rankings at this point in time
+            const rankings = Array.from(climberScores.entries())
+              .map(([id, score]) => ({id, score}))
+              .sort((a, b) => b.score - a.score);
+            
+            const currentRank = rankings.findIndex(r => r.id === viewingProfile) + 1;
+            if (currentRank > 0 && currentRank < bestRank) {
+              bestRank = currentRank;
+            }
+          });
+          
+          peakRank = bestRank !== Infinity ? bestRank : null;
+        }
+        
         if (!profileClimber) return null;
         
         return (
@@ -1322,9 +1353,15 @@ export default function App(){
                     </div>
                   </div>
                   <div>
-                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Leaderboard Rank</div>
+                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Current Rank</div>
                     <div style={{fontSize:24,fontWeight:'700',color:'#fbbf24'}}>
                       #{(leaderboard.findIndex((e:any) => e.climber === profileClimber.name) + 1) || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,color:'#94a3b8',marginBottom:4}}>Peak Rank</div>
+                    <div style={{fontSize:24,fontWeight:'700',color:'#a855f7'}}>
+                      {peakRank ? `#${peakRank}` : 'N/A'}
                     </div>
                   </div>
                 </div>
