@@ -10,6 +10,30 @@ import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-em
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
+const CLIMB_CATEGORY_COLUMNS: Array<{ key: keyof Counts; label: string; color: string }> = [
+  { key: 'black', label: 'BLACK', color: '#d1d5db' },
+  { key: 'red', label: 'RED', color: '#ef4444' },
+  { key: 'orange', label: 'ORANGE', color: '#f97316' },
+  { key: 'yellow', label: 'YELLOW', color: '#eab308' }
+];
+
+const EMPTY_COUNTS: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+
+const normalizeSessionCounts = (session: any): Counts => {
+  if (!session) return { ...EMPTY_COUNTS };
+  if (session.wallCounts) {
+    return combineCounts(session.wallCounts as WallCounts);
+  }
+  return {
+    green: session.green ?? 0,
+    blue: session.blue ?? 0,
+    yellow: session.yellow ?? 0,
+    orange: session.orange ?? 0,
+    red: session.red ?? 0,
+    black: session.black ?? 0
+  };
+};
+
 // Total available climbs per wall section per color
 const WALL_TOTALS = {
   overhang: { yellow: 7, orange: 5, red: 0, black: 0, blue: 0, green: 0 },
@@ -724,8 +748,10 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px 2fr 120px 120px 90px 240px',
-                gap:12,
+                gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 100px)',
+                gridTemplateRows:'auto auto',
+                columnGap:12,
+                rowGap:6,
                 padding:'16px 20px',
                 backgroundColor:'#1e293b',
                 fontWeight:'600',
@@ -733,12 +759,29 @@ export default function App(){
                 color:'#94a3b8',
                 borderBottom:'1px solid #334155'
               }}>
-                <div style={{textAlign:'center'}}>#</div>
-                <div>Player</div>
-                <div style={{textAlign:'right'}}>Global Ranking</div>
-                <div style={{textAlign:'right'}}>Ranked Score</div>
-                <div style={{textAlign:'right'}}>Sessions</div>
-                <div style={{textAlign:'center'}}>CLIMBS</div>
+                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>#</div>
+                <div style={{gridRow:'1 / span 2', display:'flex', alignItems:'center', gap:12}}>
+                  <span style={{display:'inline-block',width:24,height:24,borderRadius:'50%',backgroundColor:'transparent'}} />
+                  <span>Climber</span>
+                </div>
+                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>Global Ranking</div>
+                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>Ranked Score</div>
+                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>Sessions</div>
+                <div style={{gridColumn:'6 / span 4', textAlign:'center', fontSize:12, color:'#94a3b8'}}>CLIMBS</div>
+                {CLIMB_CATEGORY_COLUMNS.map(column => (
+                  <div
+                    key={column.key}
+                    style={{
+                      textAlign:'center',
+                      fontSize:11,
+                      fontWeight:'600',
+                      color:column.color,
+                      gridRow:'2'
+                    }}
+                  >
+                    {column.label}
+                  </div>
+                ))}
               </div>
               
               {/* Rows */}
@@ -751,21 +794,22 @@ export default function App(){
                 const latestSession = climberSessions.length > 0 
                   ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
                   : null;
-                
+                const latestCounts = normalizeSessionCounts(latestSession);
+
                 return (
-                  <div 
-                    key={i}
-                    style={{
-                      display:'grid',
-                      gridTemplateColumns:'60px 2fr 120px 120px 90px 240px',
-                      gap:12,
-                      padding:'16px 20px',
-                      backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
-                      borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
-                      alignItems:'center',
-                      transition:'background-color 0.2s',
-                      cursor:'pointer'
-                    }}
+                    <div 
+                      key={i}
+                      style={{
+                        display:'grid',
+                        gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 100px)',
+                        gap:12,
+                        padding:'16px 20px',
+                        backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
+                        borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
+                        alignItems:'center',
+                        transition:'background-color 0.2s',
+                        cursor:'pointer'
+                      }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? '#0f172a' : '#1a1f2e'}
                     onClick={() => climber && setViewingProfile(climber.id)}
@@ -787,73 +831,34 @@ export default function App(){
                     </div>
                     
                     {/* Global Ranking */}
-                    <div style={{textAlign:'right',fontWeight:'700',fontSize:14,color:'#94a3b8'}}>
+                    <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#94a3b8'}}>
                       #{i + 1}
                     </div>
                     
                     {/* Ranked Score */}
-                    <div style={{textAlign:'right',fontWeight:'700',fontSize:16,color:'#3b82f6'}}>
+                    <div style={{textAlign:'center',fontWeight:'700',fontSize:16,color:'#3b82f6'}}>
                       {e.total_score.toFixed(2)}
                     </div>
                     
                     {/* Sessions */}
-                    <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{playCount}</div>
+                    <div style={{textAlign:'center',color:'#94a3b8',fontSize:14}}>{playCount}</div>
                     
-                    {/* Climbs Grid - Black to Yellow */}
-                    <div style={{
-                      display:'grid',
-                      gridTemplateColumns:'repeat(4, 1fr)',
-                      gap:8,
-                      justifyContent:'center'
-                    }}>
-                      {/* Black */}
-                      <div style={{
-                        backgroundColor:'#1e293b',
-                        borderRadius:6,
-                        padding:'8px',
-                        border:'1px solid #334155',
-                        textAlign:'center'
-                      }}>
-                        <div style={{fontSize:10,color:'#d1d5db',marginBottom:4,fontWeight:'600'}}>BLACK</div>
-                        <div style={{fontSize:16,color:'#d1d5db',fontWeight:'700'}}>{latestSession?.black || 0}</div>
+                    {/* Climbs by color */}
+                    {CLIMB_CATEGORY_COLUMNS.map(column => (
+                      <div key={column.key} style={{display:'flex', justifyContent:'center'}}>
+                        <div style={{
+                          width:'100%',
+                          backgroundColor:'#1e293b',
+                          borderRadius:6,
+                          padding:'8px 0',
+                          border:'1px solid #334155',
+                          textAlign:'center'
+                        }}>
+                          <div style={{fontSize:10,color:column.color,marginBottom:4,fontWeight:'600'}}>{column.label}</div>
+                          <div style={{fontSize:16,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
+                        </div>
                       </div>
-                      
-                      {/* Red */}
-                      <div style={{
-                        backgroundColor:'#1e293b',
-                        borderRadius:6,
-                        padding:'8px',
-                        border:'1px solid #334155',
-                        textAlign:'center'
-                      }}>
-                        <div style={{fontSize:10,color:'#ef4444',marginBottom:4,fontWeight:'600'}}>RED</div>
-                        <div style={{fontSize:16,color:'#ef4444',fontWeight:'700'}}>{latestSession?.red || 0}</div>
-                      </div>
-                      
-                      {/* Orange */}
-                      <div style={{
-                        backgroundColor:'#1e293b',
-                        borderRadius:6,
-                        padding:'8px',
-                        border:'1px solid #334155',
-                        textAlign:'center'
-                      }}>
-                        <div style={{fontSize:10,color:'#f97316',marginBottom:4,fontWeight:'600'}}>ORANGE</div>
-                        <div style={{fontSize:16,color:'#f97316',fontWeight:'700'}}>{latestSession?.orange || 0}</div>
-                      </div>
-                      
-                      {/* Yellow */}
-                      <div style={{
-                        backgroundColor:'#1e293b',
-                        borderRadius:6,
-                        padding:'8px',
-                        border:'1px solid #334155',
-                        textAlign:'center'
-                      }}>
-                        <div style={{fontSize:10,color:'#eab308',marginBottom:4,fontWeight:'600'}}>YELLOW</div>
-                        <div style={{fontSize:16,color:'#eab308',fontWeight:'700'}}>{latestSession?.yellow || 0}</div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 );
               })}
