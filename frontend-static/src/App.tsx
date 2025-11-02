@@ -6,6 +6,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
+import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -751,9 +752,6 @@ export default function App(){
                   ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
                   : null;
                 
-                // Get country flag (if set)
-                const countryFlag = climber?.country || '🌐';
-                
                 return (
                   <div 
                     key={i}
@@ -784,7 +782,7 @@ export default function App(){
                     
                     {/* Player with flag */}
                     <div style={{display:'flex',alignItems:'center',gap:12}}>
-                      <span style={{fontSize:20}}>{countryFlag}</span>
+                      <FlagEmoji countryCode={climber?.country} size={24} />
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
                     </div>
                     
@@ -1875,12 +1873,10 @@ export default function App(){
                 }
               }}>
                 <div style={{marginBottom:16}}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Country Flag (emoji)</label>
-                  <input
-                    type="text"
+                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Country</label>
+                  <select
                     value={settingsCountry}
                     onChange={e => setSettingsCountry(e.target.value)}
-                    placeholder="e.g., 🇺🇸, 🇬🇧, 🇨🇦"
                     style={{
                       width:'100%',
                       padding:12,
@@ -1890,7 +1886,20 @@ export default function App(){
                       color:'white',
                       fontSize:14
                     }}
-                  />
+                  >
+                    <option value="">Select a country...</option>
+                    {COUNTRY_CODES.map(code => (
+                      <option key={code} value={code}>
+                        {COUNTRY_NAMES[code]} ({code})
+                      </option>
+                    ))}
+                  </select>
+                  {settingsCountry && (
+                    <div style={{marginTop:8,display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontSize:12,color:'#94a3b8'}}>Preview:</span>
+                      <FlagEmoji countryCode={settingsCountry} size={24} />
+                    </div>
+                  )}
                 </div>
                 <div style={{marginBottom:16}}>
                   <label style={{display:'block',marginBottom:8,fontSize:14}}>When Did You Start Bouldering?</label>
