@@ -4,6 +4,7 @@ import * as store from './lib/storage'
 import * as api from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { GlowingCard } from './components/ui/glowing-card'
+import { BackgroundBeams } from './components/ui/background-beams'
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -541,7 +542,8 @@ export default function App(){
   }
 
   return (
-    <div style={{fontFamily:'Inter, Arial, sans-serif',padding:20,maxWidth:1000,margin:'0 auto'}}>
+    <div style={{fontFamily:'Inter, Arial, sans-serif',padding:20,maxWidth:1000,margin:'0 auto',position:'relative'}}>
+      <BackgroundBeams />
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <h1 style={{margin:0}}>BoulderingELO</h1>
         <div style={{display:'flex',gap:12,alignItems:'center'}}>
@@ -647,6 +649,9 @@ export default function App(){
             <br/>
             Colors are processed in order: Black (≥V9) → Red (V7-V8) → Orange (V5-V6) → Yellow (V3-V4) → Blue (V1-V2) → Green (V0-V1)
           </div>
+                    <p style={{fontSize:14,marginBottom:8}}>
+            Basically, climb harder stuff to get more points!
+          </p>
         </div>
       </GlowingCard>
       
@@ -1615,6 +1620,8 @@ export default function App(){
         
         // Calculate rank history
         const rankHistory: {date: string, rank: number}[] = [];
+        let peakRank: number | null = null;
+        
         if (profileSessions.length > 0) {
           const allSessionsByDate = sessions
             .map((s:any) => ({...s, date: new Date(s.date)}))
@@ -1646,7 +1653,7 @@ export default function App(){
             }
           });
           
-          var peakRank = bestRank !== Infinity ? bestRank : null;
+          peakRank = bestRank !== Infinity ? bestRank : null;
         }
         
         if (!profileClimber) return null;
@@ -2133,6 +2140,37 @@ export default function App(){
           </div>
         </div>
       )}
+      
+      {/* Footer with GitHub Link */}
+      <footer style={{
+        marginTop:80,
+        paddingTop:20,
+        borderTop:'1px solid #475569',
+        textAlign:'center',
+        color:'#94a3b8',
+        fontSize:14
+      }}>
+        <div style={{marginBottom:8}}>
+          Made with ❤️ for the climbing community
+        </div>
+        <div>
+          <a 
+            href="https://github.com/Schweinefilet/BoulderingELO" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{
+              color:'#3b82f6',
+              textDecoration:'none',
+              fontWeight:'600',
+              transition:'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
+          >
+            ⭐ View on GitHub
+          </a>
+        </div>
+      </footer>
     </div>
   )
 }
