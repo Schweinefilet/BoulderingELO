@@ -723,8 +723,8 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px 2fr 1fr 1fr 1fr 60px 60px 60px',
-                gap:16,
+                gridTemplateColumns:'60px 2fr 120px 120px 90px 70px 70px 70px 70px 70px 70px',
+                gap:12,
                 padding:'16px 20px',
                 backgroundColor:'#1e293b',
                 fontWeight:'600',
@@ -734,13 +734,15 @@ export default function App(){
               }}>
                 <div style={{textAlign:'center'}}>#</div>
                 <div>Player</div>
-                <div style={{textAlign:'right'}}>Accuracy</div>
-                <div style={{textAlign:'right'}}>Play Count</div>
+                <div style={{textAlign:'right'}}>Global Ranking</div>
                 <div style={{textAlign:'right'}}>Ranked Score</div>
-                <div style={{textAlign:'right',color:'#10b981'}}>Performance</div>
-                <div style={{textAlign:'center'}}>SS</div>
-                <div style={{textAlign:'center'}}>S</div>
-                <div style={{textAlign:'center'}}>A</div>
+                <div style={{textAlign:'right'}}>Sessions</div>
+                <div style={{textAlign:'center',color:'#10b981'}}>GREEN</div>
+                <div style={{textAlign:'center',color:'#3b82f6'}}>BLUE</div>
+                <div style={{textAlign:'center',color:'#eab308'}}>YELLOW</div>
+                <div style={{textAlign:'center',color:'#f97316'}}>ORANGE</div>
+                <div style={{textAlign:'center',color:'#ef4444'}}>RED</div>
+                <div style={{textAlign:'center',color:'#d1d5db'}}>BLACK</div>
               </div>
               
               {/* Rows */}
@@ -749,15 +751,10 @@ export default function App(){
                 const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
                 const playCount = climberSessions.length;
                 
-                // Calculate accuracy (placeholder - you can customize this)
-                const accuracy = '97.40%';
-                
-                // Calculate performance (example: based on recent score gains)
-                const performance = playCount > 1 
-                  ? Math.round((climberSessions[0]?.score - climberSessions[1]?.score) || 0)
-                  : 0;
-                  
-                const performanceColor = performance > 0 ? '#10b981' : performance < 0 ? '#ef4444' : '#64748b';
+                // Get latest session for climb counts
+                const latestSession = climberSessions.length > 0 
+                  ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+                  : null;
                 
                 // Get country flag (if set)
                 const countryFlag = climber?.country || '🌐';
@@ -767,8 +764,8 @@ export default function App(){
                     key={i}
                     style={{
                       display:'grid',
-                      gridTemplateColumns:'60px 2fr 1fr 1fr 1fr 60px 60px 60px',
-                      gap:16,
+                      gridTemplateColumns:'60px 2fr 120px 120px 90px 70px 70px 70px 70px 70px 70px',
+                      gap:12,
                       padding:'16px 20px',
                       backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
                       borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
@@ -796,31 +793,54 @@ export default function App(){
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
                     </div>
                     
-                    {/* Accuracy */}
-                    <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{accuracy}</div>
-                    
-                    {/* Play Count */}
-                    <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{playCount.toLocaleString()}</div>
+                    {/* Global Ranking */}
+                    <div style={{textAlign:'right',fontWeight:'700',fontSize:14,color:'#94a3b8'}}>
+                      #{i + 1}
+                    </div>
                     
                     {/* Ranked Score */}
                     <div style={{textAlign:'right',fontWeight:'700',fontSize:16,color:'#3b82f6'}}>
-                      {e.total_score.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                      {e.total_score.toFixed(2)}
                     </div>
                     
-                    {/* Performance */}
-                    <div style={{
-                      textAlign:'right',
-                      fontWeight:'700',
-                      fontSize:14,
-                      color:performanceColor
-                    }}>
-                      {performance > 0 ? `+${performance}` : performance}
+                    {/* Sessions */}
+                    <div style={{textAlign:'right',color:'#94a3b8',fontSize:14}}>{playCount}</div>
+                    
+                    {/* Green */}
+                    <div style={{textAlign:'center',fontSize:12,color:'#10b981'}}>
+                      <div>{latestSession?.green || 0}</div>
+                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
                     </div>
                     
-                    {/* Grade badges (placeholder) */}
-                    <div style={{textAlign:'center',fontSize:14,color:'#64748b'}}>-</div>
-                    <div style={{textAlign:'center',fontSize:14,color:'#64748b'}}>-</div>
-                    <div style={{textAlign:'center',fontSize:14,color:'#64748b'}}>-</div>
+                    {/* Blue */}
+                    <div style={{textAlign:'center',fontSize:12,color:'#3b82f6'}}>
+                      <div>{latestSession?.blue || 0}</div>
+                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
+                    </div>
+                    
+                    {/* Yellow */}
+                    <div style={{textAlign:'center',fontSize:12,color:'#eab308'}}>
+                      <div>{latestSession?.yellow || 0}</div>
+                      <div style={{color:'#64748b',fontSize:11}}>0/{WALL_TOTALS.overhang.yellow + WALL_TOTALS.midWall.yellow + WALL_TOTALS.sideWall.yellow}</div>
+                    </div>
+                    
+                    {/* Orange */}
+                    <div style={{textAlign:'center',fontSize:12,color:'#f97316'}}>
+                      <div>{latestSession?.orange || 0}</div>
+                      <div style={{color:'#64748b',fontSize:11}}>0/{WALL_TOTALS.overhang.orange + WALL_TOTALS.midWall.orange + WALL_TOTALS.sideWall.orange}</div>
+                    </div>
+                    
+                    {/* Red */}
+                    <div style={{textAlign:'center',fontSize:12,color:'#ef4444'}}>
+                      <div>{latestSession?.red || 0}</div>
+                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
+                    </div>
+                    
+                    {/* Black */}
+                    <div style={{textAlign:'center',fontSize:12,color:'#d1d5db'}}>
+                      <div>{latestSession?.black || 0}</div>
+                      <div style={{color:'#64748b',fontSize:11}}>0/?</div>
+                    </div>
                   </div>
                 );
               })}
