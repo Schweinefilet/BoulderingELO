@@ -12,6 +12,16 @@ A web app that scores bouldering sessions using osu-style weighted top scores wi
 
 ## Quick Start
 
+### GitHub Codespace (Recommended for Quick Setup)
+
+If you're using GitHub Codespaces, we have a streamlined setup process:
+
+```bash
+./setup-codespace.sh
+```
+
+For complete Codespace setup instructions, see **[CODESPACE_GUIDE.md](CODESPACE_GUIDE.md)**.
+
 ### Local Development
 
 #### Backend
@@ -23,7 +33,13 @@ npm install
 cp .env.example .env
 # Edit .env with your local PostgreSQL URL
 
-# Run in development mode
+# Build the backend
+npm run build
+
+# Run in production mode
+npm start
+
+# OR run in development mode (auto-reloads on changes)
 npm run dev
 ```
 
