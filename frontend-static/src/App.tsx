@@ -1367,10 +1367,8 @@ export default function App(){
       </section>
 
       <section style={{marginTop:24}}>
-        <h2>Export / Import</h2>
         <div>
           <button onClick={()=>{ const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url); }}>Export CSV</button>
-          <button onClick={()=>{ store.clearAll(); window.location.reload(); }}>Clear All</button>
         </div>
       </section>
       
