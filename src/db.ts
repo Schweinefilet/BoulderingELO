@@ -356,6 +356,10 @@ export async function setClimberRole(climberId: number, role: string) {
   await pool.query('UPDATE climbers SET role = $1 WHERE id = $2', [role, climberId]);
 }
 
+export async function updateClimberUsername(climberId: number, username: string) {
+  await pool.query('UPDATE climbers SET username = $1 WHERE id = $2', [username.toLowerCase(), climberId]);
+}
+
 // Video review functions
 export async function addVideoReview(sessionId: number, videoUrl: string, color: string, wall: string) {
   const result = await pool.query(

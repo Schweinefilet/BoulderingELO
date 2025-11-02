@@ -110,6 +110,21 @@ app.post('/api/admin/promote-user', async (req, res) => {
   }
 });
 
+// POST /api/admin/fix-username - PUBLIC endpoint to fix username case
+app.post('/api/admin/fix-username', async (req, res) => {
+  const { climberId, username } = req.body;
+  
+  try {
+    await db.updateClimberUsername(climberId, username);
+    res.json({ 
+      success: true, 
+      message: `Username updated to lowercase`
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/admin/create-account - PUBLIC endpoint to create accounts
 app.post('/api/admin/create-account', async (req, res) => {
   const { name, username, password, role } = req.body;
