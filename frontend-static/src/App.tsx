@@ -199,6 +199,47 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+// Helper function to extract YouTube video ID from various URL formats
+function getYouTubeVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/shorts\/([^&\n?#]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
+// Helper component to render video player
+function VideoPlayer({ url }: { url: string }) {
+  const youtubeId = getYouTubeVideoId(url);
+  
+  if (youtubeId) {
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${youtubeId}`}
+        style={{width:'100%',height:'100%',border:'none'}}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+  
+  // Fallback to regular video tag for direct video files
+  return (
+    <video
+      src={url}
+      controls
+      style={{width:'100%',height:'100%'}}
+    />
+  );
+}
+
 export default function App(){
   // Validate localStorage on mount - clear if user object is malformed
   const validateAuth = () => {
@@ -992,11 +1033,7 @@ export default function App(){
                 }}>
                   {/* Video Player */}
                   <div style={{aspectRatio:'16/9',backgroundColor:'#000'}}>
-                    <video
-                      src={video.video_url}
-                      controls
-                      style={{width:'100%',height:'100%'}}
-                    />
+                    <VideoPlayer url={video.video_url} />
                   </div>
                   
                   {/* Video Info */}
