@@ -737,7 +737,7 @@ export default function App(){
         <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
           <div style={{padding:24}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Scoring Formula</h2>
+              <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Leaderboard</h2>
             </div>
             <div style={{
               backgroundColor:'#0f172a',
@@ -748,26 +748,24 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 100px)',
-                gridTemplateRows:'auto auto',
-                columnGap:12,
-                rowGap:6,
-                padding:'16px 20px',
+                gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 70px)',
+                columnGap:8,
+                padding:'12px 16px',
                 backgroundColor:'#1e293b',
                 fontWeight:'600',
                 fontSize:13,
                 color:'#94a3b8',
-                borderBottom:'1px solid #334155'
+                borderBottom:'1px solid #334155',
+                alignItems:'center'
               }}>
-                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>#</div>
-                <div style={{gridRow:'1 / span 2', display:'flex', alignItems:'center', gap:12}}>
+                <div style={{textAlign:'center'}}>#</div>
+                <div style={{display:'flex', alignItems:'center', gap:12}}>
                   <span style={{display:'inline-block',width:24,height:24,borderRadius:'50%',backgroundColor:'transparent'}} />
                   <span>Climber</span>
                 </div>
-                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>Global Ranking</div>
-                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>Ranked Score</div>
-                <div style={{textAlign:'center', gridRow:'1 / span 2'}}>Sessions</div>
-                <div style={{gridColumn:'6 / span 4', textAlign:'center', fontSize:12, color:'#94a3b8'}}>CLIMBS</div>
+                <div style={{textAlign:'center'}}>Global Ranking</div>
+                <div style={{textAlign:'center'}}>Ranked Score</div>
+                <div style={{textAlign:'center'}}>Sessions</div>
                 {CLIMB_CATEGORY_COLUMNS.map(column => (
                   <div
                     key={column.key}
@@ -775,8 +773,7 @@ export default function App(){
                       textAlign:'center',
                       fontSize:11,
                       fontWeight:'600',
-                      color:column.color,
-                      gridRow:'2'
+                      color:column.color
                     }}
                   >
                     {column.label}
@@ -801,9 +798,9 @@ export default function App(){
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 100px)',
-                        gap:12,
-                        padding:'16px 20px',
+                        gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 70px)',
+                        columnGap:8,
+                        padding:'12px 16px',
                         backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
                         borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
                         alignItems:'center',
@@ -825,9 +822,9 @@ export default function App(){
                     </div>
                     
                     {/* Player with flag */}
-                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    <div style={{display:'flex',alignItems:'center',gap:12,overflow:'hidden'}}>
                       <FlagEmoji countryCode={climber?.country} size={24} />
-                      <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
+                      <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
                     {/* Global Ranking */}
@@ -845,18 +842,8 @@ export default function App(){
                     
                     {/* Climbs by color */}
                     {CLIMB_CATEGORY_COLUMNS.map(column => (
-                      <div key={column.key} style={{display:'flex', justifyContent:'center'}}>
-                        <div style={{
-                          width:'100%',
-                          backgroundColor:'#1e293b',
-                          borderRadius:6,
-                          padding:'8px 0',
-                          border:'1px solid #334155',
-                          textAlign:'center'
-                        }}>
-                          <div style={{fontSize:10,color:column.color,marginBottom:4,fontWeight:'600'}}>{column.label}</div>
-                          <div style={{fontSize:16,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
-                        </div>
+                      <div key={column.key} style={{textAlign:'center'}}>
+                        <div style={{fontSize:16,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
                       </div>
                     ))}
                   </div>
