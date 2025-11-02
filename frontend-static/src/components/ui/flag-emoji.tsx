@@ -216,6 +216,7 @@ export function FlagEmoji({ countryCode, size = 20 }: FlagEmojiProps) {
   }
 
   const upperCode = countryCode.toUpperCase();
+  const isIsrael = upperCode === 'IL';
 
   return (
     <img
@@ -227,7 +228,8 @@ export function FlagEmoji({ countryCode, size = 20 }: FlagEmojiProps) {
         objectFit: 'cover',
         borderRadius: 2,
         display: 'inline-block',
-        verticalAlign: 'middle'
+        verticalAlign: 'middle',
+        filter: isIsrael ? 'grayscale(100%) opacity(0.5)' : 'none'
       }}
       onError={() => setErrored(true)}
     />

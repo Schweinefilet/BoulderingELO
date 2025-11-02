@@ -414,8 +414,8 @@ export default function App(){
     setShowLoginScreen(true);
   }
 
-  async function handlePasswordChange(e: React.FormEvent) {
-    e.preventDefault();
+  async function handlePasswordChange(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(false);
     
@@ -435,10 +435,7 @@ export default function App(){
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setTimeout(() => {
-        setShowPasswordChange(false);
-        setPasswordSuccess(false);
-      }, 2000);
+      // Don't auto-close since we're in settings modal now
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password');
     }
@@ -646,19 +643,6 @@ export default function App(){
                 Settings
               </button>
               <button
-                onClick={() => setShowPasswordChange(true)}
-                style={{
-                  padding:'8px 16px',
-                  backgroundColor:'#0ea5e9',
-                  color:'white',
-                  border:'none',
-                  borderRadius:6,
-                  cursor:'pointer'
-                }}
-              >
-                Change Password
-              </button>
-              <button
                 onClick={handleLogout}
                 style={{
                   padding:'8px 16px',
@@ -822,8 +806,10 @@ export default function App(){
                     </div>
                     
                     {/* Player with flag */}
-                    <div style={{display:'flex',alignItems:'center',gap:12,overflow:'hidden'}}>
-                      <FlagEmoji countryCode={climber?.country} size={24} />
+                    <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
+                      <div style={{flexShrink:0}}>
+                        <FlagEmoji countryCode={climber?.country} size={24} />
+                      </div>
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
@@ -912,10 +898,11 @@ export default function App(){
       </section>
       
       {isAuthenticated && (
-        <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-          <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-            <div style={{flex:1,minWidth:300,padding:24}}>
-              <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>New Session</h2>
+        <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
+          <div style={{flex:1,minWidth:300}}>
+            <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+              <div style={{padding:24}}>
+                <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>New Session</h2>
             
             <div style={{marginBottom:16}}>
               <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
@@ -1175,28 +1162,31 @@ export default function App(){
             </button>
           </div>
         </div>
+      </GlowBorder>
+    </div>
 
-        <div style={{width:300}}>
-          <div style={{backgroundColor:'#1e293b',padding:20,borderRadius:8,border:'1px solid #475569',marginBottom:20}}>
-            <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
-            <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',marginBottom:20,textAlign:'center'}}>
-              {scoreSession(totalCounts).toFixed(2)}
-            </div>
-            <div>
-              <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal +1</h4>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                {ORDER.map((color:any)=> (
-                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
-                    <div style={{textTransform:'capitalize',fontSize:14,fontWeight:'500'}}>{color}</div>
-                    <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:14}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
-                  </div>
-                ))}
-              </div>
+    <div style={{width:350}}>
+      <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+        <div style={{padding:24}}>
+          <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
+          <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',marginBottom:20,textAlign:'center'}}>
+            {scoreSession(totalCounts).toFixed(2)}
+          </div>
+          <div>
+            <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal +1</h4>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {ORDER.map((color:any)=> (
+                <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
+                  <div style={{textTransform:'capitalize',fontSize:14,fontWeight:'500'}}>{color}</div>
+                  <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:14}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-          </GlowBorder>
-        </section>
+      </GlowBorder>
+    </div>
+    </section>
       )}
 
       <section style={{marginTop:32}}>
@@ -1668,156 +1658,6 @@ export default function App(){
         </div>
       </section>
       
-      {/* Password Change Modal */}
-      {showPasswordChange && (
-        <div style={{
-          position:'fixed',
-          top:0,
-          left:0,
-          right:0,
-          bottom:0,
-          backgroundColor:'rgba(0,0,0,0.7)',
-          display:'flex',
-          justifyContent:'center',
-          alignItems:'center',
-          zIndex:1000
-        }}>
-          <div style={{
-            backgroundColor:'#1e293b',
-            padding:32,
-            borderRadius:8,
-            border:'1px solid #475569',
-            width:400,
-            maxWidth:'90%'
-          }}>
-            <h2 style={{marginTop:0,marginBottom:24}}>Change Password</h2>
-            <form onSubmit={handlePasswordChange}>
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',marginBottom:8,fontSize:14}}>Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  style={{
-                    width:'100%',
-                    padding:12,
-                    borderRadius:6,
-                    border:'1px solid #475569',
-                    backgroundColor:'#0f172a',
-                    color:'white',
-                    fontSize:14
-                  }}
-                  required
-                />
-              </div>
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',marginBottom:8,fontSize:14}}>New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  style={{
-                    width:'100%',
-                    padding:12,
-                    borderRadius:6,
-                    border:'1px solid #475569',
-                    backgroundColor:'#0f172a',
-                    color:'white',
-                    fontSize:14
-                  }}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',marginBottom:8,fontSize:14}}>Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  style={{
-                    width:'100%',
-                    padding:12,
-                    borderRadius:6,
-                    border:'1px solid #475569',
-                    backgroundColor:'#0f172a',
-                    color:'white',
-                    fontSize:14
-                  }}
-                  required
-                />
-              </div>
-              {passwordError && (
-                <div style={{
-                  backgroundColor:'#dc2626',
-                  color:'white',
-                  padding:12,
-                  borderRadius:6,
-                  marginBottom:16,
-                  fontSize:14
-                }}>
-                  {passwordError}
-                </div>
-              )}
-              {passwordSuccess && (
-                <div style={{
-                  backgroundColor:'#10b981',
-                  color:'white',
-                  padding:12,
-                  borderRadius:6,
-                  marginBottom:16,
-                  fontSize:14
-                }}>
-                  Password changed successfully!
-                </div>
-              )}
-              <div style={{display:'flex',gap:12}}>
-                <button
-                  type="submit"
-                  style={{
-                    flex:1,
-                    padding:12,
-                    backgroundColor:'#3b82f6',
-                    color:'white',
-                    border:'none',
-                    borderRadius:6,
-                    fontSize:16,
-                    fontWeight:'600',
-                    cursor:'pointer'
-                  }}
-                >
-                  Change Password
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordChange(false);
-                    setCurrentPassword('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                    setPasswordError(null);
-                    setPasswordSuccess(false);
-                  }}
-                  style={{
-                    flex:1,
-                    padding:12,
-                    backgroundColor:'#475569',
-                    color:'white',
-                    border:'none',
-                    borderRadius:6,
-                    fontSize:16,
-                    fontWeight:'600',
-                    cursor:'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Settings Modal */}
       {showSettings && (
         <div style={{
@@ -1931,6 +1771,111 @@ export default function App(){
                     }}
                   />
                 </div>
+                
+                {/* Change Password Section */}
+                <div style={{
+                  marginTop:24,
+                  paddingTop:24,
+                  borderTop:'1px solid #475569'
+                }}>
+                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Change Password</h3>
+                  <div style={{marginBottom:16}}>
+                    <label style={{display:'block',marginBottom:8,fontSize:14}}>Current Password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
+                      style={{
+                        width:'100%',
+                        padding:12,
+                        borderRadius:6,
+                        border:'1px solid #475569',
+                        backgroundColor:'#0f172a',
+                        color:'white',
+                        fontSize:14
+                      }}
+                    />
+                  </div>
+                  <div style={{marginBottom:16}}>
+                    <label style={{display:'block',marginBottom:8,fontSize:14}}>New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      style={{
+                        width:'100%',
+                        padding:12,
+                        borderRadius:6,
+                        border:'1px solid #475569',
+                        backgroundColor:'#0f172a',
+                        color:'white',
+                        fontSize:14
+                      }}
+                      minLength={6}
+                    />
+                  </div>
+                  <div style={{marginBottom:16}}>
+                    <label style={{display:'block',marginBottom:8,fontSize:14}}>Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      style={{
+                        width:'100%',
+                        padding:12,
+                        borderRadius:6,
+                        border:'1px solid #475569',
+                        backgroundColor:'#0f172a',
+                        color:'white',
+                        fontSize:14
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePasswordChange}
+                    disabled={!currentPassword || !newPassword || !confirmPassword}
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      backgroundColor:!currentPassword || !newPassword || !confirmPassword ? '#475569' : '#0ea5e9',
+                      color:'white',
+                      border:'none',
+                      borderRadius:6,
+                      fontSize:14,
+                      fontWeight:'600',
+                      cursor:!currentPassword || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Update Password
+                  </button>
+                </div>
+
+                {passwordError && (
+                  <div style={{
+                    backgroundColor:'#dc2626',
+                    color:'white',
+                    padding:12,
+                    borderRadius:6,
+                    marginTop:16,
+                    fontSize:14
+                  }}>
+                    {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div style={{
+                    backgroundColor:'#10b981',
+                    color:'white',
+                    padding:12,
+                    borderRadius:6,
+                    marginTop:16,
+                    fontSize:14
+                  }}>
+                    Password changed successfully!
+                  </div>
+                )}
+                
                 {settingsError && (
                   <div style={{
                     backgroundColor:'#dc2626',
@@ -1981,6 +1926,11 @@ export default function App(){
                       setSettingsBio('');
                       setSettingsError(null);
                       setSettingsSuccess(false);
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      setPasswordError(null);
+                      setPasswordSuccess(false);
                     }}
                     style={{
                       flex:1,
@@ -2038,6 +1988,15 @@ export default function App(){
           let bestRank = Infinity;
           let highestScore = 0;
           
+          // Find the first session date for this climber
+          const userFirstSession = profileSessions[profileSessions.length - 1];
+          const firstDate = new Date(userFirstSession.date);
+          const today = new Date();
+          
+          // Create a map of dates to ranks
+          const dateRankMap = new Map<string, number>();
+          let currentUserRank = 0;
+          
           allSessionsByDate.forEach((session:any) => {
             const currentScore = climberScores.get(session.climberId) || 0;
             climberScores.set(session.climberId, currentScore + session.score);
@@ -2046,9 +2005,16 @@ export default function App(){
               .map(([id, score]) => ({id, score}))
               .sort((a, b) => b.score - a.score);
             
-            const currentRank = rankings.findIndex(r => r.id === viewingProfile) + 1;
-            if (currentRank > 0 && currentRank < bestRank) {
-              bestRank = currentRank;
+            const rankOnThisDate = rankings.findIndex(r => r.id === viewingProfile) + 1;
+            
+            if (rankOnThisDate > 0) {
+              currentUserRank = rankOnThisDate;
+              const dateKey = session.date.toISOString().split('T')[0];
+              dateRankMap.set(dateKey, rankOnThisDate);
+              
+              if (rankOnThisDate < bestRank) {
+                bestRank = rankOnThisDate;
+              }
             }
             
             // Track peak score
@@ -2057,13 +2023,29 @@ export default function App(){
               if (userScore > highestScore) {
                 highestScore = userScore;
               }
-              
-              rankHistory.push({
-                date: new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                rank: currentRank
-              });
             }
           });
+          
+          // Fill in every day from first session to today
+          let currentDate = new Date(firstDate);
+          let lastKnownRank = 0;
+          
+          while (currentDate <= today) {
+            const dateKey = currentDate.toISOString().split('T')[0];
+            
+            if (dateRankMap.has(dateKey)) {
+              lastKnownRank = dateRankMap.get(dateKey)!;
+            }
+            
+            if (lastKnownRank > 0) {
+              rankHistory.push({
+                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                rank: lastKnownRank
+              });
+            }
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
           
           peakRank = bestRank !== Infinity ? bestRank : null;
           peakScore = highestScore > 0 ? highestScore : null;
@@ -2126,9 +2108,12 @@ export default function App(){
                 
                 <div style={{display:'flex', gap:24, alignItems:'flex-start'}}>
                   <div style={{flex:1}}>
-                    <h1 style={{margin:0, fontSize:36, fontWeight:'700', color:'white', marginBottom:8}}>
-                      {profileClimber.name}
-                    </h1>
+                    <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8}}>
+                      <FlagEmoji countryCode={profileClimber?.country} size={40} />
+                      <h1 style={{margin:0, fontSize:36, fontWeight:'700', color:'white'}}>
+                        {profileClimber.name}
+                      </h1>
+                    </div>
                     <div style={{display:'flex', gap:32, marginTop:16}}>
                       <div>
                         <div style={{fontSize:14, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Global Ranking</div>
@@ -2144,7 +2129,8 @@ export default function App(){
                     padding:20,
                     borderRadius:8,
                     minWidth:200,
-                    border:'1px solid rgba(255,255,255,0.1)'
+                    border:'1px solid rgba(255,255,255,0.1)',
+                    marginRight:60
                   }}>
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranked Score</div>
