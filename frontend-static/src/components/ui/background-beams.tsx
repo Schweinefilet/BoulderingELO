@@ -13,17 +13,17 @@ export function BackgroundBeams() {
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: 'linear-gradient(to bottom right, #020617, #172554, #020617)'
+        background: '#000000'
       }} />
-      {[...Array(3)].map((_, i) => (
+      {[...Array(5)].map((_, i) => (
         <motion.div
           key={i}
           style={{
             position: 'absolute',
-            height: '1px',
+            height: '2px',
             width: '100%',
-            background: 'linear-gradient(to right, transparent, rgba(59, 130, 246, 0.2), transparent)',
-            top: `${20 + i * 30}%`,
+            background: 'linear-gradient(to right, transparent, rgba(59, 130, 246, 0.4), transparent)',
+            top: `${15 + i * 20}%`,
             left: 0,
           }}
           animate={{
