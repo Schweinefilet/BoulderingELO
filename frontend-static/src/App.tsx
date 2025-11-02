@@ -457,7 +457,9 @@ export default function App(){
 
   function updateWallCount(wall: 'overhang'|'midWall'|'sideWall', color: keyof Counts, val: string) {
     const nv = Math.max(0, parseInt(val)||0);
-    setWallCounts({...wallCounts, [wall]: {...wallCounts[wall], [color]: nv}});
+    const maxAllowed = WALL_TOTALS[wall][color];
+    const cappedValue = maxAllowed > 0 ? Math.min(nv, maxAllowed) : nv;
+    setWallCounts({...wallCounts, [wall]: {...wallCounts[wall], [color]: cappedValue}});
   }
   
   function addClimb() {
@@ -821,54 +823,75 @@ export default function App(){
               <div style={{marginBottom:20}}>
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Overhang</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-                  {ORDER.map((color:keyof Counts)=> (
-                    <div key={color}>
-                      <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>{color}</label>
-                      <input 
-                        type="number" 
-                        min={0} 
-                        value={wallCounts.overhang[color]} 
-                        onChange={e=>updateWallCount('overhang',color,e.target.value)}
-                        style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                      />
-                    </div>
-                  ))}
+                  {ORDER.map((color:keyof Counts)=> {
+                    const total = WALL_TOTALS.overhang[color];
+                    const displayTotal = total > 0 ? total : '?';
+                    return (
+                      <div key={color}>
+                        <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
+                          {color} ({wallCounts.overhang[color]}/{displayTotal})
+                        </label>
+                        <input 
+                          type="number" 
+                          min={0}
+                          max={total > 0 ? total : undefined}
+                          value={wallCounts.overhang[color]} 
+                          onChange={e=>updateWallCount('overhang',color,e.target.value)}
+                          style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               <div style={{marginBottom:20}}>
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Mid Wall</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-                  {ORDER.map((color:keyof Counts)=> (
-                    <div key={color}>
-                      <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>{color}</label>
-                      <input 
-                        type="number" 
-                        min={0} 
-                        value={wallCounts.midWall[color]} 
-                        onChange={e=>updateWallCount('midWall',color,e.target.value)}
-                        style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                      />
-                    </div>
-                  ))}
+                  {ORDER.map((color:keyof Counts)=> {
+                    const total = WALL_TOTALS.midWall[color];
+                    const displayTotal = total > 0 ? total : '?';
+                    return (
+                      <div key={color}>
+                        <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
+                          {color} ({wallCounts.midWall[color]}/{displayTotal})
+                        </label>
+                        <input 
+                          type="number" 
+                          min={0}
+                          max={total > 0 ? total : undefined}
+                          value={wallCounts.midWall[color]} 
+                          onChange={e=>updateWallCount('midWall',color,e.target.value)}
+                          style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               <div style={{marginBottom:20}}>
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Side Wall</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-                  {ORDER.map((color:keyof Counts)=> (
-                    <div key={color}>
-                      <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>{color}</label>
-                      <input 
-                        type="number" 
-                        min={0} 
-                        value={wallCounts.sideWall[color]} 
-                        onChange={e=>updateWallCount('sideWall',color,e.target.value)}
-                        style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                      />
-                    </div>
-                  ))}
+                  {ORDER.map((color:keyof Counts)=> {
+                    const total = WALL_TOTALS.sideWall[color];
+                    const displayTotal = total > 0 ? total : '?';
+                    return (
+                      <div key={color}>
+                        <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
+                          {color} ({wallCounts.sideWall[color]}/{displayTotal})
+                        </label>
+                        <input 
+                          type="number" 
+                          min={0}
+                          max={total > 0 ? total : undefined}
+                          value={wallCounts.sideWall[color]} 
+                          onChange={e=>updateWallCount('sideWall',color,e.target.value)}
+                          style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
