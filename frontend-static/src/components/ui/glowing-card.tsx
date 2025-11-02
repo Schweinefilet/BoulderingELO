@@ -17,12 +17,12 @@ interface GlowingCardProps {
 
 export const GlowingCard = ({
   children,
-  blur = 0,
-  borderWidth = 2,
-  spread = 120,
+  blur = 15,
+  borderWidth = 3,
+  spread = 300,
   glow = true,
   disabled = false,
-  proximity = 80,
+  proximity = 200,
   inactiveZone = 0.01,
   className = "",
 }: GlowingCardProps) => {
@@ -38,21 +38,8 @@ export const GlowingCard = ({
 
     setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
 
-    // Calculate distance from mouse to center
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const distanceX = e.clientX - rect.left - centerX;
-    const distanceY = e.clientY - rect.top - centerY;
-    const distance = Math.sqrt(distanceX ** 2 + distanceY ** 2);
-    const maxDistance = Math.sqrt(centerX ** 2 + centerY ** 2);
-
-    // Calculate opacity based on proximity
-    const normalizedDistance = distance / maxDistance;
-    const newOpacity = Math.max(
-      0,
-      1 - normalizedDistance / (1 - inactiveZone)
-    );
-    setOpacity(newOpacity);
+    // Make it always visible when hovering
+    setOpacity(1);
   };
 
   const handleMouseLeave = () => {
@@ -66,25 +53,25 @@ export const GlowingCard = ({
       onMouseLeave={handleMouseLeave}
       className={cn("relative", className)}
     >
-      {/* Glow effect overlay */}
+      {/* Strong outer glow effect */}
       <div
-        className={cn(
-          "pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 rounded-lg",
-          glow && "opacity-100"
-        )}
+        className="pointer-events-none absolute -inset-1 rounded-lg transition-opacity duration-300"
         style={{
           opacity: opacity,
-          background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, 0.3), transparent 40%)`,
+          background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, 0.8), rgba(147, 51, 234, 0.4) 40%, transparent 70%)`,
+          filter: `blur(${blur}px)`,
         }}
       />
-      {/* Border effect */}
+      {/* Bright border effect */}
       <div
-        className="pointer-events-none absolute -inset-px rounded-lg"
+        className="pointer-events-none absolute -inset-px rounded-lg transition-opacity duration-300"
         style={{
-          borderWidth: `${borderWidth}px`,
-          borderStyle: "solid",
-          borderImage: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, ${opacity}), transparent 40%) 1`,
-          filter: blur > 0 ? `blur(${blur}px)` : "none",
+          opacity: opacity,
+          border: `${borderWidth}px solid transparent`,
+          background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, 1), rgba(147, 51, 234, 0.6) 50%, transparent 80%) border-box`,
+          WebkitMask: 'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)',
+          WebkitMaskComposite: 'xor',
+          maskComposite: 'exclude',
         }}
       />
       {/* Content */}
