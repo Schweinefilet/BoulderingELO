@@ -688,8 +688,8 @@ export default function App(){
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-          <div style={{flex:1,minWidth:300}}>
-            <h2 style={{marginBottom:16}}>New Session</h2>
+          <div style={{flex:1,minWidth:300,backgroundColor:'#1e293b',padding:24,borderRadius:12,border:'2px solid #475569'}}>
+            <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>New Session</h2>
             
             <div style={{marginBottom:16}}>
               <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
