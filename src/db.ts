@@ -427,11 +427,100 @@ export async function voteOnVideo(reviewId: number, climberId: number, vote: 'up
 }
 
 export async function approveVideo(reviewId: number) {
-  const result = await pool.query(
-    'UPDATE video_reviews SET status = $1 WHERE id = $2 RETURNING *',
-    ['approved', reviewId]
-  );
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Get the video review details
+    const reviewResult = await client.query(
+      'SELECT * FROM video_reviews WHERE id = $1',
+      [reviewId]
+    );
+    
+    if (reviewResult.rows.length === 0) {
+      throw new Error('Video review not found');
+    }
+    
+    const review = reviewResult.rows[0];
+    const { session_id, color, wall } = review;
+    
+    // Update the video status to approved
+    await client.query(
+      'UPDATE video_reviews SET status = $1 WHERE id = $2',
+      ['approved', reviewId]
+    );
+    
+    // Add the climb to the session's wall_counts
+    const wallColumnPrefix = wall.toLowerCase().replace('wall', 'wall');
+    const colorColumn = `${wallColumnPrefix}_${color}`;
+    
+    await client.query(
+      `UPDATE wall_counts 
+       SET ${colorColumn} = ${colorColumn} + 1 
+       WHERE session_id = $1`,
+      [session_id]
+    );
+    
+    // Recalculate the session score
+    const sessionResult = await client.query(`
+      SELECT s.id, s.climber_id, s.date, s.notes,
+             w.overhang_green, w.overhang_blue, w.overhang_yellow, w.overhang_orange, w.overhang_red, w.overhang_black,
+             w.midwall_green, w.midwall_blue, w.midwall_yellow, w.midwall_orange, w.midwall_red, w.midwall_black,
+             w.sidewall_green, w.sidewall_blue, w.sidewall_yellow, w.sidewall_orange, w.sidewall_red, w.sidewall_black
+      FROM sessions s
+      LEFT JOIN wall_counts w ON s.id = w.session_id
+      WHERE s.id = $1
+    `, [session_id]);
+    
+    if (sessionResult.rows.length > 0) {
+      const row = sessionResult.rows[0];
+      const { scoreSession } = require('./score');
+      const { combineCounts } = require('./score');
+      
+      const wallCounts = {
+        overhang: {
+          green: row.overhang_green || 0,
+          blue: row.overhang_blue || 0,
+          yellow: row.overhang_yellow || 0,
+          orange: row.overhang_orange || 0,
+          red: row.overhang_red || 0,
+          black: row.overhang_black || 0
+        },
+        midWall: {
+          green: row.midwall_green || 0,
+          blue: row.midwall_blue || 0,
+          yellow: row.midwall_yellow || 0,
+          orange: row.midwall_orange || 0,
+          red: row.midwall_red || 0,
+          black: row.midwall_black || 0
+        },
+        sideWall: {
+          green: row.sidewall_green || 0,
+          blue: row.sidewall_blue || 0,
+          yellow: row.sidewall_yellow || 0,
+          orange: row.sidewall_orange || 0,
+          red: row.sidewall_red || 0,
+          black: row.sidewall_black || 0
+        }
+      };
+      
+      const totalCounts = combineCounts(wallCounts);
+      const newScore = scoreSession(totalCounts);
+      
+      await client.query(
+        'UPDATE sessions SET score = $1 WHERE id = $2',
+        [newScore, session_id]
+      );
+    }
+    
+    await client.query('COMMIT');
+    return reviewResult.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function rejectVideo(reviewId: number) {

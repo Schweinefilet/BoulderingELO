@@ -59,11 +59,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div style={{
-      display:'flex',
-      justifyContent:'center',
-      alignItems:'center',
-      minHeight:'100vh',
-      backgroundColor:'#0f172a',
       fontFamily:'Inter, Arial, sans-serif'
     }}>
       <div style={{
@@ -455,10 +450,24 @@ export default function App(){
     setLoading(true);
     setError(null);
     try {
+      // Exclude red/black climbs that have pending videos from the score
+      // They will be added when admin approves the video
+      const adjustedWallCounts = JSON.parse(JSON.stringify(wallCounts)); // Deep copy
+      
+      pendingVideos.forEach(video => {
+        if (video.color === 'red' || video.color === 'black') {
+          const wall = video.wall as 'overhang' | 'midWall' | 'sideWall';
+          const color = video.color as 'red' | 'black';
+          if (adjustedWallCounts[wall] && adjustedWallCounts[wall][color] > 0) {
+            adjustedWallCounts[wall][color] -= 1;
+          }
+        }
+      });
+      
       const session = await api.addSession({
         climberId: selectedClimber,
         date,
-        wallCounts,
+        wallCounts: adjustedWallCounts, // Submit WITHOUT pending red/black climbs
         notes: sessionNotes
       });
       
