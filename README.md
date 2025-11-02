@@ -4,6 +4,13 @@ A web app that scores bouldering sessions using osu-style weighted top scores wi
 
 🌐 **Live App**: https://schweinefilet.github.io/BoulderingELO/
 
+## 🚀 Quick Links
+
+- **New to setup?** → [QUICKSTART.md](QUICKSTART.md) - Visual setup guide
+- **Using Codespaces?** → [CODESPACE_GUIDE.md](CODESPACE_GUIDE.md) - Detailed Codespace instructions  
+- **Need help with scripts?** → [SCRIPTS_README.md](SCRIPTS_README.md) - Script documentation
+- **Seeing connection errors?** → [Troubleshooting](#troubleshooting-connection-errors)
+
 ## Architecture
 
 - **Backend**: Node.js + Express + PostgreSQL (Render.com)
@@ -88,27 +95,6 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions to Rende
 - `GET /api/sessions/:id`
 - `GET /api/leaderboard?from=&to=`
 
-## Development
-
-### Run Tests
-
-```bash
-npm test
-```
-
-### Build for Production
-
-```bash
-# Backend
-npm run build
-npm start
-
-# Frontend
-cd frontend
-npm run build
-npm start
-```
-
 ## Tech Stack
 
 **Backend:**
@@ -156,10 +142,69 @@ Your app will be live at: `https://<username>.github.io/BoulderingELO/`
 
 **Note**: Data is stored in browser localStorage (per-device). Use the "Export CSV" button to backup your sessions.
 
+## Troubleshooting Connection Errors
+
+### "ERR_CONNECTION_REFUSED" Error
+
+**Symptom:** Frontend shows errors like:
+```
+localhost:3000/api/climbers: Failed to load resource: net::ERR_CONNECTION_REFUSED
+Failed to load data: TypeError: Failed to fetch
+```
+
+**Cause:** The backend server is not running or failed to start.
+
+**Solution:**
+
+1. **Check if backend is running:**
+   ```bash
+   ./check-env.sh
+   ```
+
+2. **Start the backend:**
+   ```bash
+   # Build first (if not already built)
+   npm run build
+   
+   # Start backend
+   npm start
+   ```
+
+3. **Configure database connection:**
+   - Make sure `DATABASE_URL` is set in `.env` file
+   - For cloud database (recommended): Get connection string from [neon.tech](https://neon.tech) or [supabase.com](https://supabase.com)
+   - For local database: Run `./setup-local-db.sh`
+
+4. **Use the quick start script:**
+   ```bash
+   ./dev-start.sh  # Starts both backend and frontend
+   ```
+
+**For detailed troubleshooting**, see [CODESPACE_GUIDE.md](CODESPACE_GUIDE.md#troubleshooting) or [QUICKSTART.md](QUICKSTART.md).
+
+## Development
+
+### Run Tests
+
+```bash
+npm test
+```
+
+### Build for Production
+
+```bash
+# Backend
+npm run build
+npm start
+
+# Frontend
+cd frontend-static
+npm run build
+```
+
 ## Next Steps
 
 - [ ] Replace JSON storage with SQLite/Postgres (backend)
 - [ ] Add admin toggles for decay (r) and base points
 - [ ] Add authentication
 - [ ] Add GitHub Actions workflow for auto-deploy
-# BoulderingELO

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1761964271106" clover="3.2.0">
-  <project timestamp="1761964271106" name="All files">
+<coverage generated="1762064656940" clover="3.2.0">
+  <project timestamp="1762064656940" name="All files">
     <metrics statements="27" coveredstatements="15" conditionals="15" coveredconditionals="7" methods="4" coveredmethods="2" elements="46" coveredelements="24" complexity="0" loc="27" ncloc="27" packages="1" files="1" classes="1"/>
-    <file name="score.ts" path="/workspaces/BoulderingELO/src/score.ts">
+    <file name="score.ts" path="/home/runner/work/BoulderingELO/BoulderingELO/src/score.ts">
       <metrics statements="27" coveredstatements="15" conditionals="15" coveredconditionals="7" methods="4" coveredmethods="2"/>
       <line num="3" count="1" type="stmt"/>
       <line num="12" count="1" type="stmt"/>
