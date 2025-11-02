@@ -241,6 +241,7 @@ export default function App(){
   const [dropdownColor, setDropdownColor] = useState<keyof Counts>('yellow')
   const [videoUrl, setVideoUrl] = useState('')
   const [sessionNotes, setSessionNotes] = useState('')
+  const [pendingVideos, setPendingVideos] = useState<Array<{videoUrl: string, color: string, wall: string}>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   
@@ -401,9 +402,7 @@ export default function App(){
     }
   }
 
-  if (showLoginScreen) {
-    return <LoginScreen onLogin={handleLoginSuccess} />;
-  }
+  // Removed automatic login screen redirect - users can browse without logging in
 
   async function addClimber(){ 
     if(!newName.trim()) return;
@@ -438,8 +437,13 @@ export default function App(){
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current + 1}
     });
     
-    // Append video URL to notes if provided
+    // Track video for submission after session is created
     if (videoUrl.trim()) {
+      setPendingVideos([...pendingVideos, {
+        videoUrl: videoUrl.trim(),
+        color: dropdownColor,
+        wall: dropdownWall
+      }]);
       const videoNote = `${dropdownColor} on ${dropdownWall}: ${videoUrl}`;
       setSessionNotes(sessionNotes ? `${sessionNotes}\n${videoNote}` : videoNote);
       setVideoUrl('');
@@ -451,12 +455,22 @@ export default function App(){
     setLoading(true);
     setError(null);
     try {
-      await api.addSession({
+      const session = await api.addSession({
         climberId: selectedClimber,
         date,
         wallCounts,
         notes: sessionNotes
       });
+      
+      // Submit all pending videos with the session ID
+      if (pendingVideos.length > 0 && session.id) {
+        await Promise.all(
+          pendingVideos.map(video => 
+            api.submitVideo(session.id, video.videoUrl, video.color, video.wall)
+          )
+        );
+      }
+      
       const [loadedSessions, loadedLeaderboard] = await Promise.all([
         api.getSessions(),
         api.getLeaderboard()
@@ -466,6 +480,7 @@ export default function App(){
       setWallCounts({overhang:emptyWall(),midWall:emptyWall(),sideWall:emptyWall()}); 
       setSessionNotes('');
       setVideoUrl('');
+      setPendingVideos([]);
     } catch (err: any) {
       setError(err.message || 'Failed to submit session');
     } finally {
@@ -1841,6 +1856,45 @@ export default function App(){
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      {showLoginScreen && (
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          backgroundColor:'rgba(0,0,0,0.9)',
+          display:'flex',
+          justifyContent:'center',
+          alignItems:'center',
+          zIndex:2000,
+          padding:20
+        }}>
+          <div style={{position:'relative',maxWidth:500,width:'100%'}}>
+            <button
+              onClick={() => setShowLoginScreen(false)}
+              style={{
+                position:'absolute',
+                top:-40,
+                right:0,
+                padding:'8px 16px',
+                backgroundColor:'#475569',
+                color:'white',
+                border:'none',
+                borderRadius:6,
+                fontSize:14,
+                fontWeight:'600',
+                cursor:'pointer'
+              }}
+            >
+              Close
+            </button>
+            <LoginScreen onLogin={handleLoginSuccess} />
           </div>
         </div>
       )}

@@ -648,6 +648,21 @@ app.delete('/api/climbers/:id', authenticateToken, requireAdmin, async (req: any
   }
 });
 
+// POST /api/videos - Submit a video for review
+// Authenticated users can submit videos
+app.post('/api/videos', authenticateToken, async (req: any, res) => {
+  try {
+    const { sessionId, videoUrl, color, wall } = req.body;
+    if (!sessionId || !videoUrl || !color || !wall) {
+      return res.status(400).json({ error: 'Missing required fields: sessionId, videoUrl, color, wall' });
+    }
+    const video = await db.addVideoReview(sessionId, videoUrl, color, wall);
+    res.json(video);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/videos?status=pending|approved|rejected
 // Public endpoint - anyone can view videos
 app.get('/api/videos', async (req, res) => {

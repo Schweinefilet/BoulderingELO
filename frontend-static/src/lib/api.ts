@@ -77,6 +77,27 @@ export function isAdmin(): boolean {
   return user?.role === 'admin';
 }
 
+// Helper to add timeout to fetch requests
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw error;
+  }
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
@@ -101,7 +122,7 @@ function getHeaders(includeAuth: boolean = false): HeadersInit {
 }
 
 export async function login(username: string, password: string): Promise<{ token: string; user: User }> {
-  const response = await fetch(`${API_URL}/api/auth/login`, {
+  const response = await fetchWithTimeout(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ username, password })
@@ -110,7 +131,7 @@ export async function login(username: string, password: string): Promise<{ token
 }
 
 export async function register(username: string, password: string, name: string): Promise<{ token: string; user: User }> {
-  const response = await fetch(`${API_URL}/api/auth/register`, {
+  const response = await fetchWithTimeout(`${API_URL}/api/auth/register`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ username, password, name })
@@ -219,6 +240,15 @@ export async function getVideos(status?: string): Promise<VideoReview[]> {
     console.error('Failed to fetch videos:', error);
     return [];
   }
+}
+
+export async function submitVideo(sessionId: number, videoUrl: string, color: string, wall: string): Promise<VideoReview> {
+  const response = await fetch(`${API_URL}/api/videos`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ sessionId, videoUrl, color, wall }),
+  });
+  return handleResponse<VideoReview>(response);
 }
 
 export async function voteOnVideo(videoId: number, vote: 'up' | 'down'): Promise<any> {
