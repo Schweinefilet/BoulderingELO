@@ -258,6 +258,10 @@ export default function App(){
   
   // Profile view state
   const [viewingProfile, setViewingProfile] = useState<number | null>(null)
+  
+  // Video review state
+  const [videos, setVideos] = useState<api.VideoReview[]>([])
+  const [videoFilter, setVideoFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
 
   const totalCounts = combineCounts(wallCounts);
 
@@ -284,6 +288,7 @@ export default function App(){
       setClimbers(loadedClimbers);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard);
+      await loadVideos(); // Load videos too
     } catch (err: any) {
       console.error('Failed to load data:', err);
       setError(err.message || 'Failed to load data');
@@ -291,6 +296,21 @@ export default function App(){
       setLoading(false);
     }
   }
+  
+  async function loadVideos() {
+    try {
+      const status = videoFilter === 'all' ? undefined : videoFilter;
+      const loadedVideos = await api.getVideos(status);
+      setVideos(loadedVideos);
+    } catch (err: any) {
+      console.error('Failed to load videos:', err);
+    }
+  }
+  
+  // Reload videos when filter changes
+  useEffect(() => {
+    loadVideos();
+  }, [videoFilter]);
   
   // Load selected climber's latest session data
   useEffect(() => {
@@ -889,74 +909,268 @@ export default function App(){
 
       <section style={{marginTop:32}}>
         <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,border:'1px solid #475569'}}>
-          <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>Video Evidence</h2>
-          <div style={{display:'flex',flexDirection:'column',gap:16}}>
-            {sessions
-              .filter((s:any) => s.notes && (s.notes.includes('red on') || s.notes.includes('black on')))
-              .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .map((s:any) => {
-                const climber = climbers.find(c => c.id === s.climberId);
-                // Extract video URLs from notes
-                const videoLines = s.notes.split('\n').filter((line:string) => 
-                  (line.includes('red on') || line.includes('black on')) && line.includes('http')
-                );
-                
-                return videoLines.map((line:string, idx:number) => {
-                  const urlMatch = line.match(/(https?:\/\/[^\s]+)/);
-                  const url = urlMatch ? urlMatch[1] : '';
-                  const isBlack = line.includes('black on');
-                  const wall = line.match(/on (\w+):/)?.[1] || 'unknown';
+          <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>🎥 Video Evidence Review</h2>
+          
+          {!api.isAuthenticated() && (
+            <div style={{
+              marginBottom:20,
+              padding:12,
+              backgroundColor:'rgba(234, 179, 8, 0.1)',
+              border:'1px solid rgba(234, 179, 8, 0.3)',
+              borderRadius:8
+            }}>
+              <p style={{margin:0,color:'#fde047',fontSize:14}}>
+                👀 Viewing mode: Log in to vote on videos
+              </p>
+            </div>
+          )}
+          
+          {/* Filter Tabs */}
+          <div style={{display:'flex',gap:8,marginBottom:20,flexWrap:'wrap',justifyContent:'center'}}>
+            {(['all', 'pending', 'approved', 'rejected'] as const).map(status => (
+              <button
+                key={status}
+                onClick={() => setVideoFilter(status)}
+                style={{
+                  padding:'8px 24px',
+                  borderRadius:8,
+                  fontWeight:500,
+                  border:'none',
+                  cursor:'pointer',
+                  background: videoFilter === status
+                    ? 'linear-gradient(to right, #a855f7, #ec4899)'
+                    : 'rgba(255,255,255,0.05)',
+                  color: videoFilter === status ? '#fff' : '#94a3b8',
+                  transition:'all 0.2s'
+                }}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
+          
+          {/* Video Grid */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(400px, 1fr))',gap:16}}>
+            {videos.map(video => {
+              const votes = video.votes || [];
+              const upvotes = votes.filter(v => v.vote === 'up').length;
+              const downvotes = votes.filter(v => v.vote === 'down').length;
+              const totalScore = upvotes - downvotes;
+              
+              return (
+                <div key={video.id} style={{
+                  backgroundColor:'rgba(255,255,255,0.05)',
+                  backdropFilter:'blur(10px)',
+                  borderRadius:12,
+                  border:'1px solid rgba(255,255,255,0.1)',
+                  overflow:'hidden',
+                  transition:'all 0.2s'
+                }}>
+                  {/* Video Player */}
+                  <div style={{aspectRatio:'16/9',backgroundColor:'#000'}}>
+                    <video
+                      src={video.video_url}
+                      controls
+                      style={{width:'100%',height:'100%'}}
+                    />
+                  </div>
                   
-                  return (
-                    <div key={`${s.id}-${idx}`} style={{
-                      padding:16,
-                      backgroundColor:'#0f172a',
-                      borderRadius:6,
-                      border:`2px solid ${isBlack ? '#9333ea' : '#dc2626'}`,
-                      display:'flex',
-                      flexDirection:'column',
-                      gap:12
-                    }}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                        <div>
-                          <span style={{
-                            fontSize:18,
-                            fontWeight:'700',
-                            color: isBlack ? '#c084fc' : '#f87171',
-                            textTransform:'uppercase'
-                          }}>
-                            {isBlack ? 'Black' : 'Red'}
-                          </span>
-                          <span style={{marginLeft:12,color:'#94a3b8',fontSize:14}}>
-                            {wall} · {s.date}
-                          </span>
-                        </div>
-                        <span style={{fontWeight:'600',fontSize:16}}>{climber?.name}</span>
+                  {/* Video Info */}
+                  <div style={{padding:20}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+                      <div>
+                        <h3 style={{margin:0,marginBottom:4,fontSize:18,fontWeight:600,color:'#fff'}}>
+                          {video.climber_name}
+                        </h3>
+                        <p style={{margin:0,fontSize:14,color:'#94a3b8'}}>
+                          {video.color} • {video.wall}
+                        </p>
+                        <p style={{margin:0,marginTop:4,fontSize:12,color:'#64748b'}}>
+                          {new Date(video.created_at).toLocaleDateString()}
+                        </p>
                       </div>
-                      <a 
-                        href={url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                      
+                      {/* Status Badge */}
+                      <span style={{
+                        padding:'4px 12px',
+                        borderRadius:9999,
+                        fontSize:12,
+                        fontWeight:500,
+                        backgroundColor: video.status === 'approved' 
+                          ? 'rgba(34, 197, 94, 0.2)' 
+                          : video.status === 'rejected'
+                          ? 'rgba(239, 68, 68, 0.2)'
+                          : 'rgba(234, 179, 8, 0.2)',
+                        color: video.status === 'approved'
+                          ? '#86efac'
+                          : video.status === 'rejected'
+                          ? '#fca5a5'
+                          : '#fde047',
+                        border: video.status === 'approved'
+                          ? '1px solid rgba(34, 197, 94, 0.3)'
+                          : video.status === 'rejected'
+                          ? '1px solid rgba(239, 68, 68, 0.3)'
+                          : '1px solid rgba(234, 179, 8, 0.3)'
+                      }}>
+                        {video.status}
+                      </span>
+                    </div>
+                    
+                    {/* Vote Counts */}
+                    <div style={{
+                      display:'flex',
+                      gap:16,
+                      marginBottom:16,
+                      paddingBottom:16,
+                      borderBottom:'1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:16}}>👍</span>
+                        <span style={{color:'#fff',fontWeight:500}}>{upvotes}</span>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:16}}>👎</span>
+                        <span style={{color:'#fff',fontWeight:500}}>{downvotes}</span>
+                      </div>
+                      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{color:'#94a3b8',fontSize:14}}>Score:</span>
+                        <span style={{
+                          fontWeight:600,
+                          color: totalScore >= 0 ? '#86efac' : '#fca5a5'
+                        }}>
+                          {totalScore > 0 ? '+' : ''}{totalScore}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Voting Buttons */}
+                    <div style={{display:'flex',gap:8}}>
+                      <button
+                        onClick={async () => {
+                          if (!api.isAuthenticated()) {
+                            alert('Please log in to vote');
+                            return;
+                          }
+                          try {
+                            await api.voteOnVideo(video.id, 'up');
+                            await loadVideos();
+                          } catch (err: any) {
+                            alert('Failed to submit vote: ' + err.message);
+                          }
+                        }}
+                        disabled={!api.isAuthenticated()}
                         style={{
-                          color:'#3b82f6',
-                          textDecoration:'none',
-                          fontSize:14,
-                          wordBreak:'break-all',
-                          padding:8,
-                          backgroundColor:'#1e293b',
-                          borderRadius:4,
-                          border:'1px solid #334155'
+                          flex:1,
+                          padding:'8px 16px',
+                          backgroundColor: api.isAuthenticated() ? 'rgba(34, 197, 94, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                          color: api.isAuthenticated() ? '#86efac' : '#64748b',
+                          border: api.isAuthenticated() ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(100, 116, 139, 0.2)',
+                          borderRadius:8,
+                          fontWeight:500,
+                          cursor: api.isAuthenticated() ? 'pointer' : 'not-allowed',
+                          transition:'all 0.2s'
                         }}
                       >
-                        {url}
-                      </a>
+                        👍 Upvote
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!api.isAuthenticated()) {
+                            alert('Please log in to vote');
+                            return;
+                          }
+                          try {
+                            await api.voteOnVideo(video.id, 'down');
+                            await loadVideos();
+                          } catch (err: any) {
+                            alert('Failed to submit vote: ' + err.message);
+                          }
+                        }}
+                        disabled={!api.isAuthenticated()}
+                        style={{
+                          flex:1,
+                          padding:'8px 16px',
+                          backgroundColor: api.isAuthenticated() ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                          color: api.isAuthenticated() ? '#fca5a5' : '#64748b',
+                          border: api.isAuthenticated() ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(100, 116, 139, 0.2)',
+                          borderRadius:8,
+                          fontWeight:500,
+                          cursor: api.isAuthenticated() ? 'pointer' : 'not-allowed',
+                          transition:'all 0.2s'
+                        }}
+                      >
+                        👎 Downvote
+                      </button>
                     </div>
-                  );
-                });
-              })}
+                    
+                    {/* Admin Controls */}
+                    {api.isAdmin() && video.status === 'pending' && (
+                      <div style={{
+                        display:'flex',
+                        gap:8,
+                        marginTop:12,
+                        paddingTop:12,
+                        borderTop:'1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await api.approveVideo(video.id);
+                              await loadVideos();
+                            } catch (err: any) {
+                              alert('Failed to approve: ' + err.message);
+                            }
+                          }}
+                          style={{
+                            flex:1,
+                            padding:'8px 16px',
+                            backgroundColor:'rgba(59, 130, 246, 0.2)',
+                            color:'#93c5fd',
+                            border:'1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius:8,
+                            fontWeight:500,
+                            cursor:'pointer'
+                          }}
+                        >
+                          ✅ Approve
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await api.rejectVideo(video.id);
+                              await loadVideos();
+                            } catch (err: any) {
+                              alert('Failed to reject: ' + err.message);
+                            }
+                          }}
+                          style={{
+                            flex:1,
+                            padding:'8px 16px',
+                            backgroundColor:'rgba(249, 115, 22, 0.2)',
+                            color:'#fdba74',
+                            border:'1px solid rgba(249, 115, 22, 0.3)',
+                            borderRadius:8,
+                            fontWeight:500,
+                            cursor:'pointer'
+                          }}
+                        >
+                          ❌ Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {sessions.filter((s:any) => s.notes && (s.notes.includes('red on') || s.notes.includes('black on'))).length === 0 && (
-            <p style={{color:'#64748b',fontSize:14,textAlign:'center',margin:0}}>No video evidence submitted yet</p>
+          
+          {videos.length === 0 && (
+            <p style={{color:'#64748b',fontSize:14,textAlign:'center',margin:0}}>
+              {videoFilter === 'pending' && 'No videos waiting for review'}
+              {videoFilter === 'approved' && 'No approved videos yet'}
+              {videoFilter === 'rejected' && 'No rejected videos'}
+              {videoFilter === 'all' && 'No video submissions yet'}
+            </p>
           )}
         </div>
       </section>

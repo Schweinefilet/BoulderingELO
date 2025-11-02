@@ -196,3 +196,52 @@ export async function deleteSession(sessionId: number): Promise<{ success: boole
   });
   return handleResponse<{ success: boolean; message: string }>(response);
 }
+
+export interface VideoReview {
+  id: number;
+  session_id: number;
+  climber_name: string;
+  video_url: string;
+  color: string;
+  wall: string;
+  status: 'pending' | 'approved' | 'rejected';
+  votes: Array<{ user_id: number; vote: 'up' | 'down' }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getVideos(status?: string): Promise<VideoReview[]> {
+  try {
+    const query = status ? `?status=${status}` : '';
+    const response = await fetch(`${API_URL}/api/videos${query}`);
+    return handleResponse<VideoReview[]>(response);
+  } catch (error) {
+    console.error('Failed to fetch videos:', error);
+    return [];
+  }
+}
+
+export async function voteOnVideo(videoId: number, vote: 'up' | 'down'): Promise<any> {
+  const response = await fetch(`${API_URL}/api/videos/${videoId}/vote`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ vote }),
+  });
+  return handleResponse<any>(response);
+}
+
+export async function approveVideo(videoId: number): Promise<any> {
+  const response = await fetch(`${API_URL}/api/videos/${videoId}/approve`, {
+    method: 'POST',
+    headers: getHeaders(true),
+  });
+  return handleResponse<any>(response);
+}
+
+export async function rejectVideo(videoId: number): Promise<any> {
+  const response = await fetch(`${API_URL}/api/videos/${videoId}/reject`, {
+    method: 'POST',
+    headers: getHeaders(true),
+  });
+  return handleResponse<any>(response);
+}
