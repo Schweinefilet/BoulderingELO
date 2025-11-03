@@ -743,10 +743,10 @@ export default function App(){
                 alignItems:'center',
                 minWidth:700
               }}>
-                <div style={{textAlign:'center'}}>#</div>
+                <div style={{textAlign:'center'}}></div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
                   <span style={{width:20,display:'inline-block'}}></span>
-                  <span>Climber</span>
+                  <span></span>
                 </div>
                 <div style={{textAlign:'center'}}>Global Ranking</div>
                 <div style={{textAlign:'center'}}>Ranked Score</div>
@@ -2004,66 +2004,59 @@ export default function App(){
         let peakScore: number | null = null;
         
         if (profileSessions.length > 0) {
-          // Find the first session date for this climber
-          const userFirstSession = profileSessions[profileSessions.length - 1];
-          const firstDate = new Date(userFirstSession.date);
-          const today = new Date();
+          // Get all unique session dates across all climbers
+          const allDates = new Set<string>();
+          sessions.forEach((s:any) => {
+            allDates.add(s.date);
+          });
           
-          // Get all sessions sorted by date
-          const allSessionsByDate = sessions
-            .map((s:any) => ({...s, date: new Date(s.date)}))
-            .sort((a:any, b:any) => a.date.getTime() - b.date.getTime());
+          // Sort dates chronologically
+          const sortedDates = Array.from(allDates).sort((a, b) => 
+            new Date(a).getTime() - new Date(b).getTime()
+          );
           
           let bestRank = Infinity;
-          let highestScore = 0;
           
-          // Calculate rank for every day from first session to today
-          let currentDate = new Date(firstDate);
-          
-          while (currentDate <= today) {
-            const dateKey = currentDate.toISOString().split('T')[0];
-            
-            // Calculate scores for all climbers up to this date
+          // For each date, calculate the cumulative scores and rankings
+          sortedDates.forEach(dateStr => {
+            // Calculate cumulative scores up to and including this date
             const scoresUpToDate = new Map<number, number>();
             climbers.forEach((c:any) => scoresUpToDate.set(c.id, 0));
             
-            allSessionsByDate.forEach((session:any) => {
-              const sessionDateKey = session.date.toISOString().split('T')[0];
-              if (sessionDateKey <= dateKey) {
+            sessions.forEach((session:any) => {
+              if (session.date <= dateStr) {
                 const currentScore = scoresUpToDate.get(session.climberId) || 0;
                 scoresUpToDate.set(session.climberId, currentScore + session.score);
               }
             });
             
-            // Calculate rankings for this specific date
+            // Calculate rankings for this date
             const rankings = Array.from(scoresUpToDate.entries())
-              .filter(([id, score]) => score > 0) // Only include climbers with sessions
+              .filter(([id, score]) => score > 0)
               .map(([id, score]) => ({id, score}))
               .sort((a, b) => b.score - a.score);
             
             const rankOnThisDate = rankings.findIndex(r => r.id === viewingProfile) + 1;
             
+            // Only add to history if this user had sessions up to this date
             if (rankOnThisDate > 0) {
+              const dateObj = new Date(dateStr);
               rankHistory.push({
-                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                 rank: rankOnThisDate
               });
               
               if (rankOnThisDate < bestRank) {
                 bestRank = rankOnThisDate;
               }
-              
-              const userScore = scoresUpToDate.get(viewingProfile) || 0;
-              if (userScore > highestScore) {
-                highestScore = userScore;
-              }
             }
-            
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
+          });
           
           peakRank = bestRank !== Infinity ? bestRank : null;
-          peakScore = highestScore > 0 ? highestScore : null;
+          
+          // Peak score is simply the current total score
+          const currentTotalScore = profileLeaderboardEntry?.total_score || 0;
+          peakScore = currentTotalScore > 0 ? currentTotalScore : null;
         }
         
         if (!profileClimber) return null;
