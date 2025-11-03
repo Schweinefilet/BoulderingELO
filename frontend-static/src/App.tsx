@@ -745,7 +745,7 @@ export default function App(){
               }}>
                 <div style={{textAlign:'center'}}>#</div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
-                  <div style={{display:'inline-block',width:24,height:24,flexShrink:0}} />
+                  <div style={{display:'flex',alignItems:'center',width:24,height:24,flexShrink:0}} />
                   <span>Climber</span>
                 </div>
                 <div style={{textAlign:'center'}}>Global Ranking</div>
@@ -809,7 +809,7 @@ export default function App(){
                     
                     {/* Player with flag */}
                     <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
-                      <div style={{flexShrink:0}}>
+                      <div style={{display:'flex',alignItems:'center',width:24,height:24,flexShrink:0}}>
                         <FlagEmoji countryCode={climber?.country} size={24} />
                       </div>
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
@@ -1783,7 +1783,7 @@ export default function App(){
                     value={settingsBio}
                     onChange={e => setSettingsBio(e.target.value)}
                     placeholder="Tell us about yourself..."
-                    rows={4}
+                    rows={3}
                     style={{
                       width:'100%',
                       padding:12,
@@ -2006,70 +2006,59 @@ export default function App(){
         let peakScore: number | null = null;
         
         if (profileSessions.length > 0) {
-          const allSessionsByDate = sessions
-            .map((s:any) => ({...s, date: new Date(s.date)}))
-            .sort((a:any, b:any) => a.date.getTime() - b.date.getTime());
-          
-          const climberScores = new Map<number, number>();
-          climbers.forEach((c:any) => climberScores.set(c.id, 0));
-          
-          let bestRank = Infinity;
-          let highestScore = 0;
-          
           // Find the first session date for this climber
           const userFirstSession = profileSessions[profileSessions.length - 1];
           const firstDate = new Date(userFirstSession.date);
           const today = new Date();
           
-          // Create a map of dates to ranks
-          const dateRankMap = new Map<string, number>();
-          let currentUserRank = 0;
+          // Get all sessions sorted by date
+          const allSessionsByDate = sessions
+            .map((s:any) => ({...s, date: new Date(s.date)}))
+            .sort((a:any, b:any) => a.date.getTime() - b.date.getTime());
           
-          allSessionsByDate.forEach((session:any) => {
-            const currentScore = climberScores.get(session.climberId) || 0;
-            climberScores.set(session.climberId, currentScore + session.score);
+          let bestRank = Infinity;
+          let highestScore = 0;
+          
+          // Calculate rank for every day from first session to today
+          let currentDate = new Date(firstDate);
+          
+          while (currentDate <= today) {
+            const dateKey = currentDate.toISOString().split('T')[0];
             
-            const rankings = Array.from(climberScores.entries())
+            // Calculate scores for all climbers up to this date
+            const scoresUpToDate = new Map<number, number>();
+            climbers.forEach((c:any) => scoresUpToDate.set(c.id, 0));
+            
+            allSessionsByDate.forEach((session:any) => {
+              const sessionDateKey = session.date.toISOString().split('T')[0];
+              if (sessionDateKey <= dateKey) {
+                const currentScore = scoresUpToDate.get(session.climberId) || 0;
+                scoresUpToDate.set(session.climberId, currentScore + session.score);
+              }
+            });
+            
+            // Calculate rankings for this specific date
+            const rankings = Array.from(scoresUpToDate.entries())
+              .filter(([id, score]) => score > 0) // Only include climbers with sessions
               .map(([id, score]) => ({id, score}))
               .sort((a, b) => b.score - a.score);
             
             const rankOnThisDate = rankings.findIndex(r => r.id === viewingProfile) + 1;
             
             if (rankOnThisDate > 0) {
-              currentUserRank = rankOnThisDate;
-              const dateKey = session.date.toISOString().split('T')[0];
-              dateRankMap.set(dateKey, rankOnThisDate);
+              rankHistory.push({
+                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                rank: rankOnThisDate
+              });
               
               if (rankOnThisDate < bestRank) {
                 bestRank = rankOnThisDate;
               }
-            }
-            
-            // Track peak score
-            if (session.climberId === viewingProfile) {
-              const userScore = climberScores.get(viewingProfile) || 0;
+              
+              const userScore = scoresUpToDate.get(viewingProfile) || 0;
               if (userScore > highestScore) {
                 highestScore = userScore;
               }
-            }
-          });
-          
-          // Fill in every day from first session to today
-          let currentDate = new Date(firstDate);
-          let lastKnownRank = 0;
-          
-          while (currentDate <= today) {
-            const dateKey = currentDate.toISOString().split('T')[0];
-            
-            if (dateRankMap.has(dateKey)) {
-              lastKnownRank = dateRankMap.get(dateKey)!;
-            }
-            
-            if (lastKnownRank > 0) {
-              rankHistory.push({
-                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                rank: lastKnownRank
-              });
             }
             
             currentDate.setDate(currentDate.getDate() + 1);
@@ -2138,7 +2127,9 @@ export default function App(){
                 <div style={{display:'flex', gap:24, alignItems:'flex-start', flexWrap:'wrap'}}>
                   <div style={{flex:1, minWidth:200}}>
                     <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8, flexWrap:'wrap'}}>
-                      <FlagEmoji countryCode={profileClimber?.country} size={40} />
+                      <div style={{display:'flex',alignItems:'center',width:40,height:30,flexShrink:0}}>
+                        <FlagEmoji countryCode={profileClimber?.country} size={40} />
+                      </div>
                       <h1 style={{margin:0, fontSize:'clamp(24px, 5vw, 36px)', fontWeight:'700', color:'white'}}>
                         {profileClimber.name}
                       </h1>
