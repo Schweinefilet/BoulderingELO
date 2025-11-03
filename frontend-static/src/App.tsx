@@ -810,7 +810,7 @@ export default function App(){
                     {/* Player with flag */}
                     <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
                       <FlagEmoji countryCode={climber?.country} size={20} />
-                      <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
+                      <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
                     </div>
                     
                     {/* Global Ranking */}
