@@ -745,7 +745,9 @@ export default function App(){
               }}>
                 <div style={{textAlign:'center'}}>#</div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
-                  <div style={{display:'flex',alignItems:'center',width:24,height:24,flexShrink:0}} />
+                  <span style={{width:20,display:'inline-block'}}>
+                    <FlagEmoji countryCode={''} size={20} />
+                  </span>
                   <span>Climber</span>
                 </div>
                 <div style={{textAlign:'center'}}>Global Ranking</div>
@@ -809,9 +811,9 @@ export default function App(){
                     
                     {/* Player with flag */}
                     <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',width:24,height:24,flexShrink:0}}>
-                        <FlagEmoji countryCode={climber?.country} size={24} />
-                      </div>
+                      <span style={{width:20,display:'inline-block'}}>
+                        <FlagEmoji countryCode={climber?.country} size={20} />
+                      </span>
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
@@ -1766,7 +1768,8 @@ export default function App(){
                       border:'1px solid #475569',
                       backgroundColor:'#1e293b',
                       color:'white',
-                      fontSize:14
+                      fontSize:14,
+                      boxSizing:'border-box'
                     }}
                   />
                 </div>
@@ -1793,7 +1796,8 @@ export default function App(){
                       color:'white',
                       fontSize:14,
                       fontFamily:'inherit',
-                      resize:'vertical'
+                      resize:'vertical',
+                      boxSizing:'border-box'
                     }}
                   />
                 </div>
@@ -1820,7 +1824,8 @@ export default function App(){
                         border:'1px solid #475569',
                         backgroundColor:'#1e293b',
                         color:'white',
-                        fontSize:14
+                        fontSize:14,
+                        boxSizing:'border-box'
                       }}
                     />
                   </div>
@@ -1837,7 +1842,8 @@ export default function App(){
                         border:'1px solid #475569',
                         backgroundColor:'#1e293b',
                         color:'white',
-                        fontSize:14
+                        fontSize:14,
+                        boxSizing:'border-box'
                       }}
                       minLength={6}
                     />
@@ -1855,7 +1861,8 @@ export default function App(){
                         border:'1px solid #475569',
                         backgroundColor:'#1e293b',
                         color:'white',
-                        fontSize:14
+                        fontSize:14,
+                        boxSizing:'border-box'
                       }}
                     />
                   </div>
@@ -1928,54 +1935,77 @@ export default function App(){
                     Settings updated successfully!
                   </div>
                 )}
-                <div style={{display:'flex',gap:12}}>
-                  <button
-                    type="submit"
-                    style={{
-                      flex:1,
-                      padding:12,
-                      backgroundColor:'#10b981',
-                      color:'white',
-                      border:'none',
-                      borderRadius:6,
-                      fontSize:16,
-                      fontWeight:'600',
-                      cursor:'pointer'
-                    }}
-                  >
-                    Save Changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSettings(false);
-                      setSettingsCountry('');
-                      setSettingsStarted('');
-                      setSettingsBio('');
-                      setSettingsError(null);
-                      setSettingsSuccess(false);
-                      setCurrentPassword('');
-                      setNewPassword('');
-                      setConfirmPassword('');
-                      setPasswordError(null);
-                      setPasswordSuccess(false);
-                    }}
-                    style={{
-                      flex:1,
-                      padding:12,
-                      backgroundColor:'#475569',
-                      color:'white',
-                      border:'none',
-                      borderRadius:6,
-                      fontSize:16,
-                      fontWeight:'600',
-                      cursor:'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
               </form>
+              
+              <div style={{display:'flex',gap:12,marginTop:16}}>
+                <button
+                  onClick={async () => {
+                    setSettingsError(null);
+                    setSettingsSuccess(false);
+                    
+                    try {
+                      await api.updateUserSettings({
+                        country: settingsCountry,
+                        started_bouldering: settingsStarted,
+                        bio: settingsBio
+                      });
+                      setSettingsSuccess(true);
+                      
+                      // Reload climbers data to reflect changes
+                      const loadedClimbers = await api.getClimbers();
+                      setClimbers(loadedClimbers);
+                      
+                      setTimeout(() => {
+                        setShowSettings(false);
+                        setSettingsSuccess(false);
+                      }, 2000);
+                    } catch (err: any) {
+                      setSettingsError(err.message || 'Failed to update settings');
+                    }
+                  }}
+                  style={{
+                    flex:1,
+                    padding:12,
+                    backgroundColor:'#10b981',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:16,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    setSettingsCountry('');
+                    setSettingsStarted('');
+                    setSettingsBio('');
+                    setSettingsError(null);
+                    setSettingsSuccess(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setPasswordError(null);
+                    setPasswordSuccess(false);
+                  }}
+                  style={{
+                    flex:1,
+                    padding:12,
+                    backgroundColor:'#475569',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:16,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </GlowBorder>
         </div>
@@ -2127,9 +2157,9 @@ export default function App(){
                 <div style={{display:'flex', gap:24, alignItems:'flex-start', flexWrap:'wrap'}}>
                   <div style={{flex:1, minWidth:200}}>
                     <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8, flexWrap:'wrap'}}>
-                      <div style={{display:'flex',alignItems:'center',width:40,height:30,flexShrink:0}}>
-                        <FlagEmoji countryCode={profileClimber?.country} size={40} />
-                      </div>
+                      <span style={{width:32,display:'inline-block'}}>
+                        <FlagEmoji countryCode={profileClimber?.country} size={32} />
+                      </span>
                       <h1 style={{margin:0, fontSize:'clamp(24px, 5vw, 36px)', fontWeight:'700', color:'white'}}>
                         {profileClimber.name}
                       </h1>
