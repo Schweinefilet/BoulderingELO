@@ -745,9 +745,6 @@ export default function App(){
               }}>
                 <div style={{textAlign:'center'}}>#</div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
-                  <span style={{width:20,display:'inline-block'}}>
-                    <FlagEmoji countryCode={''} size={20} />
-                  </span>
                   <span>Climber</span>
                 </div>
                 <div style={{textAlign:'center'}}>Global Ranking</div>
@@ -811,9 +808,6 @@ export default function App(){
                     
                     {/* Player with flag */}
                     <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
-                      <span style={{width:20,display:'inline-block'}}>
-                        <FlagEmoji countryCode={climber?.country} size={20} />
-                      </span>
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
@@ -1774,34 +1768,6 @@ export default function App(){
                   />
                 </div>
                 
-                <div style={{
-                  backgroundColor:'#0f172a',
-                  padding:16,
-                  borderRadius:8,
-                  border:'1px solid #475569',
-                  marginBottom:16
-                }}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Bio</label>
-                  <textarea
-                    value={settingsBio}
-                    onChange={e => setSettingsBio(e.target.value)}
-                    placeholder="Tell us about yourself..."
-                    rows={3}
-                    style={{
-                      width:'100%',
-                      padding:12,
-                      borderRadius:6,
-                      border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
-                      color:'white',
-                      fontSize:14,
-                      fontFamily:'inherit',
-                      resize:'vertical',
-                      boxSizing:'border-box'
-                    }}
-                  />
-                </div>
-                
                 {/* Change Password Section */}
                 <div style={{
                   backgroundColor:'#0f172a',
@@ -2157,9 +2123,6 @@ export default function App(){
                 <div style={{display:'flex', gap:24, alignItems:'flex-start', flexWrap:'wrap'}}>
                   <div style={{flex:1, minWidth:200}}>
                     <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8, flexWrap:'wrap'}}>
-                      <span style={{width:32,display:'inline-block'}}>
-                        <FlagEmoji countryCode={profileClimber?.country} size={32} />
-                      </span>
                       <h1 style={{margin:0, fontSize:'clamp(24px, 5vw, 36px)', fontWeight:'700', color:'white'}}>
                         {profileClimber.name}
                       </h1>
