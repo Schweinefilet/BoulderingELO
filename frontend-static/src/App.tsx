@@ -2030,14 +2030,21 @@ export default function App(){
           while (currentDate <= endDate) {
             const dateStr = currentDate.toISOString().split('T')[0];
             
-            // Calculate cumulative scores up to and including this date
+            // Get the most recent session score for each climber up to this date
+            // Each session.score already contains the cumulative total at that time
             const scoresUpToDate = new Map<number, number>();
-            climbers.forEach((c:any) => scoresUpToDate.set(c.id, 0));
             
-            sessions.forEach((session:any) => {
-              if (session.date <= dateStr) {
-                const currentScore = scoresUpToDate.get(session.climberId) || 0;
-                scoresUpToDate.set(session.climberId, currentScore + session.score);
+            climbers.forEach((c:any) => {
+              // Find the most recent session for this climber on or before this date
+              const climberSessions = sessions
+                .filter((s:any) => s.climberId === c.id && s.date <= dateStr)
+                .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              
+              if (climberSessions.length > 0) {
+                // Use the score from the most recent session
+                scoresUpToDate.set(c.id, climberSessions[0].score);
+              } else {
+                scoresUpToDate.set(c.id, 0);
               }
             });
             
