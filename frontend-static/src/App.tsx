@@ -745,6 +745,7 @@ export default function App(){
               }}>
                 <div style={{textAlign:'center'}}>#</div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
+                  <span style={{width:20,display:'inline-block'}}></span>
                   <span>Climber</span>
                 </div>
                 <div style={{textAlign:'center'}}>Global Ranking</div>
@@ -808,6 +809,7 @@ export default function App(){
                     
                     {/* Player with flag */}
                     <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
+                      <FlagEmoji countryCode={climber?.country} size={20} />
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
@@ -1003,7 +1005,7 @@ export default function App(){
                 </div>
               )}
 
-              <div style={{marginBottom:16,display:'flex',justifyContent:'center'}}>
+              <div style={{marginBottom:16}}>
                 <button
                   onClick={addClimb}
                   style={{
@@ -1138,7 +1140,7 @@ export default function App(){
             </div>
           )}
 
-          <div style={{marginTop:16,display:'flex',justifyContent:'center'}}>
+          <div style={{marginTop:16}}>
             <button
               onClick={submit}
               style={{
@@ -2123,6 +2125,7 @@ export default function App(){
                 <div style={{display:'flex', gap:24, alignItems:'flex-start', flexWrap:'wrap'}}>
                   <div style={{flex:1, minWidth:200}}>
                     <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:8, flexWrap:'wrap'}}>
+                      <FlagEmoji countryCode={profileClimber?.country} size={32} />
                       <h1 style={{margin:0, fontSize:'clamp(24px, 5vw, 36px)', fontWeight:'700', color:'white'}}>
                         {profileClimber.name}
                       </h1>
