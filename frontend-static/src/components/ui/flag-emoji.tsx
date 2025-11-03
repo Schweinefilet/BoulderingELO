@@ -209,8 +209,7 @@ export function FlagEmoji({ countryCode, size = 20 }: FlagEmojiProps) {
 
   if (!countryCode || errored) {
     return (
-      <span style={{ display: 'inline-block', width: size, height: size, fontSize: size }}>
-        🌐
+      <span style={{ display: 'inline-block', width: size, height: size * 0.75 }}>
       </span>
     );
   }
