@@ -1660,7 +1660,18 @@ export default function App(){
       
       {/* Settings Modal */}
       {showSettings && (
-        <div style={{
+        <div 
+          onClick={() => {
+            setShowSettings(false);
+            setSettingsSuccess(false);
+            setSettingsError(null);
+            setPasswordError(null);
+            setPasswordSuccess(false);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+          }}
+          style={{
           position:'fixed',
           top:0,
           left:0,
@@ -1675,7 +1686,9 @@ export default function App(){
           overflowY:'auto'
         }}>
           <GlowBorder glowColor="rgba(16, 185, 129, 0.5)" borderRadius={12} backgroundColor="#1e293b">
-            <div style={{
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
               padding:32,
               width:500,
               maxWidth:'100%',
@@ -2090,7 +2103,9 @@ export default function App(){
         const currentRank = leaderboard.findIndex((e:any) => e.climber === profileClimber.name) + 1;
         
         return (
-          <div style={{
+          <div 
+            onClick={() => setViewingProfile(null)}
+            style={{
             position:'fixed',
             top:0,
             left:0,
@@ -2104,7 +2119,9 @@ export default function App(){
             padding:20,
             overflowY:'auto'
           }}>
-            <div style={{
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
               backgroundColor:'#1e293b',
               borderRadius:12,
               border:'2px solid #475569',
@@ -2544,7 +2561,9 @@ export default function App(){
 
       {/* Login Modal */}
       {showLoginScreen && (
-        <div style={{
+        <div 
+          onClick={() => setShowLoginScreen(false)}
+          style={{
           position:'fixed',
           top:0,
           left:0,
@@ -2557,7 +2576,9 @@ export default function App(){
           zIndex:2000,
           padding:20
         }}>
-          <div style={{position:'relative',maxWidth:500,width:'100%'}}>
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{position:'relative',maxWidth:500,width:'100%'}}>
             <button
               onClick={() => setShowLoginScreen(false)}
               style={{
