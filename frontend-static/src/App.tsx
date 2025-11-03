@@ -2015,10 +2015,21 @@ export default function App(){
             new Date(a).getTime() - new Date(b).getTime()
           );
           
-          let bestRank = Infinity;
+          // Find the first and last date
+          const firstDate = new Date(sortedDates[0]);
+          const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+          const today = new Date();
+          const endDate = lastDate > today ? lastDate : today;
           
-          // For each date, calculate the cumulative scores and rankings
-          sortedDates.forEach(dateStr => {
+          let bestRank = Infinity;
+          let lastRank: number | null = null;
+          
+          // Iterate through every day from first session to today
+          let currentDate = new Date(firstDate);
+          
+          while (currentDate <= endDate) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            
             // Calculate cumulative scores up to and including this date
             const scoresUpToDate = new Map<number, number>();
             climbers.forEach((c:any) => scoresUpToDate.set(c.id, 0));
@@ -2038,19 +2049,27 @@ export default function App(){
             
             const rankOnThisDate = rankings.findIndex(r => r.id === viewingProfile) + 1;
             
-            // Only add to history if this user had sessions up to this date
+            // Add to history if this user had sessions up to this date
             if (rankOnThisDate > 0) {
-              const dateObj = new Date(dateStr);
+              lastRank = rankOnThisDate;
               rankHistory.push({
-                date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                 rank: rankOnThisDate
               });
               
               if (rankOnThisDate < bestRank) {
                 bestRank = rankOnThisDate;
               }
+            } else if (lastRank !== null) {
+              // Fill in with previous rank if no sessions up to this date but user has had sessions before
+              rankHistory.push({
+                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                rank: lastRank
+              });
             }
-          });
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
           
           peakRank = bestRank !== Infinity ? bestRank : null;
           
