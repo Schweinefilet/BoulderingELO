@@ -1693,8 +1693,12 @@ export default function App(){
               width:500,
               maxWidth:'100%',
               maxHeight:'90vh',
-              overflowY:'auto'
-            }}>
+              overflowY:'auto',
+              scrollbarWidth:'none',
+              msOverflowStyle:'none'
+            }}
+              className="hide-scrollbar"
+            >
               <h2 style={{marginTop:0,marginBottom:24}}>Account Settings</h2>
               <form onSubmit={async (e) => {
                 e.preventDefault();
@@ -2128,8 +2132,12 @@ export default function App(){
               maxWidth:1000,
               width:'100%',
               maxHeight:'90vh',
-              overflowY:'auto'
-            }}>
+              overflowY:'auto',
+              scrollbarWidth:'none',
+              msOverflowStyle:'none'
+            }}
+              className="hide-scrollbar"
+            >
               {/* Header Section - osu! style */}
               <div style={{
                 background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
