@@ -337,6 +337,9 @@ export default function App(){
   
   // Leaderboard pagination
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false)
+  
+  // Sessions pagination
+  const [sessionsToShow, setSessionsToShow] = useState(8)
 
   const totalCounts = combineCounts(wallCounts);
 
@@ -727,12 +730,13 @@ export default function App(){
               backgroundColor:'#0f172a',
               borderRadius:8,
               overflow:'auto',
-              border:'1px solid #334155'
+              border:'1px solid #334155',
+              position:'relative'
             }}>
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 70px)',
+                gridTemplateColumns:'60px minmax(150px, 2fr) 120px 120px 90px repeat(4, 70px)',
                 columnGap:8,
                 padding:'12px 16px',
                 backgroundColor:'#1e293b',
@@ -741,9 +745,9 @@ export default function App(){
                 color:'#94a3b8',
                 borderBottom:'1px solid #334155',
                 alignItems:'center',
-                minWidth:700
+                minWidth:'fit-content'
               }}>
-                <div style={{textAlign:'center'}}></div>
+                <div style={{textAlign:'center',position:'sticky',left:0,backgroundColor:'#1e293b',zIndex:2}}></div>
                 <div style={{display:'flex', alignItems:'center', gap:12}}>
                   <span style={{width:20,display:'inline-block'}}></span>
                   <span></span>
@@ -783,7 +787,7 @@ export default function App(){
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'60px 2fr 120px 120px 90px repeat(4, 70px)',
+                        gridTemplateColumns:'60px minmax(150px, 2fr) 120px 120px 90px repeat(4, 70px)',
                         columnGap:8,
                         padding:'12px 16px',
                         backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
@@ -791,7 +795,7 @@ export default function App(){
                         alignItems:'center',
                         transition:'background-color 0.2s',
                         cursor:'pointer',
-                        minWidth:700
+                        minWidth:'fit-content'
                       }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? '#0f172a' : '#1a1f2e'}
@@ -802,7 +806,11 @@ export default function App(){
                       textAlign:'center',
                       fontWeight:'700',
                       fontSize:16,
-                      color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b'
+                      color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b',
+                      position:'sticky',
+                      left:0,
+                      backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
+                      zIndex:1
                     }}>
                       #{i + 1}
                     </div>
@@ -1206,50 +1214,81 @@ export default function App(){
                   sessionsByDate.get(s.date)!.push(s);
                 });
 
-              return Array.from(sessionsByDate.entries()).map(([date, dateSessions]) => (
-                <div key={date} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #475569'}}>
-                  <h3 style={{fontSize:18,fontWeight:'600',marginBottom:16,color:'#3b82f6'}}>{date}</h3>
-                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    {dateSessions.map(s => {
-                      const climber = climbers.find(c=>c.id===s.climberId);
-                      
-                      // Find previous session for this climber
-                      const climberSessions = sessions
-                        .filter((sess:any) => sess.climberId === s.climberId)
-                        .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                      
-                      const sessionIndex = climberSessions.findIndex((sess:any) => sess.id === s.id);
-                      const prevSession = sessionIndex > 0 ? climberSessions[sessionIndex - 1] : null;
-                      
-                      const scoreDiff = prevSession ? s.score - prevSession.score : s.score;
-                      const displayScore = scoreDiff >= 0 ? `+${scoreDiff.toFixed(2)}` : scoreDiff.toFixed(2);
-                      
-                      // Color based on score change
-                      let color = '#10b981';
-                      if (scoreDiff < 0) {
-                        color = '#ef4444';
-                      } else if (scoreDiff >= 40) {
-                        color = '#6ee7b7';
-                      } else if (scoreDiff >= 30) {
-                        color = '#5eead4';
-                      } else if (scoreDiff >= 20) {
-                        color = '#34d399';
-                      } else if (scoreDiff >= 10) {
-                        color = '#10b981';
-                      } else {
-                        color = '#059669';
-                      }
-                      
-                      return (
-                        <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6,border:'1px solid #334155'}}>
-                          <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
-                          <span style={{color,fontWeight:'700',fontSize:18,minWidth:80,textAlign:'right'}}>{displayScore}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ));
+              const allDates = Array.from(sessionsByDate.entries());
+              const datesToShow = allDates.slice(0, sessionsToShow);
+              const hasMore = allDates.length > sessionsToShow;
+
+              return (
+                <>
+                  {datesToShow.map(([date, dateSessions]) => (
+                    <div key={date} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #475569'}}>
+                      <h3 style={{fontSize:18,fontWeight:'600',marginBottom:16,color:'#3b82f6'}}>{date}</h3>
+                      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                        {dateSessions.map(s => {
+                          const climber = climbers.find(c=>c.id===s.climberId);
+                          
+                          // Find previous session for this climber
+                          const climberSessions = sessions
+                            .filter((sess:any) => sess.climberId === s.climberId)
+                            .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                          
+                          const sessionIndex = climberSessions.findIndex((sess:any) => sess.id === s.id);
+                          const prevSession = sessionIndex > 0 ? climberSessions[sessionIndex - 1] : null;
+                          
+                          const scoreDiff = prevSession ? s.score - prevSession.score : s.score;
+                          const displayScore = scoreDiff >= 0 ? `+${scoreDiff.toFixed(2)}` : scoreDiff.toFixed(2);
+                          
+                          // Color based on score change
+                          let color = '#10b981';
+                          if (scoreDiff < 0) {
+                            color = '#ef4444';
+                          } else if (scoreDiff >= 40) {
+                            color = '#6ee7b7';
+                          } else if (scoreDiff >= 30) {
+                            color = '#5eead4';
+                          } else if (scoreDiff >= 20) {
+                            color = '#34d399';
+                          } else if (scoreDiff >= 10) {
+                            color = '#10b981';
+                          } else {
+                            color = '#059669';
+                          }
+                          
+                          return (
+                            <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6,border:'1px solid #334155'}}>
+                              <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
+                              <span style={{color,fontWeight:'700',fontSize:18,minWidth:80,textAlign:'right'}}>{displayScore}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {hasMore && (
+                    <div style={{textAlign:'center',marginTop:16}}>
+                      <button
+                        onClick={() => setSessionsToShow(prev => prev + 8)}
+                        style={{
+                          padding:'10px 32px',
+                          backgroundColor:'#3b82f6',
+                          color:'white',
+                          border:'none',
+                          borderRadius:8,
+                          fontSize:14,
+                          fontWeight:'600',
+                          cursor:'pointer',
+                          transition:'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                      >
+                        View More
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
             })()}
           </div>
           </div>
@@ -2231,7 +2270,7 @@ export default function App(){
                   marginBottom:24
                 }}>
                   <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>TOTAL CLIMBS</h3>
-                  <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16}}>
+                  <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:16}}>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.green}</div>
