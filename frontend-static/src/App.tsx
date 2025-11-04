@@ -2489,7 +2489,7 @@ export default function App(){
                     </div>
                     <div style={{display:'flex', gap:32, marginTop:16}}>
                       <div>
-                        <div style={{fontSize:14, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Global Ranking</div>
+                        <div style={{fontSize:14, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranking</div>
                         <div style={{fontSize:32, fontWeight:'700', color:'white'}}>
                           #{currentRank || 'N/A'}
                         </div>
@@ -2506,7 +2506,7 @@ export default function App(){
                     marginRight:60
                   }}>
                     <div style={{marginBottom:12}}>
-                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranked Score</div>
+                      <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Score</div>
                       <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
                         {profileLeaderboardEntry?.total_score.toFixed(2) || '0.00'}
                       </div>

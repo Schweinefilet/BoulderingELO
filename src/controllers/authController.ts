@@ -1,0 +1,112 @@
+import { Response } from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import * as db from '../db';
+import { AuthRequest } from '../middleware/auth';
+import { JWT_SECRET } from '../config/constants';
+import { sendSuccess, sendError, handleControllerError } from '../utils/response';
+
+/**
+ * Handle user login
+ */
+export async function login(req: AuthRequest, res: Response) {
+  try {
+    const { username, password } = req.body;
+    
+    const climber = await db.getClimberByUsername(username.toLowerCase());
+    
+    if (!climber || !climber.password) {
+      return sendError(res, 'Invalid credentials', 401);
+    }
+    
+    const validPassword = await bcrypt.compare(password, climber.password);
+    
+    if (!validPassword) {
+      return sendError(res, 'Invalid credentials', 401);
+    }
+    
+    const token = jwt.sign(
+      { climberId: climber.id, username: climber.username, role: climber.role },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    return sendSuccess(res, {
+      token,
+      user: {
+        climberId: climber.id,
+        username: climber.username,
+        role: climber.role
+      }
+    });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Handle user registration
+ */
+export async function register(req: AuthRequest, res: Response) {
+  try {
+    const { name, username, password } = req.body;
+    
+    if (!name || !username || !password) {
+      return sendError(res, 'name, username, and password required', 400);
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const climber = await db.addClimber(name, username.toLowerCase(), hashedPassword, 'user');
+    
+    const token = jwt.sign(
+      { climberId: climber.id, username: climber.username, role: climber.role },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    return sendSuccess(res, {
+      token,
+      user: {
+        climberId: climber.id,
+        username: climber.username,
+        role: climber.role
+      }
+    });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Handle password change
+ */
+export async function changePassword(req: AuthRequest, res: Response) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return sendError(res, 'currentPassword and newPassword required', 400);
+    }
+    
+    if (newPassword.length < 6) {
+      return sendError(res, 'New password must be at least 6 characters', 400);
+    }
+    
+    const climber = await db.getClimberByUsername(req.user!.username);
+    if (!climber || !climber.password) {
+      return sendError(res, 'User account not found', 404);
+    }
+    
+    const valid = await bcrypt.compare(currentPassword, climber.password);
+    if (!valid) {
+      return sendError(res, 'Current password is incorrect', 401);
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.updateClimberPassword(climber.id!, hashedPassword);
+    
+    return sendSuccess(res, { message: 'Password updated successfully' });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}

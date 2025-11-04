@@ -1,3 +1,9 @@
+/**
+ * Type definitions for the BoulderingELO application
+ */
+
+export type Color = 'green' | 'blue' | 'yellow' | 'orange' | 'red' | 'black';
+
 export type Counts = {
   green: number;
   blue: number;
@@ -11,6 +17,7 @@ export type WallCounts = {
   overhang: Counts;
   midWall: Counts;
   sideWall: Counts;
+  [key: string]: Counts;
 };
 
 export type Climber = {
@@ -18,10 +25,42 @@ export type Climber = {
   name: string;
   username?: string;
   password?: string;
-  role?: string;
+  role?: 'admin' | 'user';
   country?: string;
   started_bouldering?: string;
   bio?: string;
+  created_at?: Date;
 };
 
-export type Session = { id?: number; climberId: number; date: string; notes?: string; status?: string };
+export type Session = {
+  id?: number;
+  climberId: number;
+  date: string;
+  score?: number;
+  notes?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  created_at?: Date;
+};
+
+export type VideoReview = {
+  id?: number;
+  sessionId: number;
+  videoUrl: string;
+  color: Color;
+  wall: string;
+  status: 'pending' | 'approved' | 'rejected';
+  votes?: Array<{ climberId: number; vote: 'up' | 'down' }>;
+  created_at?: Date;
+};
+
+export type LeaderboardEntry = {
+  climber: string;
+  total_score: number;
+};
+
+export type ApiResponse<T = any> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+};

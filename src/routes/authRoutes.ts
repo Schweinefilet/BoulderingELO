@@ -1,0 +1,18 @@
+import { Router } from 'express';
+import * as authController from '../controllers/authController';
+import { authenticateToken } from '../middleware/auth';
+
+const router = Router();
+
+/**
+ * Auth Routes
+ * POST /api/auth/login - User login
+ * POST /api/auth/register - User registration
+ * POST /api/auth/change-password - Change password (authenticated)
+ */
+
+router.post('/login', authController.login);
+router.post('/register', authController.register);
+router.post('/change-password', authenticateToken, authController.changePassword);
+
+export default router;
