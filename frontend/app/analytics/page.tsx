@@ -64,20 +64,20 @@ export default function AnalyticsPage() {
 
     // Initialize cumulative scores for each climber
     const climberScores: { [climberId: string]: number } = {};
-    climbers.forEach(c => climberScores[c.id] = 0);
+    climbers.forEach((c: Climber) => climberScores[c.id] = 0);
 
     // Create data points for each date
     const dataByDate: { [date: string]: any } = {};
     
-    allDates.forEach(date => {
+    allDates.forEach((date: string) => {
       // Add scores from sessions on this date
-      sessions.filter(s => s.date === date).forEach(s => {
+      sessions.filter((s: Session) => s.date === date).forEach((s: Session) => {
         climberScores[s.climberId] += s.score;
       });
 
       // Record current cumulative scores for all climbers
       const dataPoint: any = { date };
-      climbers.forEach(c => {
+      climbers.forEach((c: Climber) => {
         dataPoint[c.name] = climberScores[c.id];
       });
       dataByDate[date] = dataPoint;
@@ -88,22 +88,50 @@ export default function AnalyticsPage() {
 
   const totalScoreOverTimeData = calculateTotalScoreOverTime();
 
-  const scoreOverTimeData = sessions.map((s) => {
-    const climber = climbers.find((c) => c.id === s.climberId);
-    return { date: s.date, score: s.score, climber: climber?.name || "Unknown" };
-  });
+  // Calculate session scores over time with interpolated dates
+  const calculateSessionScoreOverTime = () => {
+    if (sessions.length === 0) return [];
 
-  const colorTotalsData = climbers.map((climber) => {
-    const climberSess = sessions.filter((s) => s.climberId === climber.id);
+    // Get date range
+    const startDate = new Date(sessions[0].date);
+    const endDate = new Date(sessions[sessions.length - 1].date);
+    const allDates = getAllDatesBetween(startDate, endDate);
+
+    // Create data points for each date
+    const dataByDate: { [date: string]: any } = {};
+    
+    allDates.forEach((date: string) => {
+      const dataPoint: any = { date };
+      
+      // Add scores from sessions on this date for each climber
+      climbers.forEach((climber: Climber) => {
+        const sessionOnDate = sessions.find((s: Session) => s.date === date && s.climberId === climber.id);
+        if (sessionOnDate) {
+          dataPoint[climber.name] = sessionOnDate.score;
+        } else {
+          dataPoint[climber.name] = null; // Use null for missing data points
+        }
+      });
+      
+      dataByDate[date] = dataPoint;
+    });
+
+    return allDates.map(date => dataByDate[date]);
+  };
+
+  const scoreOverTimeData = calculateSessionScoreOverTime();
+
+  const colorTotalsData = climbers.map((climber: Climber) => {
+    const climberSess = sessions.filter((s: Session) => s.climberId === climber.id);
     const totals: any = { climber: climber.name };
     ORDER.forEach((color) => {
-      totals[color] = climberSess.reduce((sum, s) => sum + (s[color] || 0), 0);
+      totals[color] = climberSess.reduce((sum: number, s: Session) => sum + (s[color] || 0), 0);
     });
     return totals;
   });
 
-  const topSessions = [...sessions].sort((a, b) => b.score - a.score).slice(0, 10).map((s) => {
-    const climber = climbers.find((c) => c.id === s.climberId);
+  const topSessions = [...sessions].sort((a, b) => b.score - a.score).slice(0, 10).map((s: Session) => {
+    const climber = climbers.find((c: Climber) => c.id === s.climberId);
     return { label: `${climber?.name || "Unknown"} - ${s.date}`, score: s.score };
   });
 
@@ -131,7 +159,7 @@ export default function AnalyticsPage() {
                 <YAxis stroke="#94a3b8" />
                 <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
                 <Legend />
-                {climbers.map((climber, idx) => (
+                {climbers.map((climber: Climber, idx: number) => (
                   <Line
                     key={climber.id}
                     type="monotone"
@@ -163,11 +191,11 @@ export default function AnalyticsPage() {
                 <YAxis stroke="#94a3b8" />
                 <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
                 <Legend />
-                {climbers.map((climber, idx) => (
+                {climbers.map((climber: Climber, idx: number) => (
                   <Line
                     key={climber.id}
                     type="monotone"
-                    dataKey={(d) => (d.climber === climber.name ? d.score : null)}
+                    dataKey={climber.name}
                     name={climber.name}
                     stroke={colors[idx % colors.length]}
                     strokeWidth={3}
@@ -227,7 +255,7 @@ export default function AnalyticsPage() {
         <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/30">
           <CardContent className="pt-6 text-center">
             <div className="text-5xl font-bold text-transparent bg-gradient-to-r from-green-400 to-green-600 bg-clip-text">
-              {sessions.reduce((sum, s) => sum + ORDER.reduce((total, color) => total + (s[color] || 0), 0), 0)}
+              {sessions.reduce((sum: number, s: Session) => sum + ORDER.reduce((total: number, color) => total + (s[color] || 0), 0), 0)}
             </div>
             <div className="text-slate-400 mt-2">Total Climbs</div>
           </CardContent>
