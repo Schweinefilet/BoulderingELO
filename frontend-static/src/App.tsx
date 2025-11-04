@@ -946,8 +946,25 @@ export default function App(){
       return;
     }
     
-    const current = wallCounts[dropdownWall][dropdownColor];
+    console.log('DEBUG addClimb:', {
+      dropdownWall,
+      dropdownColor,
+      wallCountsKeys: Object.keys(wallCounts),
+      wallTotalsKeys: Object.keys(wallTotals),
+      wallCountsForWall: wallCounts[dropdownWall],
+      wallTotalsForWall: wallTotals[dropdownWall]
+    });
+    
+    const current = wallCounts[dropdownWall]?.[dropdownColor];
     const maxForSection = wallTotals[dropdownWall]?.[dropdownColor];
+    
+    console.log('DEBUG values:', { current, maxForSection });
+    
+    // Check if wallCounts doesn't have this section
+    if (current === undefined) {
+      alert(`Error: Wall section "${dropdownWall}" not found in wallCounts. Try refreshing the page.`);
+      return;
+    }
     
     // Check if adding this climb would exceed the maximum (only if a limit is set)
     if (maxForSection !== undefined && maxForSection > 0 && current >= maxForSection) {
