@@ -418,6 +418,12 @@ export default function App(){
   const [newSectionName, setNewSectionName] = useState('')
   const [renameValue, setRenameValue] = useState('')
   
+  // Session editing state
+  const [editingSession, setEditingSession] = useState<number | null>(null)
+  const [editSessionDate, setEditSessionDate] = useState('')
+  const [editSessionNotes, setEditSessionNotes] = useState('')
+  const [editSessionWallCounts, setEditSessionWallCounts] = useState<WallCounts>({} as WallCounts)
+  
   // Profile view state
   const [viewingProfile, setViewingProfile] = useState<number | null>(null)
   
@@ -654,6 +660,73 @@ export default function App(){
     }
   }
 
+  // Start editing a session
+  function startEditSession(session: any) {
+    setEditingSession(session.id);
+    setEditSessionDate(session.date);
+    setEditSessionNotes(session.notes || '');
+    
+    // Initialize wall counts for editing
+    const counts: any = {};
+    Object.keys(wallTotals).forEach(section => {
+      counts[section] = {
+        green: session.wallCounts?.[section]?.green || 0,
+        blue: session.wallCounts?.[section]?.blue || 0,
+        yellow: session.wallCounts?.[section]?.yellow || 0,
+        orange: session.wallCounts?.[section]?.orange || 0,
+        red: session.wallCounts?.[section]?.red || 0,
+        black: session.wallCounts?.[section]?.black || 0
+      };
+    });
+    setEditSessionWallCounts(counts);
+  }
+
+  // Cancel editing
+  function cancelEditSession() {
+    setEditingSession(null);
+    setEditSessionDate('');
+    setEditSessionNotes('');
+    setEditSessionWallCounts({} as WallCounts);
+  }
+
+  // Save edited session
+  async function saveEditedSession(sessionId: number, climberId: number) {
+    setLoading(true);
+    try {
+      // First delete the old session
+      await api.deleteSession(sessionId);
+      
+      // Then create a new one with the updated data
+      await api.addSession({
+        climberId,
+        date: editSessionDate,
+        wallCounts: editSessionWallCounts,
+        notes: editSessionNotes
+      });
+      
+      // Reload data
+      await loadData();
+      cancelEditSession();
+      alert('Session updated successfully');
+    } catch (err: any) {
+      alert(`Error updating session: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Update a specific wall count during editing
+  function updateEditWallCount(section: string, color: keyof Counts, value: string) {
+    const numValue = Math.max(0, parseInt(value) || 0);
+    setEditSessionWallCounts({
+      ...editSessionWallCounts,
+      [section]: {
+        ...editSessionWallCounts[section],
+        [color]: numValue
+      }
+    });
+  }
+
   // Route Management Functions
   function updateRouteCount(section: string, color: string, value: number) {
     const updated = {
@@ -721,8 +794,78 @@ export default function App(){
       saveExpiryDates(updatedExpiry);
     }
     
+    // Migrate session data: update all sessions that have the old wall name
+    migrateSectionDataInSessions(oldName, newName);
+    
     setRenamingSection(null);
     setRenameValue('');
+  }
+
+  // Migrate session data when wall section is renamed
+  function migrateSectionDataInSessions(oldName: string, newName: string) {
+    const updatedSessions = sessions.map(session => {
+      if (session.wallCounts && session.wallCounts[oldName]) {
+        const newWallCounts = { ...session.wallCounts };
+        newWallCounts[newName] = newWallCounts[oldName];
+        delete newWallCounts[oldName];
+        return { ...session, wallCounts: newWallCounts };
+      }
+      return session;
+    });
+    setSessions(updatedSessions);
+    
+    // Show confirmation
+    const migratedCount = updatedSessions.filter(s => s.wallCounts?.[newName]).length;
+    if (migratedCount > 0) {
+      console.log(`Migrated ${migratedCount} sessions from "${oldName}" to "${newName}"`);
+    }
+  }
+
+  // Manual migration function for existing sessions with old wall names
+  async function migrateOldWallNames() {
+    if (!confirm('This will migrate all old session data from "midWall" to current wall sections and "sideWall" to current sections. Continue?')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Mapping of old names to new names (you can adjust these)
+      const migrations = [
+        { old: 'midWall', new: 'mid - front' },
+        { old: 'sideWall', new: 'side - right' }
+      ];
+      
+      let totalMigrated = 0;
+      
+      for (const migration of migrations) {
+        // Check if new section exists
+        if (!wallTotals[migration.new]) {
+          console.log(`Skipping ${migration.old} -> ${migration.new}: target section doesn't exist`);
+          continue;
+        }
+        
+        const updatedSessions = sessions.map(session => {
+          if (session.wallCounts && session.wallCounts[migration.old]) {
+            const newWallCounts = { ...session.wallCounts };
+            newWallCounts[migration.new] = newWallCounts[migration.old];
+            delete newWallCounts[migration.old];
+            totalMigrated++;
+            return { ...session, wallCounts: newWallCounts };
+          }
+          return session;
+        });
+        setSessions(updatedSessions);
+      }
+      
+      // Reload data to see the changes
+      await loadData();
+      
+      alert(`Migration complete! Migrated data in ${totalMigrated} session entries.`);
+    } catch (err: any) {
+      alert(`Migration error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function deleteWallSection(section: string) {
@@ -2976,7 +3119,24 @@ export default function App(){
 
               {adminTab === 'sessions' && (
                 <div>
-                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Manage Sessions</h3>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                    <h3 style={{margin:0,fontSize:18,fontWeight:'600'}}>Manage Sessions</h3>
+                    <button
+                      onClick={migrateOldWallNames}
+                      style={{
+                        padding:'8px 16px',
+                        backgroundColor:'#8b5cf6',
+                        color:'white',
+                        border:'none',
+                        borderRadius:6,
+                        cursor:'pointer',
+                        fontSize:14,
+                        fontWeight:'600'
+                      }}
+                    >
+                      Migrate Old Wall Names
+                    </button>
+                  </div>
                   <div style={{display:'flex',flexDirection:'column',gap:12}}>
                     {sessions.map(session => (
                       <div 
@@ -2988,34 +3148,173 @@ export default function App(){
                           border:'1px solid #475569'
                         }}
                       >
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
+                        {editingSession === session.id ? (
+                          // Edit mode
                           <div>
-                            <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
-                              {climbers.find(c => c.id === session.climberId)?.name || 'Unknown'}
+                            <div style={{marginBottom:16}}>
+                              <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                Date
+                              </label>
+                              <input
+                                type="date"
+                                value={editSessionDate}
+                                onChange={(e) => setEditSessionDate(e.target.value)}
+                                style={{
+                                  width:'100%',
+                                  padding:'8px 12px',
+                                  backgroundColor:'#0f172a',
+                                  border:'1px solid #475569',
+                                  borderRadius:6,
+                                  color:'white',
+                                  fontSize:14
+                                }}
+                              />
                             </div>
-                            <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
-                              {new Date(session.date).toLocaleDateString()} • Score: {session.score.toFixed(2)}
+                            
+                            <div style={{marginBottom:16}}>
+                              <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                Notes
+                              </label>
+                              <textarea
+                                value={editSessionNotes}
+                                onChange={(e) => setEditSessionNotes(e.target.value)}
+                                style={{
+                                  width:'100%',
+                                  padding:'8px 12px',
+                                  backgroundColor:'#0f172a',
+                                  border:'1px solid #475569',
+                                  borderRadius:6,
+                                  color:'white',
+                                  fontSize:14,
+                                  minHeight:60,
+                                  resize:'vertical'
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Wall counts editing */}
+                            <div style={{marginBottom:16}}>
+                              <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
+                                Climbs by Wall Section
+                              </label>
+                              {Object.keys(wallTotals).map(section => (
+                                <div key={section} style={{marginBottom:16}}>
+                                  <div style={{fontSize:13,fontWeight:'600',marginBottom:8,color:'#cbd5e1'}}>
+                                    {section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1')}
+                                  </div>
+                                  <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8}}>
+                                    {ORDER.map(color => (
+                                      <div key={color}>
+                                        <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>
+                                          {color}
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={editSessionWallCounts[section]?.[color] || 0}
+                                          onChange={(e) => updateEditWallCount(section, color as keyof Counts, e.target.value)}
+                                          style={{
+                                            width:'100%',
+                                            padding:'6px',
+                                            backgroundColor:'#0f172a',
+                                            border:'1px solid #475569',
+                                            borderRadius:4,
+                                            color:'white',
+                                            fontSize:13
+                                          }}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <div style={{display:'flex',gap:8}}>
+                              <button
+                                onClick={() => saveEditedSession(session.id, session.climberId)}
+                                style={{
+                                  flex:1,
+                                  padding:'8px 16px',
+                                  backgroundColor:'#10b981',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditSession}
+                                style={{
+                                  flex:1,
+                                  padding:'8px 16px',
+                                  backgroundColor:'#475569',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Cancel
+                              </button>
                             </div>
                           </div>
-                          <button
-                            onClick={() => deleteSessionById(session.id)}
-                            style={{
-                              padding:'6px 12px',
-                              backgroundColor:'#dc2626',
-                              color:'white',
-                              border:'none',
-                              borderRadius:6,
-                              cursor:'pointer',
-                              fontSize:13,
-                              fontWeight:'600'
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                        {session.notes && (
-                          <div style={{fontSize:14,color:'#cbd5e1',marginTop:8,fontStyle:'italic'}}>
-                            {session.notes}
+                        ) : (
+                          // View mode
+                          <div>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
+                              <div>
+                                <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
+                                  {climbers.find(c => c.id === session.climberId)?.name || 'Unknown'}
+                                </div>
+                                <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                                  {new Date(session.date).toLocaleDateString()} • Score: {session.score.toFixed(2)}
+                                </div>
+                              </div>
+                              <div style={{display:'flex',gap:8}}>
+                                <button
+                                  onClick={() => startEditSession(session)}
+                                  style={{
+                                    padding:'6px 12px',
+                                    backgroundColor:'#3b82f6',
+                                    color:'white',
+                                    border:'none',
+                                    borderRadius:6,
+                                    cursor:'pointer',
+                                    fontSize:13,
+                                    fontWeight:'600'
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteSessionById(session.id)}
+                                  style={{
+                                    padding:'6px 12px',
+                                    backgroundColor:'#dc2626',
+                                    color:'white',
+                                    border:'none',
+                                    borderRadius:6,
+                                    cursor:'pointer',
+                                    fontSize:13,
+                                    fontWeight:'600'
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                            {session.notes && (
+                              <div style={{fontSize:14,color:'#cbd5e1',marginTop:8,fontStyle:'italic'}}>
+                                {session.notes}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
