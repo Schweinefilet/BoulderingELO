@@ -1031,8 +1031,8 @@ export default function App(){
                   <span style={{width:20,display:'inline-block'}}></span>
                   <span></span>
                 </div>
-                <div style={{textAlign:'center'}}>Global Ranking</div>
-                <div style={{textAlign:'center'}}>Ranked Score</div>
+                <div style={{textAlign:'center'}}>Ranking</div>
+                <div style={{textAlign:'center'}}>Score</div>
                 <div style={{textAlign:'center'}}>Sessions</div>
                 {CLIMB_CATEGORY_COLUMNS.map(column => (
                   <div
