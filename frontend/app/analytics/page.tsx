@@ -42,6 +42,52 @@ export default function AnalyticsPage() {
     );
   }
 
+  // Helper function to get all dates between start and end
+  const getAllDatesBetween = (startDate: Date, endDate: Date): string[] => {
+    const dates: string[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  };
+
+  // Calculate cumulative scores over time with interpolated dates
+  const calculateTotalScoreOverTime = () => {
+    if (sessions.length === 0) return [];
+
+    // Get date range
+    const startDate = new Date(sessions[0].date);
+    const endDate = new Date(sessions[sessions.length - 1].date);
+    const allDates = getAllDatesBetween(startDate, endDate);
+
+    // Initialize cumulative scores for each climber
+    const climberScores: { [climberId: string]: number } = {};
+    climbers.forEach(c => climberScores[c.id] = 0);
+
+    // Create data points for each date
+    const dataByDate: { [date: string]: any } = {};
+    
+    allDates.forEach(date => {
+      // Add scores from sessions on this date
+      sessions.filter(s => s.date === date).forEach(s => {
+        climberScores[s.climberId] += s.score;
+      });
+
+      // Record current cumulative scores for all climbers
+      const dataPoint: any = { date };
+      climbers.forEach(c => {
+        dataPoint[c.name] = climberScores[c.id];
+      });
+      dataByDate[date] = dataPoint;
+    });
+
+    return allDates.map(date => dataByDate[date]);
+  };
+
+  const totalScoreOverTimeData = calculateTotalScoreOverTime();
+
   const scoreOverTimeData = sessions.map((s) => {
     const climber = climbers.find((c) => c.id === s.climberId);
     return { date: s.date, score: s.score, climber: climber?.name || "Unknown" };
@@ -74,6 +120,38 @@ export default function AnalyticsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>📈 Total Score Over Time</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {totalScoreOverTimeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={totalScoreOverTimeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="date" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
+                <Legend />
+                {climbers.map((climber, idx) => (
+                  <Line
+                    key={climber.id}
+                    type="monotone"
+                    dataKey={climber.name}
+                    name={climber.name}
+                    stroke={colors[idx % colors.length]}
+                    strokeWidth={3}
+                    dot={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center py-16 text-slate-500">No data yet</div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>📈 Session Score Over Time</CardTitle>
         </CardHeader>
         <CardContent>
@@ -94,6 +172,7 @@ export default function AnalyticsPage() {
                     stroke={colors[idx % colors.length]}
                     strokeWidth={3}
                     connectNulls
+                    dot={false}
                   />
                 ))}
               </LineChart>
