@@ -1,5 +1,5 @@
 export type Counts = { green:number; blue:number; yellow:number; orange:number; red:number; black:number };
-export type WallCounts = { overhang: Counts; midWall: Counts; sideWall: Counts };
+export type WallCounts = { [section: string]: Counts };
 
 export const BASE: Record<keyof Counts, number> = {
   green:0.25, blue:0.75, yellow:3.5, orange:12.5, red:56, black:120
@@ -33,7 +33,7 @@ export function marginalGain(counts: Counts, color: keyof Counts, addCount = 1, 
 
 export function combineCounts(wallCounts: WallCounts): Counts {
   const total: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
-  for (const wall of ['overhang', 'midWall', 'sideWall'] as const) {
+  for (const wall of Object.keys(wallCounts)) {
     for (const color of ORDER) {
       total[color] += (wallCounts[wall] as any)[color] || 0;
     }

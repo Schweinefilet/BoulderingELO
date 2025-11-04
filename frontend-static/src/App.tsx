@@ -374,15 +374,25 @@ export default function App(){
   const [selectedClimber, setSelectedClimber] = useState<number|undefined>(undefined)
   const [newName, setNewName] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [wallCounts, setWallCounts] = useState<WallCounts>({
-    overhang: emptyWall(),
-    midWall: emptyWall(),
-    sideWall: emptyWall()
-  })
+  
+  // Wall totals state (loaded from localStorage)
+  const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(getWallTotals())
+  
+  // Initialize wallCounts dynamically based on wallTotals
+  const initializeWallCounts = () => {
+    const counts: any = {};
+    Object.keys(wallTotals).forEach(section => {
+      counts[section] = emptyWall();
+    });
+    return counts;
+  };
+  
+  const [wallCounts, setWallCounts] = useState<WallCounts>(initializeWallCounts())
   const [manualMode, setManualMode] = useState(false)
   
-  // For dropdown mode
-  const [dropdownWall, setDropdownWall] = useState<'overhang'|'midWall'|'sideWall'>('midWall')
+  // For dropdown mode - use first available wall section
+  const availableWalls = Object.keys(wallTotals);
+  const [dropdownWall, setDropdownWall] = useState<string>(availableWalls[0] || 'midWall')
   const [dropdownColor, setDropdownColor] = useState<keyof Counts>('yellow')
   const [videoUrl, setVideoUrl] = useState('')
   const [sessionNotes, setSessionNotes] = useState('')
@@ -402,8 +412,6 @@ export default function App(){
   const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes'>('accounts')
   
-  // Wall totals state (loaded from localStorage)
-  const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(getWallTotals())
   const [expiryDates, setExpiryDates] = useState<ExpiryConfig>(getExpiryDates())
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [renamingSection, setRenamingSection] = useState<string | null>(null)
@@ -443,6 +451,30 @@ export default function App(){
   useEffect(()=>{ 
     loadData();
   }, [])
+  
+  // Sync wallCounts when wallTotals changes (e.g., after rename/add/delete)
+  useEffect(() => {
+    const currentSections = Object.keys(wallCounts);
+    const newSections = Object.keys(wallTotals);
+    
+    // Check if sections have changed
+    const sectionsChanged = currentSections.length !== newSections.length || 
+      !currentSections.every(section => newSections.includes(section));
+    
+    if (sectionsChanged) {
+      // Re-initialize wallCounts with new sections, preserving existing counts where possible
+      const newCounts: any = {};
+      newSections.forEach(section => {
+        newCounts[section] = wallCounts[section] || emptyWall();
+      });
+      setWallCounts(newCounts);
+      
+      // Update dropdownWall if current selection no longer exists
+      if (!newSections.includes(dropdownWall)) {
+        setDropdownWall(newSections[0] || '');
+      }
+    }
+  }, [wallTotals]);
   
   // Check for expired sections on mount and daily
   useEffect(() => {
@@ -738,12 +770,13 @@ export default function App(){
     }
   }
 
-  function updateWallCount(wall: 'overhang'|'midWall'|'sideWall', color: keyof Counts, val: string) {
+  function updateWallCount(wall: string, color: keyof Counts, val: string) {
     const nv = Math.max(0, parseInt(val)||0);
     // Safely check if the wall exists in wallTotals
     const maxAllowed = (wallTotals[wall] && wallTotals[wall][color]) || 0;
     const cappedValue = maxAllowed > 0 ? Math.min(nv, maxAllowed) : nv;
-    setWallCounts({...wallCounts, [wall]: {...wallCounts[wall], [color]: cappedValue}});
+    const currentWallCounts = wallCounts[wall] || emptyWall();
+    setWallCounts({...wallCounts, [wall]: {...currentWallCounts, [color]: cappedValue}});
   }
   
   function addClimb() {
@@ -1229,9 +1262,11 @@ export default function App(){
                   onChange={e=>setDropdownWall(e.target.value as any)} 
                   style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
                 >
-                  <option value="midWall">Mid Wall</option>
-                  <option value="overhang">Overhang</option>
-                  <option value="sideWall">Side Wall</option>
+                  {Object.keys(wallTotals).map(section => (
+                    <option key={section} value={section}>
+                      {section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1')}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1283,33 +1318,23 @@ export default function App(){
 
               <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:13,border:'1px solid #475569'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
-                <div style={{marginBottom:8,lineHeight:'1.6'}}>
-                  <strong style={{color:'#94a3b8'}}>Mid Wall:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.midWall.green}/{wallTotals.midWall?.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.blue}/{wallTotals.midWall?.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{wallTotals.midWall?.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.midWall.orange}/{wallTotals.midWall?.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.midWall.red}/{wallTotals.midWall?.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.midWall.black}/{wallTotals.midWall?.black || '?'}</span> black
-                </div>
-                <div style={{marginBottom:8,lineHeight:'1.6'}}>
-                  <strong style={{color:'#94a3b8'}}>Overhang:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.overhang.green}/{wallTotals.overhang?.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.blue}/{wallTotals.overhang?.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{wallTotals.overhang?.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.overhang.orange}/{wallTotals.overhang?.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.overhang.red}/{wallTotals.overhang?.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.overhang.black}/{wallTotals.overhang?.black || '?'}</span> black
-                </div>
-                <div style={{lineHeight:'1.6'}}>
-                  <strong style={{color:'#94a3b8'}}>Side Wall:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.sideWall.green}/{wallTotals.sideWall?.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.blue}/{wallTotals.sideWall?.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{wallTotals.sideWall?.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{wallTotals.sideWall?.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.sideWall.red}/{wallTotals.sideWall?.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.sideWall.black}/{wallTotals.sideWall?.black || '?'}</span> black
-                </div>
+                {Object.keys(wallTotals).map(section => {
+                  const sectionCounts = wallCounts[section] || emptyWall();
+                  const sectionTotals = wallTotals[section] || {};
+                  const displayName = section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1');
+                  
+                  return (
+                    <div key={section} style={{marginBottom:8,lineHeight:'1.6'}}>
+                      <strong style={{color:'#94a3b8'}}>{displayName}:</strong>{' '}
+                      <span style={{color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green || '?'}</span> green,{' '}
+                      <span style={{color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue || '?'}</span> blue,{' '}
+                      <span style={{color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow || '?'}</span> yellow,{' '}
+                      <span style={{color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange || '?'}</span> orange,{' '}
+                      <span style={{color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red || '?'}</span> red,{' '}
+                      <span style={{color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black || '?'}</span> black
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -1317,80 +1342,38 @@ export default function App(){
             <div>
               <h3 style={{marginBottom:16,fontSize:18,fontWeight:'600'}}>Wall Sections</h3>
               
-              <div style={{marginBottom:20}}>
-                <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Overhang</h4>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-                  {ORDER.map((color:keyof Counts)=> {
-                    const total = wallTotals.overhang?.[color] || 0;
-                    const displayTotal = total > 0 ? total : '?';
-                    return (
-                      <div key={color}>
-                        <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
-                          {color} ({wallCounts.overhang[color]}/{displayTotal})
-                        </label>
-                        <input 
-                          type="number" 
-                          min={0}
-                          max={total > 0 ? total : undefined}
-                          value={wallCounts.overhang[color]} 
-                          onChange={e=>updateWallCount('overhang',color,e.target.value)}
-                          style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div style={{marginBottom:20}}>
-                <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Mid Wall</h4>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-                  {ORDER.map((color:keyof Counts)=> {
-                    const total = wallTotals.midWall?.[color] || 0;
-                    const displayTotal = total > 0 ? total : '?';
-                    return (
-                      <div key={color}>
-                        <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
-                          {color} ({wallCounts.midWall[color]}/{displayTotal})
-                        </label>
-                        <input 
-                          type="number" 
-                          min={0}
-                          max={total > 0 ? total : undefined}
-                          value={wallCounts.midWall[color]} 
-                          onChange={e=>updateWallCount('midWall',color,e.target.value)}
-                          style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div style={{marginBottom:20}}>
-                <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Side Wall</h4>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-                  {ORDER.map((color:keyof Counts)=> {
-                    const total = wallTotals.sideWall?.[color] || 0;
-                    const displayTotal = total > 0 ? total : '?';
-                    return (
-                      <div key={color}>
-                        <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
-                          {color} ({wallCounts.sideWall[color]}/{displayTotal})
-                        </label>
-                        <input 
-                          type="number" 
-                          min={0}
-                          max={total > 0 ? total : undefined}
-                          value={wallCounts.sideWall[color]} 
-                          onChange={e=>updateWallCount('sideWall',color,e.target.value)}
-                          style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              {Object.keys(wallTotals).map(section => {
+                const sectionCounts = wallCounts[section] || emptyWall();
+                const sectionTotals = wallTotals[section] || {};
+                const displayName = section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1');
+                
+                return (
+                  <div key={section} style={{marginBottom:20}}>
+                    <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>{displayName}</h4>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+                      {ORDER.map((color:keyof Counts)=> {
+                        const total = sectionTotals[color] || 0;
+                        const displayTotal = total > 0 ? total : '?';
+                        return (
+                          <div key={color}>
+                            <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
+                              {color} ({sectionCounts[color]}/{displayTotal})
+                            </label>
+                            <input 
+                              type="number" 
+                              min={0}
+                              max={total > 0 ? total : undefined}
+                              value={sectionCounts[color]} 
+                              onChange={e=>updateWallCount(section,color,e.target.value)}
+                              style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
