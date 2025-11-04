@@ -34,12 +34,34 @@ const normalizeSessionCounts = (session: any): Counts => {
   };
 };
 
-// Total available climbs per wall section per color
-const WALL_TOTALS = {
+// Default wall totals structure
+const DEFAULT_wallTotals = {
   overhang: { yellow: 7, orange: 5, red: 0, black: 0, blue: 0, green: 0 },
   midWall: { yellow: 20, orange: 13, red: 0, black: 0, blue: 0, green: 0 },
   sideWall: { yellow: 11, orange: 8, red: 0, black: 0, blue: 0, green: 0 }
 };
+
+// Load wall totals from localStorage or use defaults
+function getWallTotals(): Record<string, Record<string, number>> {
+  try {
+    const stored = localStorage.getItem('wallTotals');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Error loading wall totals:', e);
+  }
+  return DEFAULT_wallTotals;
+}
+
+// Save wall totals to localStorage
+function saveWallTotals(totals: Record<string, Record<string, number>>) {
+  try {
+    localStorage.setItem('wallTotals', JSON.stringify(totals));
+  } catch (e) {
+    console.error('Error saving wall totals:', e);
+  }
+}
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -318,7 +340,12 @@ export default function App(){
   
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions'>('accounts')
+  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes'>('accounts')
+  
+  // Wall totals state (loaded from localStorage)
+  const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(getWallTotals())
+  const [editingSection, setEditingSection] = useState<string | null>(null)
+  const [newSectionName, setNewSectionName] = useState('')
   
   // Profile view state
   const [viewingProfile, setViewingProfile] = useState<number | null>(null)
@@ -342,6 +369,13 @@ export default function App(){
   const [sessionsToShow, setSessionsToShow] = useState(8)
 
   const totalCounts = combineCounts(wallCounts);
+  
+  // Helper function to get total routes for a color across all wall sections
+  const getTotalForColor = (color: string): number => {
+    return Object.values(wallTotals).reduce((sum, section) => {
+      return sum + (section[color] || 0);
+    }, 0);
+  };
 
   useEffect(()=>{ 
     loadData();
@@ -476,6 +510,55 @@ export default function App(){
     }
   }
 
+  // Route Management Functions
+  function updateRouteCount(section: string, color: string, value: number) {
+    const updated = {
+      ...wallTotals,
+      [section]: {
+        ...wallTotals[section],
+        [color]: Math.max(0, value)
+      }
+    };
+    setWallTotals(updated);
+    saveWallTotals(updated);
+  }
+
+  function addWallSection() {
+    if (!newSectionName.trim()) {
+      alert('Please enter a section name');
+      return;
+    }
+    if (wallTotals[newSectionName]) {
+      alert('Section already exists');
+      return;
+    }
+    const updated = {
+      ...wallTotals,
+      [newSectionName]: { yellow: 0, orange: 0, red: 0, black: 0, blue: 0, green: 0 }
+    };
+    setWallTotals(updated);
+    saveWallTotals(updated);
+    setNewSectionName('');
+  }
+
+  function deleteWallSection(section: string) {
+    if (!confirm(`Delete wall section "${section}"? This cannot be undone!`)) {
+      return;
+    }
+    const updated = { ...wallTotals };
+    delete updated[section];
+    setWallTotals(updated);
+    saveWallTotals(updated);
+  }
+
+  function resetToDefaults() {
+    if (!confirm('Reset all route totals to defaults? This cannot be undone!')) {
+      return;
+    }
+    setWallTotals(DEFAULT_wallTotals);
+    saveWallTotals(DEFAULT_wallTotals);
+  }
+
   // Removed automatic login screen redirect - users can browse without logging in
 
   async function addClimber(){ 
@@ -495,7 +578,7 @@ export default function App(){
 
   function updateWallCount(wall: 'overhang'|'midWall'|'sideWall', color: keyof Counts, val: string) {
     const nv = Math.max(0, parseInt(val)||0);
-    const maxAllowed = WALL_TOTALS[wall][color];
+    const maxAllowed = wallTotals[wall][color];
     const cappedValue = maxAllowed > 0 ? Math.min(nv, maxAllowed) : nv;
     setWallCounts({...wallCounts, [wall]: {...wallCounts[wall], [color]: cappedValue}});
   }
@@ -1039,30 +1122,30 @@ export default function App(){
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
                 <div style={{marginBottom:8,lineHeight:'1.6'}}>
                   <strong style={{color:'#94a3b8'}}>Mid Wall:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.midWall.green}/{WALL_TOTALS.midWall.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.blue}/{WALL_TOTALS.midWall.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{WALL_TOTALS.midWall.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.midWall.orange}/{WALL_TOTALS.midWall.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.midWall.red}/{WALL_TOTALS.midWall.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.midWall.black}/{WALL_TOTALS.midWall.black || '?'}</span> black
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.midWall.green}/{wallTotals.midWall.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.blue}/{wallTotals.midWall.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{wallTotals.midWall.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.midWall.orange}/{wallTotals.midWall.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.midWall.red}/{wallTotals.midWall.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.midWall.black}/{wallTotals.midWall.black || '?'}</span> black
                 </div>
                 <div style={{marginBottom:8,lineHeight:'1.6'}}>
                   <strong style={{color:'#94a3b8'}}>Overhang:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.overhang.green}/{WALL_TOTALS.overhang.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.blue}/{WALL_TOTALS.overhang.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{WALL_TOTALS.overhang.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.overhang.orange}/{WALL_TOTALS.overhang.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.overhang.red}/{WALL_TOTALS.overhang.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.overhang.black}/{WALL_TOTALS.overhang.black || '?'}</span> black
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.overhang.green}/{wallTotals.overhang.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.blue}/{wallTotals.overhang.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{wallTotals.overhang.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.overhang.orange}/{wallTotals.overhang.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.overhang.red}/{wallTotals.overhang.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.overhang.black}/{wallTotals.overhang.black || '?'}</span> black
                 </div>
                 <div style={{lineHeight:'1.6'}}>
                   <strong style={{color:'#94a3b8'}}>Side Wall:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.sideWall.green}/{WALL_TOTALS.sideWall.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.blue}/{WALL_TOTALS.sideWall.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{WALL_TOTALS.sideWall.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{WALL_TOTALS.sideWall.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.sideWall.red}/{WALL_TOTALS.sideWall.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.sideWall.black}/{WALL_TOTALS.sideWall.black || '?'}</span> black
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.sideWall.green}/{wallTotals.sideWall.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.blue}/{wallTotals.sideWall.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{wallTotals.sideWall.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{wallTotals.sideWall.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.sideWall.red}/{wallTotals.sideWall.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.sideWall.black}/{wallTotals.sideWall.black || '?'}</span> black
                 </div>
               </div>
             </div>
@@ -1075,7 +1158,7 @@ export default function App(){
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Overhang</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {ORDER.map((color:keyof Counts)=> {
-                    const total = WALL_TOTALS.overhang[color];
+                    const total = wallTotals.overhang[color];
                     const displayTotal = total > 0 ? total : '?';
                     return (
                       <div key={color}>
@@ -1100,7 +1183,7 @@ export default function App(){
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Mid Wall</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {ORDER.map((color:keyof Counts)=> {
-                    const total = WALL_TOTALS.midWall[color];
+                    const total = wallTotals.midWall[color];
                     const displayTotal = total > 0 ? total : '?';
                     return (
                       <div key={color}>
@@ -1125,7 +1208,7 @@ export default function App(){
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Side Wall</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {ORDER.map((color:keyof Counts)=> {
-                    const total = WALL_TOTALS.sideWall[color];
+                    const total = wallTotals.sideWall[color];
                     const displayTotal = total > 0 ? total : '?';
                     return (
                       <div key={color}>
@@ -2304,32 +2387,32 @@ export default function App(){
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.green}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.green + WALL_TOTALS.midWall.green + WALL_TOTALS.sideWall.green || '?'}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('green') || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.blue}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.blue + WALL_TOTALS.midWall.blue + WALL_TOTALS.sideWall.blue || '?'}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('blue') || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.yellow}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.yellow + WALL_TOTALS.midWall.yellow + WALL_TOTALS.sideWall.yellow || '?'}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('yellow') || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.orange}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.orange + WALL_TOTALS.midWall.orange + WALL_TOTALS.sideWall.orange || '?'}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('orange') || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.red}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.red + WALL_TOTALS.midWall.red + WALL_TOTALS.sideWall.red || '?'}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('red') || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.black}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.black + WALL_TOTALS.midWall.black + WALL_TOTALS.sideWall.black || '?'}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('black') || '?'}</div>
                     </div>
                   </div>
                 </div>
@@ -2534,7 +2617,7 @@ export default function App(){
               borderBottom:'1px solid #475569',
               backgroundColor:'#1e293b'
             }}>
-              {(['accounts', 'sessions'] as const).map(tab => (
+              {(['accounts', 'sessions', 'routes'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setAdminTab(tab)}
@@ -2664,6 +2747,155 @@ export default function App(){
                             {session.notes}
                           </div>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'routes' && (
+                <div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+                    <h3 style={{margin:0,fontSize:18,fontWeight:'600'}}>Route Management</h3>
+                    <button
+                      onClick={resetToDefaults}
+                      style={{
+                        padding:'8px 16px',
+                        backgroundColor:'#f59e0b',
+                        color:'#000',
+                        border:'none',
+                        borderRadius:6,
+                        cursor:'pointer',
+                        fontSize:14,
+                        fontWeight:'600'
+                      }}
+                    >
+                      Reset to Defaults
+                    </button>
+                  </div>
+
+                  <p style={{color:'#94a3b8',fontSize:14,marginBottom:24}}>
+                    Set the total number of routes available per wall section and color. These totals are used to track climb completion percentages.
+                  </p>
+
+                  {/* Add New Section */}
+                  <div style={{
+                    backgroundColor:'#1e293b',
+                    padding:20,
+                    borderRadius:8,
+                    border:'2px dashed #475569',
+                    marginBottom:24
+                  }}>
+                    <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Add New Wall Section</h4>
+                    <div style={{display:'flex',gap:12,alignItems:'center'}}>
+                      <input
+                        type="text"
+                        placeholder="Section name (e.g., 'section1', 'westWall')"
+                        value={newSectionName}
+                        onChange={(e) => setNewSectionName(e.target.value)}
+                        style={{
+                          flex:1,
+                          padding:'10px 12px',
+                          backgroundColor:'#0f172a',
+                          border:'1px solid #475569',
+                          borderRadius:6,
+                          color:'white',
+                          fontSize:14
+                        }}
+                      />
+                      <button
+                        onClick={addWallSection}
+                        style={{
+                          padding:'10px 20px',
+                          backgroundColor:'#10b981',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:14,
+                          fontWeight:'600'
+                        }}
+                      >
+                        Add Section
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Wall Sections */}
+                  <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                    {Object.keys(wallTotals).map(section => (
+                      <div 
+                        key={section}
+                        style={{
+                          backgroundColor:'#1e293b',
+                          padding:20,
+                          borderRadius:8,
+                          border:'1px solid #475569'
+                        }}
+                      >
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                          <h4 style={{margin:0,fontSize:16,fontWeight:'600',textTransform:'capitalize',color:'#fbbf24'}}>
+                            {section}
+                          </h4>
+                          <button
+                            onClick={() => deleteWallSection(section)}
+                            style={{
+                              padding:'6px 12px',
+                              backgroundColor:'#dc2626',
+                              color:'white',
+                              border:'none',
+                              borderRadius:6,
+                              cursor:'pointer',
+                              fontSize:12,
+                              fontWeight:'600'
+                            }}
+                          >
+                            Delete Section
+                          </button>
+                        </div>
+
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',gap:12}}>
+                          {(['green', 'blue', 'yellow', 'orange', 'red', 'black'] as const).map(color => {
+                            const colorMap = {
+                              green: '#10b981',
+                              blue: '#3b82f6',
+                              yellow: '#eab308',
+                              orange: '#f97316',
+                              red: '#ef4444',
+                              black: '#d1d5db'
+                            };
+                            return (
+                              <div key={color} style={{backgroundColor:'#0f172a',padding:12,borderRadius:6}}>
+                                <div style={{
+                                  fontSize:11,
+                                  color:colorMap[color],
+                                  marginBottom:6,
+                                  fontWeight:'600',
+                                  textTransform:'uppercase'
+                                }}>
+                                  {color}
+                                </div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={wallTotals[section]?.[color] || 0}
+                                  onChange={(e) => updateRouteCount(section, color, parseInt(e.target.value) || 0)}
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px',
+                                    backgroundColor:'#1e293b',
+                                    border:'1px solid #475569',
+                                    borderRadius:4,
+                                    color:'white',
+                                    fontSize:16,
+                                    fontWeight:'600',
+                                    textAlign:'center'
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     ))}
                   </div>
