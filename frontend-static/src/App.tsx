@@ -2548,33 +2548,57 @@ export default function App(){
                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:16}}>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
-                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.green}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('green') || '?'}</div>
+                      <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
+                        {currentClimbs.green}/{getTotalForColor('green') || '?'}
+                      </div>
+                      <div style={{fontSize:13, color:'#64748b', marginTop:4}}>
+                        ({getTotalForColor('green') > 0 ? ((currentClimbs.green / getTotalForColor('green')) * 100).toFixed(1) : '0.0'}%)
+                      </div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
-                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.blue}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('blue') || '?'}</div>
+                      <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
+                        {currentClimbs.blue}/{getTotalForColor('blue') || '?'}
+                      </div>
+                      <div style={{fontSize:13, color:'#64748b', marginTop:4}}>
+                        ({getTotalForColor('blue') > 0 ? ((currentClimbs.blue / getTotalForColor('blue')) * 100).toFixed(1) : '0.0'}%)
+                      </div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
-                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.yellow}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('yellow') || '?'}</div>
+                      <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
+                        {currentClimbs.yellow}/{getTotalForColor('yellow') || '?'}
+                      </div>
+                      <div style={{fontSize:13, color:'#64748b', marginTop:4}}>
+                        ({getTotalForColor('yellow') > 0 ? ((currentClimbs.yellow / getTotalForColor('yellow')) * 100).toFixed(1) : '0.0'}%)
+                      </div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
-                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.orange}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('orange') || '?'}</div>
+                      <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
+                        {currentClimbs.orange}/{getTotalForColor('orange') || '?'}
+                      </div>
+                      <div style={{fontSize:13, color:'#64748b', marginTop:4}}>
+                        ({getTotalForColor('orange') > 0 ? ((currentClimbs.orange / getTotalForColor('orange')) * 100).toFixed(1) : '0.0'}%)
+                      </div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
-                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.red}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('red') || '?'}</div>
+                      <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
+                        {currentClimbs.red}/{getTotalForColor('red') || '?'}
+                      </div>
+                      <div style={{fontSize:13, color:'#64748b', marginTop:4}}>
+                        ({getTotalForColor('red') > 0 ? ((currentClimbs.red / getTotalForColor('red')) * 100).toFixed(1) : '0.0'}%)
+                      </div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
-                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.black}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>/{getTotalForColor('black') || '?'}</div>
+                      <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
+                        {currentClimbs.black}/{getTotalForColor('black') || '?'}
+                      </div>
+                      <div style={{fontSize:13, color:'#64748b', marginTop:4}}>
+                        ({getTotalForColor('black') > 0 ? ((currentClimbs.black / getTotalForColor('black')) * 100).toFixed(1) : '0.0'}%)
+                      </div>
                     </div>
                   </div>
                 </div>
