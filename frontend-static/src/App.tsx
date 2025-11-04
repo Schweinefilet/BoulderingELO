@@ -740,7 +740,8 @@ export default function App(){
 
   function updateWallCount(wall: 'overhang'|'midWall'|'sideWall', color: keyof Counts, val: string) {
     const nv = Math.max(0, parseInt(val)||0);
-    const maxAllowed = wallTotals[wall][color];
+    // Safely check if the wall exists in wallTotals
+    const maxAllowed = (wallTotals[wall] && wallTotals[wall][color]) || 0;
     const cappedValue = maxAllowed > 0 ? Math.min(nv, maxAllowed) : nv;
     setWallCounts({...wallCounts, [wall]: {...wallCounts[wall], [color]: cappedValue}});
   }
@@ -1284,30 +1285,30 @@ export default function App(){
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
                 <div style={{marginBottom:8,lineHeight:'1.6'}}>
                   <strong style={{color:'#94a3b8'}}>Mid Wall:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.midWall.green}/{wallTotals.midWall.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.blue}/{wallTotals.midWall.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{wallTotals.midWall.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.midWall.orange}/{wallTotals.midWall.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.midWall.red}/{wallTotals.midWall.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.midWall.black}/{wallTotals.midWall.black || '?'}</span> black
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.midWall.green}/{wallTotals.midWall?.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.midWall.blue}/{wallTotals.midWall?.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.midWall.yellow}/{wallTotals.midWall?.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.midWall.orange}/{wallTotals.midWall?.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.midWall.red}/{wallTotals.midWall?.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.midWall.black}/{wallTotals.midWall?.black || '?'}</span> black
                 </div>
                 <div style={{marginBottom:8,lineHeight:'1.6'}}>
                   <strong style={{color:'#94a3b8'}}>Overhang:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.overhang.green}/{wallTotals.overhang.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.blue}/{wallTotals.overhang.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{wallTotals.overhang.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.overhang.orange}/{wallTotals.overhang.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.overhang.red}/{wallTotals.overhang.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.overhang.black}/{wallTotals.overhang.black || '?'}</span> black
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.overhang.green}/{wallTotals.overhang?.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.overhang.blue}/{wallTotals.overhang?.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.overhang.yellow}/{wallTotals.overhang?.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.overhang.orange}/{wallTotals.overhang?.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.overhang.red}/{wallTotals.overhang?.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.overhang.black}/{wallTotals.overhang?.black || '?'}</span> black
                 </div>
                 <div style={{lineHeight:'1.6'}}>
                   <strong style={{color:'#94a3b8'}}>Side Wall:</strong>{' '}
-                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.sideWall.green}/{wallTotals.sideWall.green || '?'}</span> green,{' '}
-                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.blue}/{wallTotals.sideWall.blue || '?'}</span> blue,{' '}
-                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{wallTotals.sideWall.yellow || '?'}</span> yellow,{' '}
-                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{wallTotals.sideWall.orange || '?'}</span> orange,{' '}
-                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.sideWall.red}/{wallTotals.sideWall.red || '?'}</span> red,{' '}
-                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.sideWall.black}/{wallTotals.sideWall.black || '?'}</span> black
+                  <span style={{color:'#10b981',fontWeight:'600'}}>{wallCounts.sideWall.green}/{wallTotals.sideWall?.green || '?'}</span> green,{' '}
+                  <span style={{color:'#3b82f6',fontWeight:'600'}}>{wallCounts.sideWall.blue}/{wallTotals.sideWall?.blue || '?'}</span> blue,{' '}
+                  <span style={{color:'#eab308',fontWeight:'600'}}>{wallCounts.sideWall.yellow}/{wallTotals.sideWall?.yellow || '?'}</span> yellow,{' '}
+                  <span style={{color:'#f97316',fontWeight:'600'}}>{wallCounts.sideWall.orange}/{wallTotals.sideWall?.orange || '?'}</span> orange,{' '}
+                  <span style={{color:'#ef4444',fontWeight:'600'}}>{wallCounts.sideWall.red}/{wallTotals.sideWall?.red || '?'}</span> red,{' '}
+                  <span style={{color:'#d1d5db',fontWeight:'600'}}>{wallCounts.sideWall.black}/{wallTotals.sideWall?.black || '?'}</span> black
                 </div>
               </div>
             </div>
@@ -1320,7 +1321,7 @@ export default function App(){
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Overhang</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {ORDER.map((color:keyof Counts)=> {
-                    const total = wallTotals.overhang[color];
+                    const total = wallTotals.overhang?.[color] || 0;
                     const displayTotal = total > 0 ? total : '?';
                     return (
                       <div key={color}>
@@ -1345,7 +1346,7 @@ export default function App(){
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Mid Wall</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {ORDER.map((color:keyof Counts)=> {
-                    const total = wallTotals.midWall[color];
+                    const total = wallTotals.midWall?.[color] || 0;
                     const displayTotal = total > 0 ? total : '?';
                     return (
                       <div key={color}>
@@ -1370,7 +1371,7 @@ export default function App(){
                 <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>Side Wall</h4>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                   {ORDER.map((color:keyof Counts)=> {
-                    const total = wallTotals.sideWall[color];
+                    const total = wallTotals.sideWall?.[color] || 0;
                     const displayTotal = total > 0 ? total : '?';
                     return (
                       <div key={color}>
