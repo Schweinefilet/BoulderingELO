@@ -2359,7 +2359,7 @@ export default function App(){
                           dataKey="rank" 
                           stroke="#3b82f6" 
                           strokeWidth={3}
-                          dot={{fill:'#3b82f6', r:4}}
+                          dot={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
