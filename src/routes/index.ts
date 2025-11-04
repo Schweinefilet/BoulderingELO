@@ -6,6 +6,7 @@ import videoRoutes from './videoRoutes';
 import adminRoutes from './adminRoutes';
 import userRoutes from './userRoutes';
 import leaderboardRoutes from './leaderboardRoutes';
+import settingsRoutes from './settingsRoutes';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use('/videos', videoRoutes);
 router.use('/admin', adminRoutes);
 router.use('/user', userRoutes);
 router.use('/leaderboard', leaderboardRoutes);
+router.use('/settings', settingsRoutes);
 
 export default router;

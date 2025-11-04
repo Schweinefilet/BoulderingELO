@@ -105,6 +105,15 @@ export async function initDB() {
     )
   `);
   
+  // Settings table for global configuration (wall sections, etc.)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  
   // Add columns if they don't exist (migration-safe)
   await pool.query(`
     DO $$ 
@@ -608,3 +617,20 @@ export async function seedData(sample: {
     }
   }
 }
+
+// Settings management
+export async function getSetting(key: string): Promise<any | null> {
+  const result = await pool.query('SELECT value FROM settings WHERE key = $1', [key]);
+  return result.rows.length > 0 ? result.rows[0].value : null;
+}
+
+export async function setSetting(key: string, value: any): Promise<void> {
+  await pool.query(
+    `INSERT INTO settings (key, value, updated_at) 
+     VALUES ($1, $2, NOW()) 
+     ON CONFLICT (key) 
+     DO UPDATE SET value = $2, updated_at = NOW()`,
+    [key, JSON.stringify(value)]
+  );
+}
+

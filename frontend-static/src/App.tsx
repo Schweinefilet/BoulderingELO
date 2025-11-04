@@ -54,12 +54,13 @@ function getWallTotals(): Record<string, Record<string, number>> {
   return DEFAULT_wallTotals;
 }
 
-// Save wall totals to localStorage
-function saveWallTotals(totals: Record<string, Record<string, number>>) {
+// Save wall totals to database via API
+async function saveWallTotalsToAPI(totals: Record<string, Record<string, number>>) {
   try {
-    localStorage.setItem('wallTotals', JSON.stringify(totals));
+    await api.saveWallTotals(totals);
   } catch (e) {
     console.error('Error saving wall totals:', e);
+    alert('Failed to save wall configuration. Please try again.');
   }
 }
 
@@ -375,8 +376,9 @@ export default function App(){
   const [newName, setNewName] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   
-  // Wall totals state (loaded from localStorage)
-  const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(getWallTotals())
+  // Wall totals state (loaded from API)
+  const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(DEFAULT_wallTotals)
+  const [wallTotalsLoaded, setWallTotalsLoaded] = useState(false)
   
   // Initialize wallCounts dynamically based on wallTotals
   const initializeWallCounts = () => {
@@ -459,12 +461,33 @@ export default function App(){
   }, [])
   
   // Reload wallTotals when page becomes visible (fixes mobile sync issues)
+  // Load wallTotals from API on mount
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const loadWallTotals = async () => {
+      try {
+        const totals = await api.getWallTotals();
+        setWallTotals(totals);
+        setWallTotalsLoaded(true);
+      } catch (err) {
+        console.error('Failed to load wall totals:', err);
+        // Use defaults if API fails
+        setWallTotals(DEFAULT_wallTotals);
+        setWallTotalsLoaded(true);
+      }
+    };
+    loadWallTotals();
+  }, []);
+
+  // Reload wallTotals when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
       if (!document.hidden) {
-        // Page became visible - reload wallTotals from localStorage
-        const freshTotals = getWallTotals();
-        setWallTotals(freshTotals);
+        try {
+          const freshTotals = await api.getWallTotals();
+          setWallTotals(freshTotals);
+        } catch (err) {
+          console.error('Failed to reload wall totals:', err);
+        }
       }
     };
     
@@ -501,11 +524,11 @@ export default function App(){
   
   // Check for expired sections on mount and daily
   useEffect(() => {
-    const checkExpiry = () => {
+    const checkExpiry = async () => {
       const result = checkAndResetExpiredSections(wallTotals, expiryDates);
       if (result.updated) {
         setWallTotals(result.newTotals);
-        saveWallTotals(result.newTotals);
+        await saveWallTotalsToAPI(result.newTotals);
         setExpiryDates(result.newExpiry);
         saveExpiryDates(result.newExpiry);
         alert('Some wall sections have expired and been reset to 0 routes.');
@@ -728,7 +751,7 @@ export default function App(){
   }
 
   // Route Management Functions
-  function updateRouteCount(section: string, color: string, value: number) {
+  async function updateRouteCount(section: string, color: string, value: number) {
     const updated = {
       ...wallTotals,
       [section]: {
@@ -737,10 +760,10 @@ export default function App(){
       }
     };
     setWallTotals(updated);
-    saveWallTotals(updated);
+    await saveWallTotalsToAPI(updated);
   }
 
-  function addWallSection() {
+  async function addWallSection() {
     if (!newSectionName.trim()) {
       alert('Please enter a section name');
       return;
@@ -754,11 +777,11 @@ export default function App(){
       [newSectionName]: { yellow: 0, orange: 0, red: 0, black: 0, blue: 0, green: 0 }
     };
     setWallTotals(updated);
-    saveWallTotals(updated);
+    await saveWallTotalsToAPI(updated);
     setNewSectionName('');
   }
 
-  function renameWallSection(oldName: string, newName: string) {
+  async function renameWallSection(oldName: string, newName: string) {
     if (!newName.trim()) {
       alert('Please enter a new section name');
       return;
@@ -783,7 +806,7 @@ export default function App(){
     });
     
     setWallTotals(updated);
-    saveWallTotals(updated);
+    await saveWallTotalsToAPI(updated);
     
     // Update expiry date if exists
     if (expiryDates[oldName]) {
@@ -868,14 +891,14 @@ export default function App(){
     }
   }
 
-  function deleteWallSection(section: string) {
+  async function deleteWallSection(section: string) {
     if (!confirm(`Delete wall section "${section}"? This cannot be undone!`)) {
       return;
     }
     const updated = { ...wallTotals };
     delete updated[section];
     setWallTotals(updated);
-    saveWallTotals(updated);
+    await saveWallTotalsToAPI(updated);
     
     // Remove expiry date if exists
     if (expiryDates[section]) {
@@ -903,12 +926,12 @@ export default function App(){
     }
   }
 
-  function resetToDefaults() {
+  async function resetToDefaults() {
     if (!confirm('Reset all route totals to defaults? This cannot be undone!')) {
       return;
     }
     setWallTotals(DEFAULT_wallTotals);
-    saveWallTotals(DEFAULT_wallTotals);
+    await saveWallTotalsToAPI(DEFAULT_wallTotals);
     setExpiryDates({});
     saveExpiryDates({});
   }

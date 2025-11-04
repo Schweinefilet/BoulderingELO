@@ -287,3 +287,20 @@ export async function rejectVideo(videoId: number): Promise<any> {
   });
   return handleResponse<any>(response);
 }
+
+// Wall totals configuration
+export async function getWallTotals(): Promise<Record<string, Record<string, number>>> {
+  const response = await fetch(`${API_URL}/api/settings/wall-totals`);
+  const result = await handleResponse<{ data: Record<string, Record<string, number>> }>(response);
+  return result.data;
+}
+
+export async function saveWallTotals(wallTotals: Record<string, Record<string, number>>): Promise<void> {
+  const response = await fetch(`${API_URL}/api/settings/wall-totals`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify(wallTotals),
+  });
+  await handleResponse(response);
+}
+
