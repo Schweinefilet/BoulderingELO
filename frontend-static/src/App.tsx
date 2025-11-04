@@ -1596,21 +1596,21 @@ export default function App(){
               const endDate = new Date(sortedSessions[sortedSessions.length - 1].date);
               const allDates = getAllDatesBetween(startDate, endDate);
               
-              // Build cumulative scores for each date
-              const climberScores: { [climberId: number]: number } = {};
-              climbers.forEach((c:any) => climberScores[c.id] = 0);
+              // Track each climber's current total score (from their latest session counts)
+              const climberCurrentScore: { [climberId: number]: number } = {};
+              climbers.forEach((c:any) => climberCurrentScore[c.id] = 0);
               
               const chartData: any[] = [];
               allDates.forEach((date: string) => {
-                // Add scores from sessions on this date
+                // Update scores from sessions on this date (use the session's total score, don't add)
                 sortedSessions.filter((s:any) => s.date === date).forEach((s:any) => {
-                  climberScores[s.climberId] += s.score;
+                  climberCurrentScore[s.climberId] = s.score;
                 });
                 
-                // Record current cumulative scores for all climbers
+                // Record current scores for all climbers
                 const point: any = { date };
                 climbers.forEach((c:any) => {
-                  point[c.name] = climberScores[c.id];
+                  point[c.name] = climberCurrentScore[c.id] || null;
                 });
                 chartData.push(point);
               });
