@@ -63,6 +63,66 @@ function saveWallTotals(totals: Record<string, Record<string, number>>) {
   }
 }
 
+// Expiry date management
+interface ExpiryConfig {
+  [section: string]: string; // section name -> ISO date string
+}
+
+function getExpiryDates(): ExpiryConfig {
+  try {
+    const stored = localStorage.getItem('wallExpiryDates');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Error loading expiry dates:', e);
+  }
+  return {};
+}
+
+function saveExpiryDates(config: ExpiryConfig) {
+  try {
+    localStorage.setItem('wallExpiryDates', JSON.stringify(config));
+  } catch (e) {
+    console.error('Error saving expiry dates:', e);
+  }
+}
+
+// Check and reset expired sections
+function checkAndResetExpiredSections(
+  wallTotals: Record<string, Record<string, number>>,
+  expiryDates: ExpiryConfig
+): { updated: boolean; newTotals: Record<string, Record<string, number>>; newExpiry: ExpiryConfig } {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Start of today
+  
+  let updated = false;
+  const newTotals = { ...wallTotals };
+  const newExpiry = { ...expiryDates };
+  
+  Object.keys(expiryDates).forEach(section => {
+    const expiryDate = new Date(expiryDates[section]);
+    expiryDate.setHours(0, 0, 0, 0);
+    
+    if (now >= expiryDate && newTotals[section]) {
+      // Reset all routes to 0
+      newTotals[section] = {
+        green: 0,
+        blue: 0,
+        yellow: 0,
+        orange: 0,
+        red: 0,
+        black: 0
+      };
+      // Remove the expiry date
+      delete newExpiry[section];
+      updated = true;
+    }
+  });
+  
+  return { updated, newTotals, newExpiry };
+}
+
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
@@ -344,8 +404,11 @@ export default function App(){
   
   // Wall totals state (loaded from localStorage)
   const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(getWallTotals())
+  const [expiryDates, setExpiryDates] = useState<ExpiryConfig>(getExpiryDates())
   const [editingSection, setEditingSection] = useState<string | null>(null)
+  const [renamingSection, setRenamingSection] = useState<string | null>(null)
   const [newSectionName, setNewSectionName] = useState('')
+  const [renameValue, setRenameValue] = useState('')
   
   // Profile view state
   const [viewingProfile, setViewingProfile] = useState<number | null>(null)
@@ -380,6 +443,38 @@ export default function App(){
   useEffect(()=>{ 
     loadData();
   }, [])
+  
+  // Check for expired sections on mount and daily
+  useEffect(() => {
+    const checkExpiry = () => {
+      const result = checkAndResetExpiredSections(wallTotals, expiryDates);
+      if (result.updated) {
+        setWallTotals(result.newTotals);
+        saveWallTotals(result.newTotals);
+        setExpiryDates(result.newExpiry);
+        saveExpiryDates(result.newExpiry);
+        alert('Some wall sections have expired and been reset to 0 routes.');
+      }
+    };
+    
+    checkExpiry();
+    
+    // Check daily at midnight
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    const timer = setTimeout(() => {
+      checkExpiry();
+      // Set up daily interval
+      const dailyInterval = setInterval(checkExpiry, 24 * 60 * 60 * 1000);
+      return () => clearInterval(dailyInterval);
+    }, timeUntilMidnight);
+    
+    return () => clearTimeout(timer);
+  }, []); // Only run on mount
   
   // Auto-select climber for non-admin users
   useEffect(() => {
@@ -541,6 +636,46 @@ export default function App(){
     setNewSectionName('');
   }
 
+  function renameWallSection(oldName: string, newName: string) {
+    if (!newName.trim()) {
+      alert('Please enter a new section name');
+      return;
+    }
+    if (newName === oldName) {
+      setRenamingSection(null);
+      return;
+    }
+    if (wallTotals[newName]) {
+      alert('A section with that name already exists');
+      return;
+    }
+    
+    // Create new object with renamed section
+    const updated: Record<string, Record<string, number>> = {};
+    Object.keys(wallTotals).forEach(key => {
+      if (key === oldName) {
+        updated[newName] = wallTotals[oldName];
+      } else {
+        updated[key] = wallTotals[key];
+      }
+    });
+    
+    setWallTotals(updated);
+    saveWallTotals(updated);
+    
+    // Update expiry date if exists
+    if (expiryDates[oldName]) {
+      const updatedExpiry = { ...expiryDates };
+      updatedExpiry[newName] = updatedExpiry[oldName];
+      delete updatedExpiry[oldName];
+      setExpiryDates(updatedExpiry);
+      saveExpiryDates(updatedExpiry);
+    }
+    
+    setRenamingSection(null);
+    setRenameValue('');
+  }
+
   function deleteWallSection(section: string) {
     if (!confirm(`Delete wall section "${section}"? This cannot be undone!`)) {
       return;
@@ -549,6 +684,31 @@ export default function App(){
     delete updated[section];
     setWallTotals(updated);
     saveWallTotals(updated);
+    
+    // Remove expiry date if exists
+    if (expiryDates[section]) {
+      const updatedExpiry = { ...expiryDates };
+      delete updatedExpiry[section];
+      setExpiryDates(updatedExpiry);
+      saveExpiryDates(updatedExpiry);
+    }
+  }
+
+  function setExpiryDate(section: string, date: string) {
+    if (!date) {
+      // Remove expiry date
+      const updated = { ...expiryDates };
+      delete updated[section];
+      setExpiryDates(updated);
+      saveExpiryDates(updated);
+    } else {
+      const updated = {
+        ...expiryDates,
+        [section]: date
+      };
+      setExpiryDates(updated);
+      saveExpiryDates(updated);
+    }
   }
 
   function resetToDefaults() {
@@ -557,6 +717,8 @@ export default function App(){
     }
     setWallTotals(DEFAULT_wallTotals);
     saveWallTotals(DEFAULT_wallTotals);
+    setExpiryDates({});
+    saveExpiryDates({});
   }
 
   // Removed automatic login screen redirect - users can browse without logging in
@@ -2833,27 +2995,156 @@ export default function App(){
                           border:'1px solid #475569'
                         }}
                       >
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-                          <h4 style={{margin:0,fontSize:16,fontWeight:'600',textTransform:'capitalize',color:'#fbbf24'}}>
-                            {section}
-                          </h4>
-                          <button
-                            onClick={() => deleteWallSection(section)}
-                            style={{
-                              padding:'6px 12px',
-                              backgroundColor:'#dc2626',
-                              color:'white',
-                              border:'none',
-                              borderRadius:6,
-                              cursor:'pointer',
-                              fontSize:12,
-                              fontWeight:'600'
-                            }}
-                          >
-                            Delete Section
-                          </button>
+                        {/* Section Header with Rename and Delete */}
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                          {renamingSection === section ? (
+                            <div style={{display:'flex',gap:8,alignItems:'center',flex:1}}>
+                              <input
+                                type="text"
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                placeholder="New section name"
+                                autoFocus
+                                style={{
+                                  padding:'6px 10px',
+                                  backgroundColor:'#0f172a',
+                                  border:'1px solid #fbbf24',
+                                  borderRadius:4,
+                                  color:'white',
+                                  fontSize:14,
+                                  flex:1,
+                                  maxWidth:250
+                                }}
+                              />
+                              <button
+                                onClick={() => renameWallSection(section, renameValue)}
+                                style={{
+                                  padding:'6px 12px',
+                                  backgroundColor:'#10b981',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:4,
+                                  cursor:'pointer',
+                                  fontSize:12,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRenamingSection(null);
+                                  setRenameValue('');
+                                }}
+                                style={{
+                                  padding:'6px 12px',
+                                  backgroundColor:'#475569',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:4,
+                                  cursor:'pointer',
+                                  fontSize:12,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <h4 style={{margin:0,fontSize:16,fontWeight:'600',textTransform:'capitalize',color:'#fbbf24'}}>
+                              {section}
+                            </h4>
+                          )}
+                          <div style={{display:'flex',gap:8}}>
+                            {renamingSection !== section && (
+                              <button
+                                onClick={() => {
+                                  setRenamingSection(section);
+                                  setRenameValue(section);
+                                }}
+                                style={{
+                                  padding:'6px 12px',
+                                  backgroundColor:'#3b82f6',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:12,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Rename
+                              </button>
+                            )}
+                            <button
+                              onClick={() => deleteWallSection(section)}
+                              style={{
+                                padding:'6px 12px',
+                                backgroundColor:'#dc2626',
+                                color:'white',
+                                border:'none',
+                                borderRadius:6,
+                                cursor:'pointer',
+                                fontSize:12,
+                                fontWeight:'600'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
 
+                        {/* Expiry Date Setting */}
+                        <div style={{
+                          backgroundColor:'#0f172a',
+                          padding:12,
+                          borderRadius:6,
+                          marginBottom:16,
+                          display:'flex',
+                          alignItems:'center',
+                          gap:12
+                        }}>
+                          <label style={{fontSize:13,color:'#94a3b8',minWidth:100}}>
+                            Expiry Date:
+                          </label>
+                          <input
+                            type="date"
+                            value={expiryDates[section] || ''}
+                            onChange={(e) => setExpiryDate(section, e.target.value)}
+                            style={{
+                              padding:'6px 10px',
+                              backgroundColor:'#1e293b',
+                              border:'1px solid #475569',
+                              borderRadius:4,
+                              color:'white',
+                              fontSize:13
+                            }}
+                          />
+                          {expiryDates[section] && (
+                            <button
+                              onClick={() => setExpiryDate(section, '')}
+                              style={{
+                                padding:'4px 10px',
+                                backgroundColor:'#475569',
+                                color:'white',
+                                border:'none',
+                                borderRadius:4,
+                                cursor:'pointer',
+                                fontSize:11,
+                                fontWeight:'600'
+                              }}
+                            >
+                              Clear
+                            </button>
+                          )}
+                          <span style={{fontSize:12,color:'#64748b',fontStyle:'italic'}}>
+                            {expiryDates[section] 
+                              ? `Routes will reset to 0 on ${new Date(expiryDates[section]).toLocaleDateString()}`
+                              : 'No expiry set'}
+                          </span>
+                        </div>
+
+                        {/* Route Count Inputs */}
                         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',gap:12}}>
                           {(['green', 'blue', 'yellow', 'orange', 'red', 'black'] as const).map(color => {
                             const colorMap = {
