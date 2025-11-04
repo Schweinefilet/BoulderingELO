@@ -13,16 +13,35 @@ const app = express();
 // JWT Secret (set in environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
-// CORS configuration - allow GitHub Pages
+// CORS configuration - allow GitHub Pages and local development
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://schweinefilet.github.io'
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://schweinefilet.github.io'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(null, false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 app.use(bodyParser.json());
 
