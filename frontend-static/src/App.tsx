@@ -1911,17 +1911,23 @@ export default function App(){
                 .filter((s:any)=>s.climberId===c.id)
                 .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                 
-              const wallTotals:any = {climber: c.name, overhang: 0, midWall: 0, sideWall: 0};
+              const result:any = {climber: c.name};
               
               if(latestSession?.wallCounts){
-                ORDER.forEach((color:any)=>{
-                  wallTotals.overhang += latestSession.wallCounts.overhang[color]||0;
-                  wallTotals.midWall += latestSession.wallCounts.midWall[color]||0;
-                  wallTotals.sideWall += latestSession.wallCounts.sideWall[color]||0;
+                Object.keys(wallTotals).forEach(section => {
+                  result[section] = 0;
+                  ORDER.forEach((color:any)=>{
+                    result[section] += latestSession.wallCounts[section]?.[color] || 0;
+                  });
+                });
+              } else {
+                // Initialize with 0 for all sections
+                Object.keys(wallTotals).forEach(section => {
+                  result[section] = 0;
                 });
               }
               
-              return wallTotals;
+              return result;
             })}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="climber" stroke="#94a3b8" />
@@ -1931,9 +1937,19 @@ export default function App(){
                 formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
               />
               <Legend />
-              <Bar dataKey="overhang" name="Overhang" fill="#ec4899" />
-              <Bar dataKey="midWall" name="Mid Wall" fill="#3b82f6" />
-              <Bar dataKey="sideWall" name="Side Wall" fill="#10b981" />
+              {Object.keys(wallTotals).map((section, idx) => {
+                // Generate colors dynamically
+                const colors = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+                const displayName = section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1');
+                return (
+                  <Bar 
+                    key={section} 
+                    dataKey={section} 
+                    name={displayName} 
+                    fill={colors[idx % colors.length]} 
+                  />
+                );
+              })}
             </BarChart>
           </ResponsiveContainer>
         </div>
