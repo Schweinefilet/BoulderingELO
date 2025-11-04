@@ -2073,6 +2073,16 @@ export default function App(){
           black: latestSession?.black || 0
         };
         
+        // Calculate current climbs (from most recent session)
+        const currentClimbs = latestSession ? {
+          green: latestSession.green || 0,
+          blue: latestSession.blue || 0,
+          yellow: latestSession.yellow || 0,
+          orange: latestSession.orange || 0,
+          red: latestSession.red || 0,
+          black: latestSession.black || 0
+        } : { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+        
         // Calculate rank history and peak score
         const rankHistory: {date: string, rank: number}[] = [];
         let peakRank: number | null = null;
@@ -2280,6 +2290,50 @@ export default function App(){
 
               {/* Stats Section */}
               <div style={{padding:32}}>
+                {/* Current Climbs Section */}
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:24,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:24
+                }}>
+                  <h3 style={{marginTop:0, marginBottom:8, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>CURRENT CLIMBS</h3>
+                  <p style={{marginTop:0, marginBottom:20, fontSize:13, color:'#64748b'}}>From latest session - routes available this week</p>
+                  <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:16}}>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.green}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.green + WALL_TOTALS.midWall.green + WALL_TOTALS.sideWall.green || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.blue}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.blue + WALL_TOTALS.midWall.blue + WALL_TOTALS.sideWall.blue || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.yellow}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.yellow + WALL_TOTALS.midWall.yellow + WALL_TOTALS.sideWall.yellow || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.orange}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.orange + WALL_TOTALS.midWall.orange + WALL_TOTALS.sideWall.orange || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.red}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.red + WALL_TOTALS.midWall.red + WALL_TOTALS.sideWall.red || '?'}</div>
+                    </div>
+                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                      <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
+                      <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{currentClimbs.black}</div>
+                      <div style={{fontSize:11, color:'#64748b'}}>/{WALL_TOTALS.overhang.black + WALL_TOTALS.midWall.black + WALL_TOTALS.sideWall.black || '?'}</div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Total Climbs by Color */}
                 <div style={{
                   backgroundColor:'#0f172a',
@@ -2288,37 +2342,32 @@ export default function App(){
                   border:'1px solid #475569',
                   marginBottom:24
                 }}>
-                  <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>TOTAL CLIMBS</h3>
+                  <h3 style={{marginTop:0, marginBottom:8, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>TOTAL CLIMBS</h3>
+                  <p style={{marginTop:0, marginBottom:20, fontSize:13, color:'#64748b'}}>All-time climbs including replaced routes</p>
                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:16}}>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.green}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.green + WALL_TOTALS.midWall.green + WALL_TOTALS.sideWall.green || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.blue}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.blue + WALL_TOTALS.midWall.blue + WALL_TOTALS.sideWall.blue || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.yellow}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.yellow + WALL_TOTALS.midWall.yellow + WALL_TOTALS.sideWall.yellow || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.orange}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.orange + WALL_TOTALS.midWall.orange + WALL_TOTALS.sideWall.orange || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.red}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.red + WALL_TOTALS.midWall.red + WALL_TOTALS.sideWall.red || '?'}</div>
                     </div>
                     <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
                       <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.black}</div>
-                      <div style={{fontSize:11, color:'#64748b'}}>0/{WALL_TOTALS.overhang.black + WALL_TOTALS.midWall.black + WALL_TOTALS.sideWall.black || '?'}</div>
                     </div>
                   </div>
                 </div>
