@@ -452,6 +452,23 @@ export default function App(){
     loadData();
   }, [])
   
+  // Reload wallTotals when page becomes visible (fixes mobile sync issues)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible - reload wallTotals from localStorage
+        const freshTotals = getWallTotals();
+        setWallTotals(freshTotals);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+  
   // Sync wallCounts when wallTotals changes (e.g., after rename/add/delete)
   useEffect(() => {
     const currentSections = Object.keys(wallCounts);
@@ -787,6 +804,14 @@ export default function App(){
     }
     
     const current = wallCounts[dropdownWall][dropdownColor];
+    const maxForSection = wallTotals[dropdownWall]?.[dropdownColor] || 0;
+    
+    // Check if adding this climb would exceed the maximum
+    if (maxForSection > 0 && current >= maxForSection) {
+      alert(`Cannot add more ${dropdownColor} climbs to ${dropdownWall}. Maximum is ${maxForSection}.`);
+      return;
+    }
+    
     setWallCounts({
       ...wallCounts, 
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current + 1}
@@ -1410,7 +1435,7 @@ export default function App(){
             {scoreSession(totalCounts).toFixed(2)}
           </div>
           <div>
-            <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal +1</h4>
+            <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal</h4>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {ORDER.map((color:any)=> (
                 <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
@@ -2330,6 +2355,7 @@ export default function App(){
         
         // Calculate rank history and peak score
         const rankHistory: {date: string, rank: number}[] = [];
+        const scoreHistory: {date: string, score: number}[] = [];
         let peakRank: number | null = null;
         let peakScore: number | null = null;
         
@@ -2353,6 +2379,7 @@ export default function App(){
           
           let bestRank = Infinity;
           let lastRank: number | null = null;
+          let lastScore: number | null = null;
           
           // Iterate through every day from first session to today
           let currentDate = new Date(firstDate);
@@ -2385,23 +2412,39 @@ export default function App(){
               .sort((a, b) => b.score - a.score);
             
             const rankOnThisDate = rankings.findIndex(r => r.id === viewingProfile) + 1;
+            const scoreOnThisDate = scoresUpToDate.get(viewingProfile) || 0;
             
             // Add to history if this user had sessions up to this date
-            if (rankOnThisDate > 0) {
+            if (rankOnThisDate > 0 && scoreOnThisDate > 0) {
               lastRank = rankOnThisDate;
+              lastScore = scoreOnThisDate;
+              const formattedDate = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              
               rankHistory.push({
-                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                date: formattedDate,
                 rank: rankOnThisDate
+              });
+              
+              scoreHistory.push({
+                date: formattedDate,
+                score: scoreOnThisDate
               });
               
               if (rankOnThisDate < bestRank) {
                 bestRank = rankOnThisDate;
               }
-            } else if (lastRank !== null) {
-              // Fill in with previous rank if no sessions up to this date but user has had sessions before
+            } else if (lastRank !== null && lastScore !== null) {
+              // Fill in with previous rank/score if no sessions up to this date but user has had sessions before
+              const formattedDate = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              
               rankHistory.push({
-                date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                date: formattedDate,
                 rank: lastRank
+              });
+              
+              scoreHistory.push({
+                date: formattedDate,
+                score: lastScore
               });
             }
             
@@ -2676,6 +2719,48 @@ export default function App(){
                           type="monotone" 
                           dataKey="rank" 
                           stroke="#3b82f6" 
+                          strokeWidth={3}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Score History Graph */}
+                {scoreHistory.length > 0 && (
+                  <div style={{
+                    backgroundColor:'#0f172a',
+                    padding:24,
+                    borderRadius:8,
+                    border:'1px solid #475569',
+                    marginBottom:24
+                  }}>
+                    <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>SCORE OVER TIME</h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={scoreHistory}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                        <XAxis 
+                          dataKey="date" 
+                          stroke="#94a3b8"
+                          style={{fontSize:12}}
+                        />
+                        <YAxis 
+                          stroke="#94a3b8"
+                          style={{fontSize:12}}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor:'#1e293b',
+                            border:'1px solid #475569',
+                            borderRadius:6
+                          }}
+                          formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="score" 
+                          stroke="#10b981" 
                           strokeWidth={3}
                           dot={false}
                         />
