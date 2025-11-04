@@ -947,10 +947,10 @@ export default function App(){
     }
     
     const current = wallCounts[dropdownWall][dropdownColor];
-    const maxForSection = wallTotals[dropdownWall]?.[dropdownColor] || 0;
+    const maxForSection = wallTotals[dropdownWall]?.[dropdownColor];
     
-    // Check if adding this climb would exceed the maximum
-    if (maxForSection > 0 && current >= maxForSection) {
+    // Check if adding this climb would exceed the maximum (only if a limit is set)
+    if (maxForSection !== undefined && maxForSection > 0 && current >= maxForSection) {
       alert(`Cannot add more ${dropdownColor} climbs to ${dropdownWall}. Maximum is ${maxForSection}.`);
       return;
     }
