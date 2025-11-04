@@ -1578,24 +1578,42 @@ export default function App(){
             <LineChart data={(() => {
               const sortedSessions = [...sessions].sort((a:any,b:any)=> new Date(a.date).getTime() - new Date(b.date).getTime());
               
-              // Group sessions by date - just display the scores as entered
-              const dateMap = new Map<string, Map<number, number>>();
-              for (const s of sortedSessions) {
-                if (!dateMap.has(s.date)) {
-                  dateMap.set(s.date, new Map());
-                }
-                dateMap.get(s.date)!.set(s.climberId, s.score);
-              }
+              if (sortedSessions.length === 0) return [];
               
-              // Convert to chart data with all climbers at each date
-              const chartData: any[] = [];
-              for (const [date, climberScores] of dateMap) {
-                const point: any = { date };
-                for (const c of climbers) {
-                  point[c.name] = climberScores.get(c.id) || null;
+              // Helper to get all dates between start and end
+              const getAllDatesBetween = (start: Date, end: Date): string[] => {
+                const dates: string[] = [];
+                const current = new Date(start);
+                while (current <= end) {
+                  dates.push(current.toISOString().split('T')[0]);
+                  current.setDate(current.getDate() + 1);
                 }
+                return dates;
+              };
+              
+              // Get date range
+              const startDate = new Date(sortedSessions[0].date);
+              const endDate = new Date(sortedSessions[sortedSessions.length - 1].date);
+              const allDates = getAllDatesBetween(startDate, endDate);
+              
+              // Build cumulative scores for each date
+              const climberScores: { [climberId: number]: number } = {};
+              climbers.forEach((c:any) => climberScores[c.id] = 0);
+              
+              const chartData: any[] = [];
+              allDates.forEach((date: string) => {
+                // Add scores from sessions on this date
+                sortedSessions.filter((s:any) => s.date === date).forEach((s:any) => {
+                  climberScores[s.climberId] += s.score;
+                });
+                
+                // Record current cumulative scores for all climbers
+                const point: any = { date };
+                climbers.forEach((c:any) => {
+                  point[c.name] = climberScores[c.id];
+                });
                 chartData.push(point);
-              }
+              });
               
               return chartData;
             })()}>
@@ -1615,6 +1633,7 @@ export default function App(){
                   name={c.name}
                   stroke={['#3b82f6','#a855f7','#ec4899','#f59e0b','#10b981'][i%5]}
                   strokeWidth={2}
+                  dot={false}
                   connectNulls
                 />
               ))}
