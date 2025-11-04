@@ -54,6 +54,10 @@ app.get('/', (req, res) => {
       user: {
         PUT_settings: '/api/user/settings'
       },
+      settings: {
+        GET_wallTotals: '/api/settings/wall-totals',
+        POST_wallTotals: '/api/settings/wall-totals (admin)'
+      },
       admin: {
         POST_wipe: '/api/admin/wipe-all-data',
         POST_promote: '/api/admin/promote-user',
