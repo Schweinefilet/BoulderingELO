@@ -420,6 +420,10 @@ function VideoPlayer({ url }: { url: string }) {
 }
 
 export default function App(){
+  // Check if Google OAuth is configured
+  const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
+  const isGoogleConfigured = googleClientId && googleClientId.length > 0 && !googleClientId.includes('your-google');
+  
   // Validate localStorage on mount - clear if user object is malformed
   const validateAuth = () => {
     const user = api.getUser();
@@ -466,6 +470,7 @@ export default function App(){
   const [dropdownWall, setDropdownWall] = useState<string>(availableWalls[0] || 'midWall')
   const [dropdownColor, setDropdownColor] = useState<keyof Counts>('yellow')
   const [videoUrl, setVideoUrl] = useState('')
+  const [wallImage, setWallImage] = useState<string>('')
   const [sessionNotes, setSessionNotes] = useState('')
   const [pendingVideos, setPendingVideos] = useState<Array<{videoUrl: string, color: string, wall: string}>>([])
   const [loading, setLoading] = useState(false)
@@ -1371,7 +1376,7 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px minmax(150px, 2fr) 120px 90px repeat(4, 70px)',
+                gridTemplateColumns:'60px minmax(150px, 2fr) 1fr 1fr 1fr 1fr 1fr 1fr',
                 columnGap:8,
                 padding:'12px 16px',
                 backgroundColor:'#1e293b',
@@ -1421,7 +1426,7 @@ export default function App(){
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'60px minmax(150px, 2fr) 120px 90px repeat(4, 70px)',
+                        gridTemplateColumns:'60px minmax(150px, 2fr) 1fr 1fr 1fr 1fr 1fr 1fr',
                         columnGap:8,
                         padding:'12px 16px',
                         backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
@@ -1618,6 +1623,29 @@ export default function App(){
                     </option>
                   ))}
                 </select>
+              </div>
+              
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Wall Image (Optional)</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter image URL (e.g., https://example.com/wall.jpg)" 
+                  value={wallImage} 
+                  onChange={e=>setWallImage(e.target.value)}
+                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                />
+                {wallImage && (
+                  <div style={{marginTop:8,border:'1px solid #475569',borderRadius:6,overflow:'hidden'}}>
+                    <img 
+                      src={wallImage} 
+                      alt="Wall preview" 
+                      style={{width:'100%',height:'auto',maxHeight:200,objectFit:'contain',backgroundColor:'#0f172a'}}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div style={{marginBottom:16}}>
@@ -2446,6 +2474,34 @@ export default function App(){
                   />
                 </div>
                 
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:16,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:16
+                }}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>About Me</label>
+                  <textarea
+                    value={settingsBio}
+                    onChange={e => setSettingsBio(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    rows={4}
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#1e293b',
+                      color:'white',
+                      fontSize:14,
+                      boxSizing:'border-box',
+                      fontFamily:'inherit',
+                      resize:'vertical'
+                    }}
+                  />
+                </div>
+                
                 {/* Change Password Section */}
                 <div style={{
                   backgroundColor:'#0f172a',
@@ -2580,6 +2636,59 @@ export default function App(){
                   </div>
                 )}
               </form>
+              
+              {/* Link Google Account Section */}
+              {isGoogleConfigured && (
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:16,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginTop:16
+                }}>
+                  <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600'}}>Link Google Account</h3>
+                  <p style={{fontSize:14,color:'#94a3b8',marginBottom:16}}>
+                    Link your Google account for easy sign-in
+                  </p>
+                  <div style={{
+                    display:'flex',
+                    justifyContent:'center'
+                  }}>
+                    <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
+                      <GoogleLogin
+                        onSuccess={async (credentialResponse: CredentialResponse) => {
+                          try {
+                            if (!credentialResponse.credential) {
+                              throw new Error('No credential received from Google');
+                            }
+                            
+                            const result = await api.googleLogin(credentialResponse.credential);
+                            setSettingsSuccess(true);
+                            
+                            // Reload user data
+                            const loadedClimbers = await api.getClimbers();
+                            setClimbers(loadedClimbers);
+                            
+                            setTimeout(() => {
+                              setShowSettings(false);
+                              setSettingsSuccess(false);
+                            }, 2000);
+                          } catch (err: any) {
+                            setSettingsError(err.message || 'Failed to link Google account');
+                          }
+                        }}
+                        onError={() => {
+                          setSettingsError('Google linking failed. Please try again.');
+                        }}
+                        theme="outline"
+                        size="large"
+                        shape="pill"
+                        text="continue_with"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div style={{display:'flex',gap:12,marginTop:16}}>
                 <button
