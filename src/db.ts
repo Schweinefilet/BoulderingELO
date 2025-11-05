@@ -16,22 +16,53 @@ if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
       port: parseInt(url.port) || 5432,
       database: url.pathname.slice(1),
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-      connectionTimeoutMillis: 5000,
       client_encoding: 'UTF8',
+      // Connection pool settings for better reliability on Render
+      max: 20, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 30000, // Increased to 30 seconds for Render
     };
     console.log('Database config:', { ...poolConfig, password: '***' });
   } catch (e) {
     console.error('Failed to parse DATABASE_URL:', e);
-    poolConfig = { connectionString: dbUrl };
+    poolConfig = { connectionString: dbUrl, ssl: { rejectUnauthorized: false } };
   }
 } else {
-  poolConfig = { connectionString: dbUrl };
+  poolConfig = { connectionString: dbUrl, ssl: { rejectUnauthorized: false } };
 }
 
 const pool = new Pool(poolConfig);
 
-// Initialize database tables
+// Add connection error handler
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+// Helper function to retry database operations
+async function retryQuery<T>(queryFn: () => Promise<T>, maxRetries = 3, delay = 2000): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await queryFn();
+    } catch (error: any) {
+      console.error(`Database query attempt ${i + 1}/${maxRetries} failed:`, error.message);
+      if (i === maxRetries - 1) throw error;
+      console.log(`Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Max retries reached');
+}
+
+// Initialize database tables with retry logic
 export async function initDB() {
+  console.log('Initializing database...');
+  
+  // Test connection first with retry
+  await retryQuery(async () => {
+    const result = await pool.query('SELECT NOW()');
+    console.log('✅ Database connection successful at', result.rows[0].now);
+  });
+
   // Add password and role columns to climbers table
   await pool.query(`
     CREATE TABLE IF NOT EXISTS climbers (
