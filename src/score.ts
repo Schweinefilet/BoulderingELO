@@ -41,7 +41,8 @@ export function validateCounts(counts: Partial<Counts>): Counts {
 // Combine wall counts into total counts
 export function combineCounts(wallCounts: WallCounts): Counts {
   const total: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
-  for (const wall of ['overhang', 'midWall', 'sideWall'] as const) {
+  // Support dynamic wall sections instead of hard-coded ones
+  for (const wall of Object.keys(wallCounts)) {
     for (const color of ORDER) {
       total[color] += wallCounts[wall][color] || 0;
     }

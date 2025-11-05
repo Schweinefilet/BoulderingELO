@@ -114,28 +114,64 @@ export async function initDB() {
     )
   `);
   
+  // Migrate wall_counts table to use JSONB for dynamic wall sections
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS wall_counts (
-      session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
-      overhang_green INTEGER DEFAULT 0,
-      overhang_blue INTEGER DEFAULT 0,
-      overhang_yellow INTEGER DEFAULT 0,
-      overhang_orange INTEGER DEFAULT 0,
-      overhang_red INTEGER DEFAULT 0,
-      overhang_black INTEGER DEFAULT 0,
-      midwall_green INTEGER DEFAULT 0,
-      midwall_blue INTEGER DEFAULT 0,
-      midwall_yellow INTEGER DEFAULT 0,
-      midwall_orange INTEGER DEFAULT 0,
-      midwall_red INTEGER DEFAULT 0,
-      midwall_black INTEGER DEFAULT 0,
-      sidewall_green INTEGER DEFAULT 0,
-      sidewall_blue INTEGER DEFAULT 0,
-      sidewall_yellow INTEGER DEFAULT 0,
-      sidewall_orange INTEGER DEFAULT 0,
-      sidewall_red INTEGER DEFAULT 0,
-      sidewall_black INTEGER DEFAULT 0
-    )
+    DO $$ 
+    BEGIN
+      -- Check if the old column-based structure exists
+      IF EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name='wall_counts' AND column_name='overhang_green') THEN
+        
+        -- Create temporary table with new structure
+        CREATE TABLE IF NOT EXISTS wall_counts_new (
+          session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+          counts JSONB DEFAULT '{}'::jsonb
+        );
+        
+        -- Migrate existing data to JSONB format
+        INSERT INTO wall_counts_new (session_id, counts)
+        SELECT 
+          session_id,
+          jsonb_build_object(
+            'overhang', jsonb_build_object(
+              'green', COALESCE(overhang_green, 0),
+              'blue', COALESCE(overhang_blue, 0),
+              'yellow', COALESCE(overhang_yellow, 0),
+              'orange', COALESCE(overhang_orange, 0),
+              'red', COALESCE(overhang_red, 0),
+              'black', COALESCE(overhang_black, 0)
+            ),
+            'midWall', jsonb_build_object(
+              'green', COALESCE(midwall_green, 0),
+              'blue', COALESCE(midwall_blue, 0),
+              'yellow', COALESCE(midwall_yellow, 0),
+              'orange', COALESCE(midwall_orange, 0),
+              'red', COALESCE(midwall_red, 0),
+              'black', COALESCE(midwall_black, 0)
+            ),
+            'sideWall', jsonb_build_object(
+              'green', COALESCE(sidewall_green, 0),
+              'blue', COALESCE(sidewall_blue, 0),
+              'yellow', COALESCE(sidewall_yellow, 0),
+              'orange', COALESCE(sidewall_orange, 0),
+              'red', COALESCE(sidewall_red, 0),
+              'black', COALESCE(sidewall_black, 0)
+            )
+          ) as counts
+        FROM wall_counts
+        ON CONFLICT (session_id) DO NOTHING;
+        
+        -- Drop old table and rename new one
+        DROP TABLE wall_counts;
+        ALTER TABLE wall_counts_new RENAME TO wall_counts;
+      ELSE
+        -- Just create the new structure if it doesn't exist
+        CREATE TABLE IF NOT EXISTS wall_counts (
+          session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+          counts JSONB DEFAULT '{}'::jsonb
+        );
+      END IF;
+    END $$;
   `);
   
   // Video reviews table for red/black climbs
@@ -235,21 +271,8 @@ export async function addSession(session: Session & { score: number }, counts: C
     
     if (wallCounts) {
       await client.query(
-        `INSERT INTO wall_counts (
-          session_id,
-          overhang_green, overhang_blue, overhang_yellow, overhang_orange, overhang_red, overhang_black,
-          midwall_green, midwall_blue, midwall_yellow, midwall_orange, midwall_red, midwall_black,
-          sidewall_green, sidewall_blue, sidewall_yellow, sidewall_orange, sidewall_red, sidewall_black
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-        [
-          sessionId,
-          wallCounts.overhang.green, wallCounts.overhang.blue, wallCounts.overhang.yellow,
-          wallCounts.overhang.orange, wallCounts.overhang.red, wallCounts.overhang.black,
-          wallCounts.midWall.green, wallCounts.midWall.blue, wallCounts.midWall.yellow,
-          wallCounts.midWall.orange, wallCounts.midWall.red, wallCounts.midWall.black,
-          wallCounts.sideWall.green, wallCounts.sideWall.blue, wallCounts.sideWall.yellow,
-          wallCounts.sideWall.orange, wallCounts.sideWall.red, wallCounts.sideWall.black
-        ]
+        'INSERT INTO wall_counts (session_id, counts) VALUES ($1, $2)',
+        [sessionId, JSON.stringify(wallCounts)]
       );
     }
     
@@ -266,9 +289,7 @@ export async function addSession(session: Session & { score: number }, counts: C
 export async function getSessions(filter?: { from?: string; to?: string; climberId?: number }) {
   let query = `
     SELECT s.*, c.green, c.blue, c.yellow, c.orange, c.red, c.black,
-           w.overhang_green, w.overhang_blue, w.overhang_yellow, w.overhang_orange, w.overhang_red, w.overhang_black,
-           w.midwall_green, w.midwall_blue, w.midwall_yellow, w.midwall_orange, w.midwall_red, w.midwall_black,
-           w.sidewall_green, w.sidewall_blue, w.sidewall_yellow, w.sidewall_orange, w.sidewall_red, w.sidewall_black
+           w.counts as wall_counts
     FROM sessions s
     LEFT JOIN counts c ON s.id = c.session_id
     LEFT JOIN wall_counts w ON s.id = w.session_id
@@ -305,41 +326,14 @@ export async function getSessions(filter?: { from?: string; to?: string; climber
     orange: row.orange,
     red: row.red,
     black: row.black,
-    wallCounts: row.overhang_green !== null ? {
-      overhang: {
-        green: row.overhang_green,
-        blue: row.overhang_blue,
-        yellow: row.overhang_yellow,
-        orange: row.overhang_orange,
-        red: row.overhang_red,
-        black: row.overhang_black
-      },
-      midWall: {
-        green: row.midwall_green,
-        blue: row.midwall_blue,
-        yellow: row.midwall_yellow,
-        orange: row.midwall_orange,
-        red: row.midwall_red,
-        black: row.midwall_black
-      },
-      sideWall: {
-        green: row.sidewall_green,
-        blue: row.sidewall_blue,
-        yellow: row.sidewall_yellow,
-        orange: row.sidewall_orange,
-        red: row.sidewall_red,
-        black: row.sidewall_black
-      }
-    } : undefined
+    wallCounts: row.wall_counts || undefined
   }));
 }
 
 export async function getSessionById(id: number) {
   const result = await pool.query(`
     SELECT s.*, c.green, c.blue, c.yellow, c.orange, c.red, c.black,
-           w.overhang_green, w.overhang_blue, w.overhang_yellow, w.overhang_orange, w.overhang_red, w.overhang_black,
-           w.midwall_green, w.midwall_blue, w.midwall_yellow, w.midwall_orange, w.midwall_red, w.midwall_black,
-           w.sidewall_green, w.sidewall_blue, w.sidewall_yellow, w.sidewall_orange, w.sidewall_red, w.sidewall_black
+           w.counts as wall_counts
     FROM sessions s
     LEFT JOIN counts c ON s.id = c.session_id
     LEFT JOIN wall_counts w ON s.id = w.session_id
@@ -361,32 +355,7 @@ export async function getSessionById(id: number) {
     orange: row.orange,
     red: row.red,
     black: row.black,
-    wallCounts: row.overhang_green !== null ? {
-      overhang: {
-        green: row.overhang_green,
-        blue: row.overhang_blue,
-        yellow: row.overhang_yellow,
-        orange: row.overhang_orange,
-        red: row.overhang_red,
-        black: row.overhang_black
-      },
-      midWall: {
-        green: row.midwall_green,
-        blue: row.midwall_blue,
-        yellow: row.midwall_yellow,
-        orange: row.midwall_orange,
-        red: row.midwall_red,
-        black: row.midwall_black
-      },
-      sideWall: {
-        green: row.sidewall_green,
-        blue: row.sidewall_blue,
-        yellow: row.sidewall_yellow,
-        orange: row.sidewall_orange,
-        red: row.sidewall_red,
-        black: row.sidewall_black
-      }
-    } : undefined
+    wallCounts: row.wall_counts || undefined
   };
 }
 
@@ -561,89 +530,57 @@ export async function approveVideo(reviewId: number) {
       ['approved', reviewId]
     );
     
-    // Map wall names to database column prefixes
-    const wallMapping: { [key: string]: string } = {
-      'overhang': 'overhang',
-      'midWall': 'midwall',
-      'sideWall': 'sidewall'
-    };
-    
-    const wallPrefix = wallMapping[wall] || wall.toLowerCase();
-    
-    // Build column name (ensure it's safe - no SQL injection since we control the mapping)
+    // Validate color
     const validColors = ['green', 'blue', 'yellow', 'orange', 'red', 'black'];
     if (!validColors.includes(color)) {
       throw new Error(`Invalid color: ${color}`);
     }
     
-    const columnName = `${wallPrefix}_${color}`;
+    console.log(`Updating wall_counts for wall: ${wall}, color: ${color}, session: ${session_id}`);
     
-    console.log(`Updating wall_counts: ${columnName} for session ${session_id}`);
+    // Get current wall counts
+    const countsResult = await client.query(
+      'SELECT counts FROM wall_counts WHERE session_id = $1',
+      [session_id]
+    );
     
-    // Use string interpolation for column name (safe since validated above)
-    const updateQuery = `UPDATE wall_counts SET ${columnName} = ${columnName} + 1 WHERE session_id = $1`;
-    await client.query(updateQuery, [session_id]);
+    let wallCounts: any = {};
+    if (countsResult.rows.length > 0 && countsResult.rows[0].counts) {
+      wallCounts = countsResult.rows[0].counts;
+    }
+    
+    // Initialize wall section if it doesn't exist
+    if (!wallCounts[wall]) {
+      wallCounts[wall] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+    }
+    
+    // Increment the color count for this wall
+    wallCounts[wall][color as keyof Counts] = (wallCounts[wall][color as keyof Counts] || 0) + 1;
+    
+    // Update wall_counts with new JSONB data
+    await client.query(
+      'UPDATE wall_counts SET counts = $1 WHERE session_id = $2',
+      [JSON.stringify(wallCounts), session_id]
+    );
     
     // Recalculate the session score
-    const sessionResult = await client.query(`
-      SELECT s.id, s.climber_id, s.date, s.notes,
-             w.overhang_green, w.overhang_blue, w.overhang_yellow, w.overhang_orange, w.overhang_red, w.overhang_black,
-             w.midwall_green, w.midwall_blue, w.midwall_yellow, w.midwall_orange, w.midwall_red, w.midwall_black,
-             w.sidewall_green, w.sidewall_blue, w.sidewall_yellow, w.sidewall_orange, w.sidewall_red, w.sidewall_black
-      FROM sessions s
-      LEFT JOIN wall_counts w ON s.id = w.session_id
-      WHERE s.id = $1
-    `, [session_id]);
+    const { scoreSession, combineCounts } = require('./score');
+    const totalCounts = combineCounts(wallCounts);
+    const newScore = scoreSession(totalCounts);
     
-    if (sessionResult.rows.length > 0) {
-      const row = sessionResult.rows[0];
-      const { scoreSession } = require('./score');
-      const { combineCounts } = require('./score');
-      
-      const wallCounts = {
-        overhang: {
-          green: row.overhang_green || 0,
-          blue: row.overhang_blue || 0,
-          yellow: row.overhang_yellow || 0,
-          orange: row.overhang_orange || 0,
-          red: row.overhang_red || 0,
-          black: row.overhang_black || 0
-        },
-        midWall: {
-          green: row.midwall_green || 0,
-          blue: row.midwall_blue || 0,
-          yellow: row.midwall_yellow || 0,
-          orange: row.midwall_orange || 0,
-          red: row.midwall_red || 0,
-          black: row.midwall_black || 0
-        },
-        sideWall: {
-          green: row.sidewall_green || 0,
-          blue: row.sidewall_blue || 0,
-          yellow: row.sidewall_yellow || 0,
-          orange: row.sidewall_orange || 0,
-          red: row.sidewall_red || 0,
-          black: row.sidewall_black || 0
-        }
-      };
-      
-      const totalCounts = combineCounts(wallCounts);
-      const newScore = scoreSession(totalCounts);
-      
-      console.log(`Session ${session_id}: Old score from DB, New score: ${newScore}`);
-      console.log('Total counts:', totalCounts);
-      
-      await client.query(
-        'UPDATE sessions SET score = $1 WHERE id = $2',
-        [newScore, session_id]
-      );
-      
-      console.log(`Score updated successfully for session ${session_id}`);
-    }
+    console.log(`Session ${session_id}: New score: ${newScore}`);
+    console.log('Total counts:', totalCounts);
+    
+    await client.query(
+      'UPDATE sessions SET score = $1 WHERE id = $2',
+      [newScore, session_id]
+    );
+    
+    console.log(`Score updated successfully for session ${session_id}`);
     
     await client.query('COMMIT');
     console.log(`Video ${reviewId} approved successfully`);
-    return reviewResult.rows[0];
+    return review;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -676,12 +613,12 @@ export async function seedData(sample: {
     const base: Counts = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
     if (!w) return base;
     const sum: any = { ...base };
-    ['green','blue','yellow','orange','red','black'].forEach((col:any) => {
-      const a = ((w.overhang as any)[col] || 0);
-      const b = ((w.midWall as any)[col] || 0);
-      const c = ((w.sideWall as any)[col] || 0);
-      sum[col] = a + b + c;
-    });
+    // Support dynamic wall sections
+    for (const wall of Object.keys(w)) {
+      ['green','blue','yellow','orange','red','black'].forEach((col:any) => {
+        sum[col] += ((w as any)[wall][col] || 0);
+      });
+    }
     return sum as Counts;
   }
 
