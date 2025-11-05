@@ -1452,24 +1452,24 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px minmax(150px, 2fr) 1fr 1fr 1fr 1fr 1fr 1fr',
-                columnGap:8,
-                padding:'12px 16px',
+                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(6, minmax(60px, 1fr))',
+                columnGap:4,
+                padding:'12px 8px',
                 backgroundColor:'#1e293b',
                 fontWeight:'600',
-                fontSize:13,
+                fontSize:12,
                 color:'#94a3b8',
                 borderBottom:'1px solid #334155',
                 alignItems:'center',
                 minWidth:'fit-content'
               }}>
                 <div style={{textAlign:'center',position:'sticky',left:0,backgroundColor:'#1e293b',zIndex:2}}></div>
-                <div style={{display:'flex', alignItems:'center', gap:12}}>
-                  <span style={{width:20,display:'inline-block'}}></span>
+                <div style={{display:'flex', alignItems:'center', gap:8}}>
+                  <span style={{width:16,display:'inline-block'}}></span>
                   <span></span>
                 </div>
-                <div style={{textAlign:'center'}}>Score</div>
-                <div style={{textAlign:'center'}}>Sessions</div>
+                <div style={{textAlign:'center',fontSize:11}}>Score</div>
+                <div style={{textAlign:'center',fontSize:11}}>Sessions</div>
                 {CLIMB_CATEGORY_COLUMNS.map(column => (
                   <div
                     key={column.key}
@@ -1502,9 +1502,9 @@ export default function App(){
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'60px minmax(150px, 2fr) 1fr 1fr 1fr 1fr 1fr 1fr',
-                        columnGap:8,
-                        padding:'12px 16px',
+                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(6, minmax(60px, 1fr))',
+                        columnGap:4,
+                        padding:'10px 8px',
                         backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
                         borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
                         alignItems:'center',
@@ -1520,7 +1520,7 @@ export default function App(){
                     <div style={{
                       textAlign:'center',
                       fontWeight:'700',
-                      fontSize:16,
+                      fontSize:14,
                       color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b',
                       position:'sticky',
                       left:0,
@@ -1531,23 +1531,23 @@ export default function App(){
                     </div>
                     
                     {/* Player with flag */}
-                    <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
-                      <FlagEmoji countryCode={climber?.country} size={20} />
-                      <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0,overflow:'hidden'}}>
+                      <FlagEmoji countryCode={climber?.country} size={16} />
+                      <span style={{fontWeight:'600',fontSize:14,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
                     {/* Ranked Score */}
-                    <div style={{textAlign:'center',fontWeight:'700',fontSize:16,color:'#3b82f6'}}>
+                    <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#3b82f6'}}>
                       {e.total_score.toFixed(2)}
                     </div>
                     
                     {/* Sessions */}
-                    <div style={{textAlign:'center',color:'#94a3b8',fontSize:14}}>{playCount}</div>
+                    <div style={{textAlign:'center',color:'#94a3b8',fontSize:13}}>{playCount}</div>
                     
                     {/* Climbs by color */}
                     {CLIMB_CATEGORY_COLUMNS.map(column => (
                       <div key={column.key} style={{textAlign:'center'}}>
-                        <div style={{fontSize:16,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
+                        <div style={{fontSize:14,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
                       </div>
                     ))}
                   </div>
@@ -2624,20 +2624,20 @@ export default function App(){
             <div 
               onClick={(e) => e.stopPropagation()}
               style={{
-              padding:32,
+              padding:'16px',
               width:500,
               maxWidth:'100%',
-              maxHeight:'85vh',
+              maxHeight:'90vh',
               overflowY:'auto',
               WebkitOverflowScrolling:'touch' as any,
               scrollbarWidth:'none',
               msOverflowStyle:'none',
-              marginTop:20,
-              marginBottom:20
+              marginTop:10,
+              marginBottom:10
             }}
               className="hide-scrollbar"
             >
-              <h2 style={{marginTop:0,marginBottom:24}}>Account Settings</h2>
+              <h2 style={{marginTop:0,marginBottom:16,fontSize:20}}>Account Settings</h2>
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setSettingsError(null);
@@ -2665,12 +2665,12 @@ export default function App(){
               }}>
                 <div style={{
                   backgroundColor:'#0f172a',
-                  padding:16,
+                  padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
-                  marginBottom:16
+                  marginBottom:12
                 }}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Country</label>
+                  <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>Country</label>
                   <select
                     value={settingsCountry}
                     onChange={e => setSettingsCountry(e.target.value)}
@@ -2701,12 +2701,12 @@ export default function App(){
                 
                 <div style={{
                   backgroundColor:'#0f172a',
-                  padding:16,
+                  padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
-                  marginBottom:16
+                  marginBottom:12
                 }}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>When Did You Start Bouldering?</label>
+                  <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>When Did You Start Bouldering?</label>
                   <input
                     type="text"
                     value={settingsStarted}
@@ -2727,12 +2727,12 @@ export default function App(){
                 
                 <div style={{
                   backgroundColor:'#0f172a',
-                  padding:16,
+                  padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
-                  marginBottom:16
+                  marginBottom:12
                 }}>
-                  <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>About Me</label>
+                  <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>About Me</label>
                   <textarea
                     value={settingsBio}
                     onChange={e => setSettingsBio(e.target.value)}
@@ -2756,14 +2756,14 @@ export default function App(){
                 {/* Change Password Section */}
                 <div style={{
                   backgroundColor:'#0f172a',
-                  padding:16,
+                  padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
                   marginTop:8
                 }}>
-                  <h3 style={{marginTop:0,marginBottom:16,fontSize:18,fontWeight:'600'}}>Change Password</h3>
-                  <div style={{marginBottom:16}}>
-                    <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Current Password</label>
+                  <h3 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Change Password</h3>
+                  <div style={{marginBottom:12}}>
+                    <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>Current Password</label>
                     <input
                       type="password"
                       value={currentPassword}
@@ -2780,8 +2780,8 @@ export default function App(){
                       }}
                     />
                   </div>
-                  <div style={{marginBottom:16}}>
-                    <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>New Password</label>
+                  <div style={{marginBottom:12}}>
+                    <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>New Password</label>
                     <input
                       type="password"
                       value={newPassword}
@@ -2799,8 +2799,8 @@ export default function App(){
                       minLength={6}
                     />
                   </div>
-                  <div style={{marginBottom:16}}>
-                    <label style={{display:'block',marginBottom:8,fontSize:14,fontWeight:'600'}}>Confirm New Password</label>
+                  <div style={{marginBottom:12}}>
+                    <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>Confirm New Password</label>
                     <input
                       type="password"
                       value={confirmPassword}
@@ -2841,10 +2841,10 @@ export default function App(){
                   <div style={{
                     backgroundColor:'#dc2626',
                     color:'white',
-                    padding:12,
+                    padding:10,
                     borderRadius:6,
-                    marginTop:16,
-                    fontSize:14
+                    marginTop:12,
+                    fontSize:13
                   }}>
                     {passwordError}
                   </div>
@@ -2853,10 +2853,10 @@ export default function App(){
                   <div style={{
                     backgroundColor:'#10b981',
                     color:'white',
-                    padding:12,
+                    padding:10,
                     borderRadius:6,
-                    marginTop:16,
-                    fontSize:14
+                    marginTop:12,
+                    fontSize:13
                   }}>
                     Password changed successfully!
                   </div>
@@ -2866,10 +2866,10 @@ export default function App(){
                   <div style={{
                     backgroundColor:'#dc2626',
                     color:'white',
-                    padding:12,
+                    padding:10,
                     borderRadius:6,
-                    marginBottom:16,
-                    fontSize:14
+                    marginBottom:12,
+                    fontSize:13
                   }}>
                     {settingsError}
                   </div>
@@ -2878,10 +2878,10 @@ export default function App(){
                   <div style={{
                     backgroundColor:'#10b981',
                     color:'white',
-                    padding:12,
+                    padding:10,
                     borderRadius:6,
-                    marginBottom:16,
-                    fontSize:14
+                    marginBottom:12,
+                    fontSize:13
                   }}>
                     Settings updated successfully!
                   </div>
