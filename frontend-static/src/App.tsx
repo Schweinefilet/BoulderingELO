@@ -132,6 +132,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Check if Google OAuth is configured
+  const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
+  const isGoogleConfigured = googleClientId && googleClientId.length > 0;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -326,7 +330,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </button>
         </form>
 
-        {mode === 'login' && (
+        {mode === 'login' && isGoogleConfigured && (
           <>
             <div style={{
               margin:'24px 0',
@@ -354,16 +358,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
               display:'flex',
               justifyContent:'center'
             }}>
-              <GoogleLogin
-                onSuccess={handleGoogleLogin}
-                onError={() => {
-                  setError('Google login failed. Please try again.');
-                }}
-                useOneTap
-                theme="filled_blue"
-                size="large"
-                width="400"
-              />
+              <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
+                <GoogleLogin
+                  onSuccess={handleGoogleLogin}
+                  onError={() => {
+                    setError('Google login failed. Please try again.');
+                  }}
+                  theme="filled_blue"
+                  size="large"
+                  width="400"
+                  shape="pill"
+                />
+              </div>
             </div>
           </>
         )}
@@ -1365,7 +1371,7 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'60px minmax(150px, 2fr) 120px 120px 90px repeat(4, 70px)',
+                gridTemplateColumns:'60px minmax(150px, 2fr) 120px 90px repeat(4, 70px)',
                 columnGap:8,
                 padding:'12px 16px',
                 backgroundColor:'#1e293b',
@@ -1381,7 +1387,6 @@ export default function App(){
                   <span style={{width:20,display:'inline-block'}}></span>
                   <span></span>
                 </div>
-                <div style={{textAlign:'center'}}>Ranking</div>
                 <div style={{textAlign:'center'}}>Score</div>
                 <div style={{textAlign:'center'}}>Sessions</div>
                 {CLIMB_CATEGORY_COLUMNS.map(column => (
@@ -1416,7 +1421,7 @@ export default function App(){
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'60px minmax(150px, 2fr) 120px 120px 90px repeat(4, 70px)',
+                        gridTemplateColumns:'60px minmax(150px, 2fr) 120px 90px repeat(4, 70px)',
                         columnGap:8,
                         padding:'12px 16px',
                         backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
@@ -1448,11 +1453,6 @@ export default function App(){
                     <div style={{display:'flex',alignItems:'center',gap:12,minWidth:0}}>
                       <FlagEmoji countryCode={climber?.country} size={20} />
                       <span style={{fontWeight:'600',fontSize:16,color:'#e2e8f0'}}>{e.climber}</span>
-                    </div>
-                    
-                    {/* Global Ranking */}
-                    <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#94a3b8'}}>
-                      #{i + 1}
                     </div>
                     
                     {/* Ranked Score */}

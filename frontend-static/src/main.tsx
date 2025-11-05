@@ -6,10 +6,17 @@ import './styles.css'
 
 const GOOGLE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
 
+// Only wrap with GoogleOAuthProvider if client ID is configured
+const AppWithProviders = GOOGLE_CLIENT_ID ? (
+  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <App />
+  </GoogleOAuthProvider>
+) : (
+  <App />
+);
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <App />
-    </GoogleOAuthProvider>
+    {AppWithProviders}
   </React.StrictMode>
 )
