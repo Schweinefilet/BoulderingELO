@@ -27,12 +27,11 @@ export async function addSession(req: AuthRequest, res: Response) {
     let validatedWalls: WallCounts | undefined;
     
     if (wallCounts) {
-      // Validate and combine wall counts
-      validatedWalls = {
-        overhang: validateCounts(wallCounts.overhang || {}),
-        midWall: validateCounts(wallCounts.midWall || {}),
-        sideWall: validateCounts(wallCounts.sideWall || {})
-      };
+      // Validate and combine wall counts - support dynamic wall sections
+      validatedWalls = {} as WallCounts;
+      for (const wallSection of Object.keys(wallCounts)) {
+        validatedWalls[wallSection] = validateCounts(wallCounts[wallSection] || {});
+      }
       totalCounts = combineCounts(validatedWalls);
     } else {
       // Legacy: flat counts

@@ -642,6 +642,9 @@ export default function App(){
   
   // Sync wallCounts when wallTotals changes (e.g., after rename/add/delete)
   useEffect(() => {
+    // Only run after wallTotals has been loaded
+    if (!wallTotalsLoaded) return;
+    
     const currentSections = Object.keys(wallCounts);
     const newSections = Object.keys(wallTotals);
     
@@ -650,6 +653,7 @@ export default function App(){
       !currentSections.every(section => newSections.includes(section));
     
     if (sectionsChanged) {
+      console.log('Wall sections changed, syncing wallCounts:', { currentSections, newSections });
       // Re-initialize wallCounts with new sections, preserving existing counts where possible
       const newCounts: any = {};
       newSections.forEach(section => {
@@ -662,7 +666,7 @@ export default function App(){
         setDropdownWall(newSections[0] || '');
       }
     }
-  }, [wallTotals]);
+  }, [wallTotals, wallTotalsLoaded]);
   
   // Check for expired sections on mount and daily
   useEffect(() => {

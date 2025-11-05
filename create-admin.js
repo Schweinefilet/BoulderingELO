@@ -6,6 +6,7 @@
  * Example: node create-admin.js keith mypassword "Keith Chambers"
  */
 
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { Client } = require('pg');
 
