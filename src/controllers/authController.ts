@@ -77,15 +77,36 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     const name = payload.name || email.split('@')[0];
     const googleId = payload.sub;
     
+    // Check if a user exists with this Google ID
+    const existingGoogleUser = await db.getClimberByGoogleId(googleId);
+    if (existingGoogleUser) {
+      // User already has a Google account linked - log them in
+      const token = jwt.sign(
+        { climberId: existingGoogleUser.id, username: existingGoogleUser.username, role: existingGoogleUser.role },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      
+      return sendSuccess(res, {
+        token,
+        user: {
+          climberId: existingGoogleUser.id,
+          username: existingGoogleUser.username,
+          role: existingGoogleUser.role
+        }
+      });
+    }
+    
     // Check if user exists by email (use email as username)
     let climber = await db.getClimberByUsername(email.toLowerCase());
     
     if (!climber) {
       // Create new user with Google account
       climber = await db.addClimber(name, email.toLowerCase(), null, 'user', googleId);
-    } else if (!climber.google_id) {
+    } else {
       // Link Google account to existing user
       await db.linkGoogleAccount(climber.id!, googleId);
+      climber.google_id = googleId;
     }
     
     const token = jwt.sign(
@@ -104,6 +125,57 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     });
   } catch (err: any) {
     console.error('Google auth error:', err);
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Link Google account to currently logged-in user
+ */
+export async function linkGoogleAccount(req: AuthRequest, res: Response) {
+  try {
+    const { credential } = req.body;
+    
+    if (!credential) {
+      return sendError(res, 'Google credential required', 400);
+    }
+    
+    if (!GOOGLE_CLIENT_ID) {
+      return sendError(res, 'Google authentication not configured', 500);
+    }
+    
+    if (!req.user) {
+      return sendError(res, 'User not authenticated', 401);
+    }
+    
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return sendError(res, 'Invalid Google token', 401);
+    }
+    
+    const googleId = payload.sub;
+    
+    // Check if this Google ID is already linked to another account
+    const existingGoogleUser = await db.getClimberByGoogleId(googleId);
+    if (existingGoogleUser && existingGoogleUser.id !== req.user.climberId) {
+      return sendError(res, 'This Google account is already linked to another user', 400);
+    }
+    
+    // Link Google account to current user
+    await db.linkGoogleAccount(req.user.climberId, googleId);
+    
+    return sendSuccess(res, { 
+      message: 'Google account linked successfully',
+      googleId: googleId 
+    });
+  } catch (err: any) {
+    console.error('Link Google account error:', err);
     return handleControllerError(res, err);
   }
 }

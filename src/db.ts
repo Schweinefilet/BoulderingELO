@@ -442,6 +442,11 @@ export async function getClimberByUsername(username: string) {
   return result.rows.length > 0 ? result.rows[0] : null;
 }
 
+export async function getClimberByGoogleId(googleId: string) {
+  const result = await pool.query('SELECT * FROM climbers WHERE google_id = $1', [googleId]);
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
 export async function updateClimberPassword(climberId: number, password: string) {
   await pool.query('UPDATE climbers SET password = $1 WHERE id = $2', [password, climberId]);
 }

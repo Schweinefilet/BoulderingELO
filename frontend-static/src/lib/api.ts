@@ -142,6 +142,15 @@ export async function googleLogin(credential: string): Promise<{ token: string; 
   return handleResponse<{ token: string; user: User }>(response);
 }
 
+export async function linkGoogleAccount(credential: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetchWithTimeout(`${API_URL}/api/auth/link-google`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ credential })
+  });
+  return handleResponse<{ success: boolean; message: string }>(response);
+}
+
 export async function register(username: string, password: string, name: string): Promise<{ token: string; user: User }> {
   const response = await fetchWithTimeout(`${API_URL}/api/auth/register`, {
     method: 'POST',
