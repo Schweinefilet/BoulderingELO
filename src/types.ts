@@ -26,6 +26,7 @@ export type Climber = {
   username?: string;
   password?: string;
   role?: 'admin' | 'user';
+  google_id?: string;
   country?: string;
   started_bouldering?: string;
   bio?: string;

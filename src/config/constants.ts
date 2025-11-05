@@ -4,6 +4,8 @@
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+
 export const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',

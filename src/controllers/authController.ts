@@ -1,10 +1,13 @@
 import { Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import * as db from '../db';
 import { AuthRequest } from '../middleware/auth';
-import { JWT_SECRET } from '../config/constants';
+import { JWT_SECRET, GOOGLE_CLIENT_ID } from '../config/constants';
 import { sendSuccess, sendError, handleControllerError } from '../utils/response';
+
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 /**
  * Handle user login
@@ -40,6 +43,67 @@ export async function login(req: AuthRequest, res: Response) {
       }
     });
   } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Handle Google OAuth login/registration
+ */
+export async function googleAuth(req: AuthRequest, res: Response) {
+  try {
+    const { credential } = req.body;
+    
+    if (!credential) {
+      return sendError(res, 'Google credential required', 400);
+    }
+    
+    if (!GOOGLE_CLIENT_ID) {
+      return sendError(res, 'Google authentication not configured', 500);
+    }
+    
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return sendError(res, 'Invalid Google token', 401);
+    }
+    
+    const email = payload.email;
+    const name = payload.name || email.split('@')[0];
+    const googleId = payload.sub;
+    
+    // Check if user exists by email (use email as username)
+    let climber = await db.getClimberByUsername(email.toLowerCase());
+    
+    if (!climber) {
+      // Create new user with Google account
+      climber = await db.addClimber(name, email.toLowerCase(), null, 'user', googleId);
+    } else if (!climber.google_id) {
+      // Link Google account to existing user
+      await db.linkGoogleAccount(climber.id!, googleId);
+    }
+    
+    const token = jwt.sign(
+      { climberId: climber.id, username: climber.username, role: climber.role },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    return sendSuccess(res, {
+      token,
+      user: {
+        climberId: climber.id,
+        username: climber.username,
+        role: climber.role
+      }
+    });
+  } catch (err: any) {
+    console.error('Google auth error:', err);
     return handleControllerError(res, err);
   }
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getSetting, setSetting } from '../db';
-import { requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { sendSuccess, sendError } from '../utils/response';
 
 const router = Router();
@@ -25,7 +25,7 @@ router.get('/wall-totals', async (req, res) => {
 });
 
 // Set wall totals configuration (admin only)
-router.post('/wall-totals', requireAdmin, async (req, res) => {
+router.post('/wall-totals', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const wallTotals = req.body;
     await setSetting('wallTotals', wallTotals);

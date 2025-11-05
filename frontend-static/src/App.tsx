@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google'
 import { scoreSession, marginalGain, ORDER, BASE, combineCounts, type Counts, type WallCounts } from './lib/scoring'
 import * as store from './lib/storage'
 import * as api from './lib/api'
@@ -144,6 +145,26 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       onLogin();
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleLogin(credentialResponse: CredentialResponse) {
+    setLoading(true);
+    setError('');
+    
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error('No credential received from Google');
+      }
+      
+      const result = await api.googleLogin(credentialResponse.credential);
+      api.setToken(result.token);
+      api.setUser(result.user);
+      onLogin();
+    } catch (err: any) {
+      setError(err.message || 'Google login failed');
     } finally {
       setLoading(false);
     }
@@ -304,6 +325,48 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             {loading ? (mode === 'login' ? 'Logging in...' : 'Creating account...') : (mode === 'login' ? 'Login' : 'Create Account')}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <>
+            <div style={{
+              margin:'24px 0',
+              textAlign:'center',
+              position:'relative'
+            }}>
+              <div style={{
+                position:'absolute',
+                top:'50%',
+                left:0,
+                right:0,
+                height:'1px',
+                backgroundColor:'#475569'
+              }}></div>
+              <span style={{
+                position:'relative',
+                backgroundColor:'#1e293b',
+                padding:'0 16px',
+                fontSize:14,
+                color:'#94a3b8'
+              }}>OR</span>
+            </div>
+            
+            <div style={{
+              display:'flex',
+              justifyContent:'center'
+            }}>
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => {
+                  setError('Google login failed. Please try again.');
+                }}
+                useOneTap
+                theme="filled_blue"
+                size="large"
+                width="400"
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

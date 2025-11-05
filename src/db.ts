@@ -17,6 +17,7 @@ if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
       database: url.pathname.slice(1),
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
       connectionTimeoutMillis: 5000,
+      client_encoding: 'UTF8',
     };
     console.log('Database config:', { ...poolConfig, password: '***' });
   } catch (e) {
@@ -39,8 +40,23 @@ export async function initDB() {
       username TEXT UNIQUE,
       password TEXT,
       role TEXT DEFAULT 'user',
+      google_id TEXT UNIQUE,
+      country TEXT,
+      started_bouldering TEXT,
+      bio TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
+  `);
+  
+  // Add google_id column if it doesn't exist (for existing databases)
+  await pool.query(`
+    DO $$ 
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name='climbers' AND column_name='google_id') THEN
+        ALTER TABLE climbers ADD COLUMN google_id TEXT UNIQUE;
+      END IF;
+    END $$;
   `);
   
   await pool.query(`
@@ -147,15 +163,22 @@ export async function getClient() {
   return pool.connect();
 }
 
-export async function addClimber(name: string, username?: string, password?: string, role: string = 'user') {
+export async function addClimber(name: string, username?: string, password?: string | null, role: string = 'user', googleId?: string) {
   const existing = await pool.query('SELECT * FROM climbers WHERE name = $1', [name]);
   if (existing.rows.length > 0) return existing.rows[0] as Climber;
   
   const result = await pool.query(
-    'INSERT INTO climbers (name, username, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
-    [name, username || null, password || null, role]
+    'INSERT INTO climbers (name, username, password, role, google_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [name, username || null, password || null, role, googleId || null]
   );
   return result.rows[0] as Climber;
+}
+
+export async function linkGoogleAccount(climberId: number, googleId: string) {
+  await pool.query(
+    'UPDATE climbers SET google_id = $1 WHERE id = $2',
+    [googleId, climberId]
+  );
 }
 
 export async function listClimbers() {
