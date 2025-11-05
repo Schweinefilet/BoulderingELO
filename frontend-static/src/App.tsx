@@ -65,6 +65,16 @@ async function saveWallTotalsToAPI(totals: Record<string, Record<string, number>
   }
 }
 
+// Save wall section images to database via API
+async function saveWallSectionImagesToAPI(images: Record<string, string>) {
+  try {
+    await api.saveWallSectionImages(images);
+  } catch (e) {
+    console.error('Error saving wall section images:', e);
+    alert('Failed to save wall section images. Please try again.');
+  }
+}
+
 // Expiry date management
 interface ExpiryConfig {
   [section: string]: string; // section name -> ISO date string
@@ -452,6 +462,7 @@ export default function App(){
   // Wall totals state (loaded from API)
   const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(DEFAULT_wallTotals)
   const [wallTotalsLoaded, setWallTotalsLoaded] = useState(false)
+  const [wallSectionImages, setWallSectionImages] = useState<Record<string, string>>({}) // Store image URLs for each wall section
   
   // Initialize wallCounts dynamically based on wallTotals
   const initializeWallCounts = () => {
@@ -559,6 +570,21 @@ export default function App(){
       }
     };
     loadWallTotals();
+  }, []);
+
+  // Load wall section images from API on mount
+  useEffect(() => {
+    const loadWallSectionImages = async () => {
+      try {
+        const images = await api.getWallSectionImages();
+        setWallSectionImages(images);
+      } catch (err) {
+        console.error('Failed to load wall section images:', err);
+        // Use empty object if API fails
+        setWallSectionImages({});
+      }
+    };
+    loadWallSectionImages();
   }, []);
 
   // Load data on mount
@@ -902,6 +928,15 @@ export default function App(){
     setWallTotals(updated);
     await saveWallTotalsToAPI(updated);
     
+    // Update wall section images
+    if (wallSectionImages[oldName]) {
+      const updatedImages = { ...wallSectionImages };
+      updatedImages[newName] = updatedImages[oldName];
+      delete updatedImages[oldName];
+      setWallSectionImages(updatedImages);
+      await saveWallSectionImagesToAPI(updatedImages);
+    }
+    
     // Update expiry date if exists
     if (expiryDates[oldName]) {
       const updatedExpiry = { ...expiryDates };
@@ -993,6 +1028,14 @@ export default function App(){
     delete updated[section];
     setWallTotals(updated);
     await saveWallTotalsToAPI(updated);
+    
+    // Remove wall section image if exists
+    if (wallSectionImages[section]) {
+      const updatedImages = { ...wallSectionImages };
+      delete updatedImages[section];
+      setWallSectionImages(updatedImages);
+      await saveWallSectionImagesToAPI(updatedImages);
+    }
     
     // Remove expiry date if exists
     if (expiryDates[section]) {
@@ -1623,6 +1666,42 @@ export default function App(){
                     </option>
                   ))}
                 </select>
+                
+                {/* Display admin-uploaded wall section reference image */}
+                {wallSectionImages[dropdownWall] && (
+                  <div style={{
+                    marginTop:12,
+                    border:'2px solid #3b82f6',
+                    borderRadius:8,
+                    overflow:'hidden',
+                    backgroundColor:'#000'
+                  }}>
+                    <div style={{
+                      backgroundColor:'#1e293b',
+                      padding:'8px 12px',
+                      borderBottom:'1px solid #3b82f6',
+                      fontSize:12,
+                      color:'#3b82f6',
+                      fontWeight:'600'
+                    }}>
+                      📍 Wall Section Reference
+                    </div>
+                    <img 
+                      src={wallSectionImages[dropdownWall]} 
+                      alt={`${dropdownWall} wall reference`} 
+                      style={{
+                        width:'100%',
+                        height:'auto',
+                        maxHeight:250,
+                        objectFit:'contain',
+                        display:'block'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.parentElement!.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               
               <div style={{marginBottom:16}}>
@@ -4109,6 +4188,63 @@ export default function App(){
                               ? `Routes will reset to 0 on ${new Date(expiryDates[section]).toLocaleDateString()}`
                               : 'No expiry set'}
                           </span>
+                        </div>
+
+                        {/* Wall Section Image Upload */}
+                        <div style={{
+                          backgroundColor:'#0f172a',
+                          padding:12,
+                          borderRadius:6,
+                          marginBottom:16
+                        }}>
+                          <label style={{fontSize:13,color:'#94a3b8',display:'block',marginBottom:8}}>
+                            📸 Wall Section Reference Image
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Paste image URL (HEIF, HEIC, JPG, PNG)"
+                            value={wallSectionImages[section] || ''}
+                            onChange={async (e) => {
+                              const updated = {
+                                ...wallSectionImages,
+                                [section]: e.target.value
+                              };
+                              setWallSectionImages(updated);
+                              await saveWallSectionImagesToAPI(updated);
+                            }}
+                            style={{
+                              width:'100%',
+                              padding:'8px 12px',
+                              backgroundColor:'#1e293b',
+                              border:'1px solid #475569',
+                              borderRadius:4,
+                              color:'white',
+                              fontSize:13,
+                              marginBottom:8
+                            }}
+                          />
+                          {wallSectionImages[section] && (
+                            <div style={{marginTop:8}}>
+                              <img
+                                src={wallSectionImages[section]}
+                                alt={`${section} wall`}
+                                style={{
+                                  width:'100%',
+                                  maxHeight:200,
+                                  objectFit:'contain',
+                                  borderRadius:6,
+                                  border:'1px solid #475569',
+                                  backgroundColor:'#000'
+                                }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                          <p style={{fontSize:11,color:'#64748b',marginTop:6,marginBottom:0}}>
+                            💡 Upload to <a href="https://imgur.com" target="_blank" style={{color:'#3b82f6'}}>Imgur</a> or use a direct link. This helps climbers identify which wall section to log climbs for.
+                          </p>
                         </div>
 
                         {/* Route Count Inputs */}

@@ -36,4 +36,27 @@ router.post('/wall-totals', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
+// Get wall section images configuration
+router.get('/wall-section-images', async (req, res) => {
+  try {
+    const wallSectionImages = await getSetting('wallSectionImages');
+    sendSuccess(res, { data: wallSectionImages || {} });
+  } catch (error: any) {
+    console.error('Error getting wall section images:', error);
+    sendError(res, error.message);
+  }
+});
+
+// Set wall section images configuration (admin only)
+router.post('/wall-section-images', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const wallSectionImages = req.body;
+    await setSetting('wallSectionImages', wallSectionImages);
+    sendSuccess(res, { message: 'Wall section images updated successfully' });
+  } catch (error: any) {
+    console.error('Error setting wall section images:', error);
+    sendError(res, error.message);
+  }
+});
+
 export default router;
