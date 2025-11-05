@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import path from 'path';
 import * as db from './db';
 import { corsOptions } from './config/cors';
 import { PORT } from './config/constants';
@@ -15,6 +16,9 @@ const app = express();
 app.use(corsOptions);
 app.options('*', cors()); // Handle preflight requests
 app.use(bodyParser.json());
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 /**
  * Root endpoint - API documentation

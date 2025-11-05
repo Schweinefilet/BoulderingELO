@@ -1,9 +1,89 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { getSetting, setSetting } from '../db';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { sendSuccess, sendError } from '../utils/response';
 
 const router = Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/wall-sections');
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'wall-section-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images only
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
+    }
+    cb(null, true);
+  }
+});
+
+// Upload wall section image (admin only)
+router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return sendError(res, 'No image file provided', 400);
+    }
+    
+    const { section } = req.body;
+    if (!section) {
+      // Delete uploaded file if section not provided
+      fs.unlinkSync(req.file.path);
+      return sendError(res, 'Wall section name required', 400);
+    }
+    
+    // Get current images
+    const wallSectionImages = await getSetting('wallSectionImages') || {};
+    
+    // Delete old image file if it exists
+    if (wallSectionImages[section]) {
+      const oldImagePath = path.join(__dirname, '../../', wallSectionImages[section]);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+    
+    // Store relative path from project root
+    const imagePath = `/uploads/wall-sections/${req.file.filename}`;
+    wallSectionImages[section] = imagePath;
+    
+    await setSetting('wallSectionImages', wallSectionImages);
+    
+    sendSuccess(res, { 
+      message: 'Image uploaded successfully',
+      imagePath: imagePath
+    });
+  } catch (error: any) {
+    console.error('Error uploading wall image:', error);
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    sendError(res, error.message);
+  }
+});
 
 // Get wall totals configuration
 router.get('/wall-totals', async (req, res) => {

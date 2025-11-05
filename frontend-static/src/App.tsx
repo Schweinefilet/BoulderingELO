@@ -3,6 +3,7 @@ import { GoogleLogin, CredentialResponse } from '@react-oauth/google'
 import { scoreSession, marginalGain, ORDER, BASE, combineCounts, type Counts, type WallCounts } from './lib/scoring'
 import * as store from './lib/storage'
 import * as api from './lib/api'
+import { API_URL } from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
@@ -463,6 +464,30 @@ export default function App(){
   const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(DEFAULT_wallTotals)
   const [wallTotalsLoaded, setWallTotalsLoaded] = useState(false)
   const [wallSectionImages, setWallSectionImages] = useState<Record<string, string>>({}) // Store image URLs for each wall section
+  
+  // Helper function to format wall section names properly
+  const formatWallSectionName = (section: string): string => {
+    // Handle special cases first
+    const specialCases: Record<string, string> = {
+      'uMassLogo': 'UMass Logo',
+      'umasslogo': 'UMass Logo',
+      'tVWall': 'TV Wall',
+      'tvwall': 'TV Wall',
+      'tvWall': 'TV Wall',
+      'TVWall': 'TV Wall',
+      'UMassLogo': 'UMass Logo'
+    };
+    
+    if (specialCases[section]) {
+      return specialCases[section];
+    }
+    
+    // For other cases, capitalize first letter and add spaces before capitals
+    // But avoid adding spaces for consecutive capitals (like TV, UMass)
+    return section
+      .charAt(0).toUpperCase() + 
+      section.slice(1).replace(/([A-Z])/g, ' $1').trim();
+  };
   
   // Initialize wallCounts dynamically based on wallTotals
   const initializeWallCounts = () => {
@@ -1240,7 +1265,7 @@ export default function App(){
       ]);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard); 
-      setWallCounts({overhang:emptyWall(),midWall:emptyWall(),sideWall:emptyWall()}); 
+      setWallCounts(initializeWallCounts()); 
       setSessionNotes('');
       setVideoUrl('');
       setPendingVideos([]);
@@ -1666,7 +1691,7 @@ export default function App(){
                 >
                   {Object.keys(wallTotals).map(section => (
                     <option key={section} value={section}>
-                      {section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1')}
+                      {formatWallSectionName(section)}
                     </option>
                   ))}
                 </select>
@@ -1691,7 +1716,7 @@ export default function App(){
                       📍 Wall Section Reference
                     </div>
                     <img 
-                      src={wallSectionImages[dropdownWall]} 
+                      src={`${API_URL}${wallSectionImages[dropdownWall]}`} 
                       alt={`${dropdownWall} wall reference`} 
                       style={{
                         width:'100%',
@@ -1795,7 +1820,7 @@ export default function App(){
                 {Object.keys(wallTotals).map(section => {
                   const sectionCounts = wallCounts[section] || emptyWall();
                   const sectionTotals = wallTotals[section] || {};
-                  const displayName = section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1');
+                  const displayName = formatWallSectionName(section);
                   
                   return (
                     <div key={section} style={{marginBottom:8,lineHeight:'1.6'}}>
@@ -1819,7 +1844,7 @@ export default function App(){
               {Object.keys(wallTotals).map(section => {
                 const sectionCounts = wallCounts[section] || emptyWall();
                 const sectionTotals = wallTotals[section] || {};
-                const displayName = section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1');
+                const displayName = formatWallSectionName(section);
                 
                 return (
                   <div key={section} style={{marginBottom:20}}>
@@ -2529,7 +2554,7 @@ export default function App(){
                 {Object.keys(wallTotals).map((section, idx) => {
                   // Generate colors dynamically
                   const colors = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-                  const displayName = section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1');
+                  const displayName = formatWallSectionName(section);
                   return (
                     <Bar 
                       key={section} 
@@ -3969,7 +3994,7 @@ export default function App(){
                               {Object.keys(wallTotals).map(section => (
                                 <div key={section} style={{marginBottom:16}}>
                                   <div style={{fontSize:13,fontWeight:'600',marginBottom:8,color:'#cbd5e1'}}>
-                                    {section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1')}
+                                    {formatWallSectionName(section)}
                                   </div>
                                   <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8}}>
                                     {ORDER.map(color => (
@@ -4332,16 +4357,44 @@ export default function App(){
                             📸 Wall Section Reference Image
                           </label>
                           <input
-                            type="text"
-                            placeholder="Paste image URL (HEIF, HEIC, JPG, PNG)"
-                            value={wallSectionImages[section] || ''}
+                            type="file"
+                            accept="image/*"
                             onChange={async (e) => {
-                              const updated = {
-                                ...wallSectionImages,
-                                [section]: e.target.value
-                              };
-                              setWallSectionImages(updated);
-                              await saveWallSectionImagesToAPI(updated);
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              
+                              try {
+                                const formData = new FormData();
+                                formData.append('image', file);
+                                formData.append('section', section);
+                                
+                                const response = await fetch(`${API_URL}/api/settings/upload-wall-image`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Authorization': `Bearer ${api.getToken()}`
+                                  },
+                                  body: formData
+                                });
+                                
+                                if (!response.ok) {
+                                  throw new Error('Upload failed');
+                                }
+                                
+                                const result = await response.json();
+                                const imagePath = result.data.imagePath;
+                                
+                                // Update local state
+                                const updated = {
+                                  ...wallSectionImages,
+                                  [section]: imagePath
+                                };
+                                setWallSectionImages(updated);
+                                
+                                // Also save to database
+                                await saveWallSectionImagesToAPI(updated);
+                              } catch (err: any) {
+                                alert('Failed to upload image: ' + (err.message || 'Unknown error'));
+                              }
                             }}
                             style={{
                               width:'100%',
@@ -4351,13 +4404,14 @@ export default function App(){
                               borderRadius:4,
                               color:'white',
                               fontSize:13,
-                              marginBottom:8
+                              marginBottom:8,
+                              cursor:'pointer'
                             }}
                           />
                           {wallSectionImages[section] && (
-                            <div style={{marginTop:8}}>
+                            <div style={{marginTop:8,position:'relative'}}>
                               <img
-                                src={wallSectionImages[section]}
+                                src={`${API_URL}${wallSectionImages[section]}`}
                                 alt={`${section} wall`}
                                 style={{
                                   width:'100%',
@@ -4371,10 +4425,35 @@ export default function App(){
                                   e.currentTarget.style.display = 'none';
                                 }}
                               />
+                              <button
+                                onClick={async () => {
+                                  if (confirm('Delete this image?')) {
+                                    const updated = {...wallSectionImages};
+                                    delete updated[section];
+                                    setWallSectionImages(updated);
+                                    await saveWallSectionImagesToAPI(updated);
+                                  }
+                                }}
+                                style={{
+                                  position:'absolute',
+                                  top:8,
+                                  right:8,
+                                  padding:'4px 8px',
+                                  backgroundColor:'#dc2626',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:4,
+                                  cursor:'pointer',
+                                  fontSize:11,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Delete
+                              </button>
                             </div>
                           )}
                           <p style={{fontSize:11,color:'#64748b',marginTop:6,marginBottom:0}}>
-                            💡 Upload to <a href="https://imgur.com" target="_blank" style={{color:'#3b82f6'}}>Imgur</a> or use a direct link. This helps climbers identify which wall section to log climbs for.
+                            💡 Upload image directly (HEIF, HEIC, JPG, PNG). Max 10MB. This helps climbers identify which wall section to log climbs for.
                           </p>
                         </div>
 

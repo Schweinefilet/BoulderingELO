@@ -1,5 +1,5 @@
 // API client for backend communication
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+export const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
 
 const TOKEN_KEY = 'boulderingelo_token';
 const USER_KEY = 'boulderingelo_user';
