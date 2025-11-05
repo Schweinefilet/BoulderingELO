@@ -176,6 +176,14 @@ export async function resetAndSeed(): Promise<{ success: boolean; message: strin
   return handleResponse<{ success: boolean; message: string }>(response);
 }
 
+export async function mergeDuplicateSessions(): Promise<{ success: boolean; message: string; mergedCount: number; deletedCount: number }> {
+  const response = await fetch(`${API_URL}/api/admin/merge-duplicates`, {
+    method: 'POST',
+    headers: getHeaders(true)
+  });
+  return handleResponse<{ success: boolean; message: string; mergedCount: number; deletedCount: number }>(response);
+}
+
 export async function addClimber(name: string): Promise<Climber> {
   const response = await fetch(`${API_URL}/api/climbers`, {
     method: 'POST',

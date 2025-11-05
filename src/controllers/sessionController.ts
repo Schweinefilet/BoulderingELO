@@ -6,7 +6,7 @@ import { Counts, WallCounts } from '../types';
 import { sendSuccess, sendError, handleControllerError } from '../utils/response';
 
 /**
- * Add a new session
+ * Add a new session (merges with existing session on same date if found)
  */
 export async function addSession(req: AuthRequest, res: Response) {
   try {
@@ -16,16 +16,80 @@ export async function addSession(req: AuthRequest, res: Response) {
       return sendError(res, 'climberId and date required', 400);
     }
     
+    // Check if a session already exists for this climber on this date
+    const existingSessions = await db.getSessions({ 
+      climberId: Number(climberId), 
+      from: date, 
+      to: date 
+    });
+    
     let totalCounts: Counts;
+    let validatedWalls: WallCounts | undefined;
     
     if (wallCounts) {
       // Validate and combine wall counts
-      const validatedWalls: WallCounts = {
+      validatedWalls = {
         overhang: validateCounts(wallCounts.overhang || {}),
         midWall: validateCounts(wallCounts.midWall || {}),
         sideWall: validateCounts(wallCounts.sideWall || {})
       };
       totalCounts = combineCounts(validatedWalls);
+    } else {
+      // Legacy: flat counts
+      totalCounts = validateCounts(counts || {});
+    }
+    
+    if (existingSessions.length > 0) {
+      // Merge with existing session(s)
+      const existing = existingSessions[0];
+      
+      // Merge wall counts if both have them
+      if (validatedWalls && existing.wallCounts) {
+        const mergedWalls: WallCounts = {
+          overhang: mergeCountObjects(existing.wallCounts.overhang, validatedWalls.overhang),
+          midWall: mergeCountObjects(existing.wallCounts.midWall, validatedWalls.midWall),
+          sideWall: mergeCountObjects(existing.wallCounts.sideWall, validatedWalls.sideWall)
+        };
+        validatedWalls = mergedWalls;
+        totalCounts = combineCounts(mergedWalls);
+      } else if (existing.wallCounts) {
+        // Existing has wallCounts, new doesn't - keep existing structure
+        validatedWalls = existing.wallCounts as WallCounts;
+        totalCounts = combineCounts(validatedWalls);
+      } else {
+        // Merge flat counts
+        totalCounts = mergeCountObjects(
+          { green: existing.green, blue: existing.blue, yellow: existing.yellow, 
+            orange: existing.orange, red: existing.red, black: existing.black },
+          totalCounts
+        );
+      }
+      
+      // Merge notes
+      const mergedNotes = [existing.notes, notes].filter(Boolean).join('\n\n');
+      
+      // Delete old session(s) before creating merged one
+      for (const oldSession of existingSessions) {
+        await db.deleteSession(oldSession.id);
+      }
+      
+      // Create new merged session
+      const score = scoreSession(totalCounts);
+      const session = { climberId, date, notes: mergedNotes || null, score };
+      const out = await db.addSession(session as any, totalCounts, validatedWalls);
+      
+      return res.json({ 
+        id: out.id, 
+        climberId, 
+        date, 
+        counts: totalCounts, 
+        wallCounts: validatedWalls, 
+        score,
+        merged: true,
+        mergedCount: existingSessions.length
+      });
+    } else {
+      // No existing session - create new one
       const score = scoreSession(totalCounts);
       const session = { climberId, date, notes: notes || null, score };
       const out = await db.addSession(session as any, totalCounts, validatedWalls);
@@ -38,24 +102,22 @@ export async function addSession(req: AuthRequest, res: Response) {
         wallCounts: validatedWalls, 
         score 
       });
-    } else {
-      // Legacy: flat counts
-      totalCounts = validateCounts(counts || {});
-      const score = scoreSession(totalCounts);
-      const session = { climberId, date, notes: notes || null, score };
-      const out = await db.addSession(session as any, totalCounts);
-      
-      return res.json({ 
-        id: out.id, 
-        climberId, 
-        date, 
-        counts: totalCounts, 
-        score 
-      });
     }
   } catch (err: any) {
     return sendError(res, err.message, 400);
   }
+}
+
+// Helper function to merge count objects by adding values
+function mergeCountObjects(existing: any, newCounts: any): Counts {
+  return {
+    green: (existing.green || 0) + (newCounts.green || 0),
+    blue: (existing.blue || 0) + (newCounts.blue || 0),
+    yellow: (existing.yellow || 0) + (newCounts.yellow || 0),
+    orange: (existing.orange || 0) + (newCounts.orange || 0),
+    red: (existing.red || 0) + (newCounts.red || 0),
+    black: (existing.black || 0) + (newCounts.black || 0)
+  };
 }
 
 /**

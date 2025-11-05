@@ -3159,23 +3159,52 @@ export default function App(){
 
               {adminTab === 'sessions' && (
                 <div>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,gap:12}}>
                     <h3 style={{margin:0,fontSize:18,fontWeight:'600'}}>Manage Sessions</h3>
-                    <button
-                      onClick={migrateOldWallNames}
-                      style={{
-                        padding:'8px 16px',
-                        backgroundColor:'#8b5cf6',
-                        color:'white',
-                        border:'none',
-                        borderRadius:6,
-                        cursor:'pointer',
-                        fontSize:14,
-                        fontWeight:'600'
-                      }}
-                    >
-                      Migrate Old Wall Names
-                    </button>
+                    <div style={{display:'flex',gap:8}}>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Merge all duplicate sessions (same climber + same date)? This will combine their climb counts.')) return;
+                          try {
+                            setLoading(true);
+                            const result = await api.mergeDuplicateSessions();
+                            alert(result.message);
+                            await loadData();
+                          } catch (err: any) {
+                            alert('Merge failed: ' + err.message);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        style={{
+                          padding:'8px 16px',
+                          backgroundColor:'#10b981',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:14,
+                          fontWeight:'600'
+                        }}
+                      >
+                        Merge Duplicates
+                      </button>
+                      <button
+                        onClick={migrateOldWallNames}
+                        style={{
+                          padding:'8px 16px',
+                          backgroundColor:'#8b5cf6',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:14,
+                          fontWeight:'600'
+                        }}
+                      >
+                        Migrate Old Wall Names
+                      </button>
+                    </div>
                   </div>
                   <div style={{display:'flex',flexDirection:'column',gap:12}}>
                     {sessions.map(session => (
