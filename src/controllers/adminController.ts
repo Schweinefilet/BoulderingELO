@@ -120,7 +120,7 @@ export async function resetAndSeed(req: AuthRequest, res: Response) {
 }
 
 /**
- * Merge duplicate sessions (same climber, same date)
+ * Merge duplicate sessions (same climber, same date) - keeps the session with most climbs
  */
 export async function mergeDuplicateSessions(req: AuthRequest, res: Response) {
   try {
@@ -137,76 +137,70 @@ export async function mergeDuplicateSessions(req: AuthRequest, res: Response) {
       grouped.get(key)!.push(session);
     }
     
-    let mergedCount = 0;
     let deletedCount = 0;
+    let groupsProcessed = 0;
     
     // Process each group that has duplicates
     for (const [key, sessions] of grouped.entries()) {
       if (sessions.length > 1) {
-        // Merge all sessions in this group
-        const [climberId, date] = key.split('-');
+        groupsProcessed++;
         
-        // Combine all wall counts
-        let mergedWalls: WallCounts | undefined;
-        let mergedNotes: string[] = [];
+        // Find the session with the most total climbs (keep that one)
+        let bestSession = sessions[0];
+        let maxClimbs = (bestSession.green || 0) + (bestSession.blue || 0) + (bestSession.yellow || 0) + 
+                        (bestSession.orange || 0) + (bestSession.red || 0) + (bestSession.black || 0);
         
         for (const session of sessions) {
-          if (session.notes) mergedNotes.push(session.notes);
-          
-          if (session.wallCounts) {
-            if (!mergedWalls) {
-              mergedWalls = {
-                overhang: { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 },
-                midWall: { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 },
-                sideWall: { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 }
-              };
-            }
-            
-            // Add counts from this session
-            for (const wall of ['overhang', 'midWall', 'sideWall'] as const) {
-              for (const color of ['green', 'blue', 'yellow', 'orange', 'red', 'black'] as const) {
-                (mergedWalls[wall] as any)[color] += (session.wallCounts[wall]?.[color] || 0);
-              }
-            }
+          const totalClimbs = (session.green || 0) + (session.blue || 0) + (session.yellow || 0) + 
+                             (session.orange || 0) + (session.red || 0) + (session.black || 0);
+          if (totalClimbs > maxClimbs) {
+            bestSession = session;
+            maxClimbs = totalClimbs;
           }
         }
         
-        // Calculate merged totals
-        const totalCounts = mergedWalls ? combineCounts(mergedWalls) : {
-          green: sessions.reduce((sum, s) => sum + (s.green || 0), 0),
-          blue: sessions.reduce((sum, s) => sum + (s.blue || 0), 0),
-          yellow: sessions.reduce((sum, s) => sum + (s.yellow || 0), 0),
-          orange: sessions.reduce((sum, s) => sum + (s.orange || 0), 0),
-          red: sessions.reduce((sum, s) => sum + (s.red || 0), 0),
-          black: sessions.reduce((sum, s) => sum + (s.black || 0), 0)
-        };
-        
-        const score = scoreSession(totalCounts);
-        const notes = mergedNotes.filter(Boolean).join('\n\n') || null;
-        
-        // Delete all old sessions
+        // Delete all sessions except the best one
         for (const session of sessions) {
-          await db.deleteSession(session.id);
-          deletedCount++;
+          if (session.id !== bestSession.id) {
+            await db.deleteSession(session.id);
+            deletedCount++;
+          }
         }
-        
-        // Create merged session
-        await db.addSession(
-          { climberId: Number(climberId), date, notes, score } as any,
-          totalCounts,
-          mergedWalls
-        );
-        
-        mergedCount++;
       }
     }
     
     return sendSuccess(res, { 
-      message: `Merged ${mergedCount} duplicate session groups (deleted ${deletedCount} duplicate entries)`,
-      mergedCount,
+      message: `Processed ${groupsProcessed} duplicate groups, deleted ${deletedCount} duplicate sessions`,
+      groupsProcessed,
       deletedCount
     });
   } catch (err: any) {
     return handleControllerError(res, err);
   }
 }
+
+/**
+ * Update climber profile (admin only - can edit all fields)
+ */
+export async function updateClimberProfile(req: AuthRequest, res: Response) {
+  try {
+    const { climberId } = req.params;
+    const updates = req.body;
+    
+    if (!climberId) {
+      return sendError(res, 'climberId required', 400);
+    }
+    
+    const updatedClimber = await db.updateClimberProfile(Number(climberId), updates);
+    
+    if (!updatedClimber) {
+      return sendError(res, 'Climber not found', 404);
+    }
+    
+    return sendSuccess(res, { climber: updatedClimber });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+

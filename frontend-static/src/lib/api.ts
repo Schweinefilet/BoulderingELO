@@ -184,6 +184,22 @@ export async function mergeDuplicateSessions(): Promise<{ success: boolean; mess
   return handleResponse<{ success: boolean; message: string; mergedCount: number; deletedCount: number }>(response);
 }
 
+export async function updateClimberProfile(climberId: number, updates: {
+  name?: string;
+  username?: string;
+  country?: string;
+  started_bouldering?: string;
+  bio?: string;
+  role?: string;
+}): Promise<{ success: boolean; climber: Climber }> {
+  const response = await fetch(`${API_URL}/api/admin/climber/${climberId}`, {
+    method: 'PUT',
+    headers: getHeaders(true),
+    body: JSON.stringify(updates)
+  });
+  return handleResponse<{ success: boolean; climber: Climber }>(response);
+}
+
 export async function addClimber(name: string): Promise<Climber> {
   const response = await fetch(`${API_URL}/api/climbers`, {
     method: 'POST',

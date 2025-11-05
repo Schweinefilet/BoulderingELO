@@ -401,6 +401,31 @@ export async function updateUserSettings(climberId: number, settings: { country?
   return result.rows[0];
 }
 
+export async function updateClimberProfile(climberId: number, updates: { 
+  name?: string; 
+  username?: string; 
+  country?: string; 
+  started_bouldering?: string; 
+  bio?: string;
+  role?: string;
+}) {
+  const { name, username, country, started_bouldering, bio, role } = updates;
+  const result = await pool.query(
+    `UPDATE climbers 
+     SET name = COALESCE($1, name),
+         username = COALESCE($2, username),
+         country = COALESCE($3, country),
+         started_bouldering = COALESCE($4, started_bouldering),
+         bio = COALESCE($5, bio),
+         role = COALESCE($6, role)
+     WHERE id = $7 
+     RETURNING *`,
+    [name || null, username ? username.toLowerCase() : null, country || null, 
+     started_bouldering || null, bio || null, role || null, climberId]
+  );
+  return result.rows[0];
+}
+
 export async function setClimberRole(climberId: number, role: string) {
   await pool.query('UPDATE climbers SET role = $1 WHERE id = $2', [role, climberId]);
 }

@@ -426,6 +426,15 @@ export default function App(){
   const [editSessionNotes, setEditSessionNotes] = useState('')
   const [editSessionWallCounts, setEditSessionWallCounts] = useState<WallCounts>({} as WallCounts)
   
+  // Climber profile editing state (admin)
+  const [editingClimber, setEditingClimber] = useState<number | null>(null)
+  const [editClimberName, setEditClimberName] = useState('')
+  const [editClimberUsername, setEditClimberUsername] = useState('')
+  const [editClimberCountry, setEditClimberCountry] = useState('')
+  const [editClimberStarted, setEditClimberStarted] = useState('')
+  const [editClimberBio, setEditClimberBio] = useState('')
+  const [editClimberRole, setEditClimberRole] = useState<'user' | 'admin'>('user')
+  
   // Profile view state
   const [viewingProfile, setViewingProfile] = useState<number | null>(null)
   
@@ -934,6 +943,52 @@ export default function App(){
     await saveWallTotalsToAPI(DEFAULT_wallTotals);
     setExpiryDates({});
     saveExpiryDates({});
+  }
+
+  // Climber profile editing functions (admin)
+  function startEditClimber(climber: any) {
+    setEditingClimber(climber.id);
+    setEditClimberName(climber.name || '');
+    setEditClimberUsername(climber.username || '');
+    setEditClimberCountry(climber.country || '');
+    setEditClimberStarted(climber.started_bouldering || '');
+    setEditClimberBio(climber.bio || '');
+    setEditClimberRole(climber.role || 'user');
+  }
+
+  function cancelEditClimber() {
+    setEditingClimber(null);
+    setEditClimberName('');
+    setEditClimberUsername('');
+    setEditClimberCountry('');
+    setEditClimberStarted('');
+    setEditClimberBio('');
+    setEditClimberRole('user');
+  }
+
+  async function saveEditedClimber() {
+    if (!editingClimber) return;
+    
+    try {
+      setLoading(true);
+      await api.updateClimberProfile(editingClimber, {
+        name: editClimberName,
+        username: editClimberUsername || undefined,
+        country: editClimberCountry || undefined,
+        started_bouldering: editClimberStarted || undefined,
+        bio: editClimberBio || undefined,
+        role: editClimberRole
+      });
+      
+      // Reload data
+      await loadData();
+      cancelEditClimber();
+      alert('Profile updated successfully!');
+    } catch (err: any) {
+      alert('Failed to update profile: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Removed automatic login screen redirect - users can browse without logging in
@@ -3109,48 +3164,225 @@ export default function App(){
                           backgroundColor:'#1e293b',
                           padding:16,
                           borderRadius:8,
-                          border:'1px solid #475569',
-                          display:'flex',
-                          justifyContent:'space-between',
-                          alignItems:'center'
+                          border:'1px solid #475569'
                         }}
                       >
-                        <div>
-                          <div style={{fontSize:16,fontWeight:'600',color:'white'}}>{climber.name}</div>
-                          {climber.username && (
-                            <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
-                              Username: {climber.username}
-                              {climber.role === 'admin' && (
-                                <span style={{
-                                  marginLeft:8,
-                                  padding:'2px 8px',
-                                  backgroundColor:'#fbbf24',
-                                  color:'#000',
-                                  borderRadius:4,
-                                  fontSize:12,
+                        {editingClimber === climber.id ? (
+                          // Edit mode
+                          <div>
+                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+                              <div>
+                                <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                  Name
+                                </label>
+                                <input
+                                  value={editClimberName}
+                                  onChange={(e) => setEditClimberName(e.target.value)}
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px 12px',
+                                    backgroundColor:'#0f172a',
+                                    border:'1px solid #475569',
+                                    borderRadius:6,
+                                    color:'white',
+                                    fontSize:14
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                  Username
+                                </label>
+                                <input
+                                  value={editClimberUsername}
+                                  onChange={(e) => setEditClimberUsername(e.target.value)}
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px 12px',
+                                    backgroundColor:'#0f172a',
+                                    border:'1px solid #475569',
+                                    borderRadius:6,
+                                    color:'white',
+                                    fontSize:14
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                  Country
+                                </label>
+                                <input
+                                  value={editClimberCountry}
+                                  onChange={(e) => setEditClimberCountry(e.target.value)}
+                                  placeholder="e.g., US, GB, DE"
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px 12px',
+                                    backgroundColor:'#0f172a',
+                                    border:'1px solid #475569',
+                                    borderRadius:6,
+                                    color:'white',
+                                    fontSize:14
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                  Started Bouldering
+                                </label>
+                                <input
+                                  value={editClimberStarted}
+                                  onChange={(e) => setEditClimberStarted(e.target.value)}
+                                  placeholder="e.g., 2020"
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px 12px',
+                                    backgroundColor:'#0f172a',
+                                    border:'1px solid #475569',
+                                    borderRadius:6,
+                                    color:'white',
+                                    fontSize:14
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                  Role
+                                </label>
+                                <select
+                                  value={editClimberRole}
+                                  onChange={(e) => setEditClimberRole(e.target.value as 'user' | 'admin')}
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px 12px',
+                                    backgroundColor:'#0f172a',
+                                    border:'1px solid #475569',
+                                    borderRadius:6,
+                                    color:'white',
+                                    fontSize:14
+                                  }}
+                                >
+                                  <option value="user">User</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div style={{marginBottom:16}}>
+                              <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                Bio
+                              </label>
+                              <textarea
+                                value={editClimberBio}
+                                onChange={(e) => setEditClimberBio(e.target.value)}
+                                style={{
+                                  width:'100%',
+                                  padding:'8px 12px',
+                                  backgroundColor:'#0f172a',
+                                  border:'1px solid #475569',
+                                  borderRadius:6,
+                                  color:'white',
+                                  fontSize:14,
+                                  minHeight:60,
+                                  resize:'vertical'
+                                }}
+                              />
+                            </div>
+                            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+                              <button
+                                onClick={cancelEditClimber}
+                                style={{
+                                  padding:'8px 16px',
+                                  backgroundColor:'#475569',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
                                   fontWeight:'600'
-                                }}>
-                                  ADMIN
-                                </span>
+                                }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={saveEditedClimber}
+                                style={{
+                                  padding:'8px 16px',
+                                  backgroundColor:'#10b981',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // View mode
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                            <div>
+                              <div style={{fontSize:16,fontWeight:'600',color:'white'}}>{climber.name}</div>
+                              {climber.username && (
+                                <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                                  Username: {climber.username}
+                                  {climber.role === 'admin' && (
+                                    <span style={{
+                                      marginLeft:8,
+                                      padding:'2px 8px',
+                                      backgroundColor:'#fbbf24',
+                                      color:'#000',
+                                      borderRadius:4,
+                                      fontSize:12,
+                                      fontWeight:'600'
+                                    }}>
+                                      ADMIN
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {climber.country && (
+                                <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
+                                  Country: {climber.country}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => deleteClimberAccount(climber.id, climber.name)}
-                          style={{
-                            padding:'8px 16px',
-                            backgroundColor:'#dc2626',
-                            color:'white',
-                            border:'none',
-                            borderRadius:6,
-                            cursor:'pointer',
-                            fontSize:14,
-                            fontWeight:'600'
-                          }}
-                        >
-                          Delete
-                        </button>
+                            <div style={{display:'flex',gap:8}}>
+                              <button
+                                onClick={() => startEditClimber(climber)}
+                                style={{
+                                  padding:'8px 16px',
+                                  backgroundColor:'#3b82f6',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteClimberAccount(climber.id, climber.name)}
+                                style={{
+                                  padding:'8px 16px',
+                                  backgroundColor:'#dc2626',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
