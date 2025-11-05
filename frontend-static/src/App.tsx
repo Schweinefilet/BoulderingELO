@@ -2089,10 +2089,16 @@ export default function App(){
         
         {/* Total Score Over Time */}
         <div style={{marginTop:16}}>
-          <h3>Total Score Over Time</h3>
+          <h3>Total Score Over Time (Last 30 Days)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={(() => {
-              const sortedSessions = [...sessions].sort((a:any,b:any)=> new Date(a.date).getTime() - new Date(b.date).getTime());
+              // Filter sessions to last 30 days
+              const oneMonthAgo = new Date();
+              oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+              
+              const sortedSessions = [...sessions]
+                .filter((s:any) => new Date(s.date) >= oneMonthAgo)
+                .sort((a:any,b:any)=> new Date(a.date).getTime() - new Date(b.date).getTime());
               
               if (sortedSessions.length === 0) return [];
               
@@ -2107,8 +2113,8 @@ export default function App(){
                 return dates;
               };
               
-              // Get date range
-              const startDate = new Date(sortedSessions[0].date);
+              // Get date range (start from 30 days ago or first session, whichever is later)
+              const startDate = new Date(Math.max(oneMonthAgo.getTime(), new Date(sortedSessions[0].date).getTime()));
               const endDate = new Date(sortedSessions[sortedSessions.length - 1].date);
               const allDates = getAllDatesBetween(startDate, endDate);
               
