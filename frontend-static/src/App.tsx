@@ -1717,12 +1717,12 @@ export default function App(){
                   return (
                     <div key={section} style={{marginBottom:8,lineHeight:'1.6'}}>
                       <strong style={{color:'#94a3b8'}}>{displayName}:</strong>{' '}
-                      <span style={{color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green || '?'}</span> green,{' '}
-                      <span style={{color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue || '?'}</span> blue,{' '}
-                      <span style={{color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow || '?'}</span> yellow,{' '}
-                      <span style={{color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange || '?'}</span> orange,{' '}
-                      <span style={{color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red || '?'}</span> red,{' '}
-                      <span style={{color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black || '?'}</span> black
+                      <span style={{color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green ?? '?'}</span> green,{' '}
+                      <span style={{color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue ?? '?'}</span> blue,{' '}
+                      <span style={{color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow ?? '?'}</span> yellow,{' '}
+                      <span style={{color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange ?? '?'}</span> orange,{' '}
+                      <span style={{color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red ?? '?'}</span> red,{' '}
+                      <span style={{color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black ?? '?'}</span> black
                     </div>
                   );
                 })}
@@ -1743,8 +1743,8 @@ export default function App(){
                     <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>{displayName}</h4>
                     <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                       {ORDER.map((color:keyof Counts)=> {
-                        const total = sectionTotals[color] || 0;
-                        const displayTotal = total > 0 ? total : '?';
+                        const total = sectionTotals[color];
+                        const displayTotal = total !== undefined && total !== null ? total : '?';
                         return (
                           <div key={color}>
                             <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
@@ -1753,7 +1753,7 @@ export default function App(){
                             <input 
                               type="number" 
                               min={0}
-                              max={total > 0 ? total : undefined}
+                              max={typeof total === 'number' ? total : undefined}
                               value={sectionCounts[color]} 
                               onChange={e=>updateWallCount(section,color,e.target.value)}
                               style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
