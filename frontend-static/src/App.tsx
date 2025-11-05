@@ -2792,6 +2792,33 @@ export default function App(){
                         {profileClimber.name}
                       </h1>
                     </div>
+                    
+                    {/* Bio and Started Climbing */}
+                    {(profileClimber?.bio || profileClimber?.started_bouldering) && (
+                      <div style={{marginTop:16, padding:16, backgroundColor:'rgba(0,0,0,0.2)', borderRadius:8, border:'1px solid rgba(255,255,255,0.1)'}}>
+                        {profileClimber?.started_bouldering && (
+                          <div style={{marginBottom: profileClimber?.bio ? 12 : 0}}>
+                            <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4, fontWeight:'600'}}>
+                              Started Climbing
+                            </div>
+                            <div style={{fontSize:14, color:'white'}}>
+                              {profileClimber.started_bouldering}
+                            </div>
+                          </div>
+                        )}
+                        {profileClimber?.bio && (
+                          <div>
+                            <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4, fontWeight:'600'}}>
+                              About Me
+                            </div>
+                            <div style={{fontSize:14, color:'white', lineHeight:'1.5', whiteSpace:'pre-wrap'}}>
+                              {profileClimber.bio}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     <div style={{display:'flex', gap:32, marginTop:16}}>
                       <div>
                         <div style={{fontSize:14, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Ranking</div>
