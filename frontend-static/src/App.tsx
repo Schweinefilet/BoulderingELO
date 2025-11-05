@@ -487,6 +487,11 @@ export default function App(){
     loadWallTotals();
   }, []);
 
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Reload wallTotals when tab becomes visible
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -574,18 +579,24 @@ export default function App(){
     setLoading(true);
     setError(null);
     try {
+      console.log('Loading data from API...');
       const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
         api.getClimbers(),
         api.getSessions(),
         api.getLeaderboard()
       ]);
+      console.log('Data loaded successfully:', { 
+        climbers: loadedClimbers.length, 
+        sessions: loadedSessions.length, 
+        leaderboard: loadedLeaderboard.length 
+      });
       setClimbers(loadedClimbers);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard);
       await loadVideos(); // Load videos too
     } catch (err: any) {
       console.error('Failed to load data:', err);
-      setError(err.message || 'Failed to load data');
+      setError(err.message || 'Failed to load data. Check if API is online at https://bouldering-elo-api.onrender.com');
     } finally {
       setLoading(false);
     }
@@ -1227,7 +1238,20 @@ export default function App(){
       )}
       
       {loading && (
-        <div style={{color:'#3b82f6',marginBottom:16}}>Loading...</div>
+        <div style={{
+          color:'#3b82f6',
+          marginBottom:16,
+          padding:16,
+          backgroundColor:'#1e293b',
+          borderRadius:8,
+          border:'1px solid #3b82f6'
+        }}>
+          <div style={{marginBottom:8}}>Loading data from API...</div>
+          <div style={{fontSize:12,color:'#94a3b8'}}>
+            If this takes more than 10 seconds, the backend may be sleeping. 
+            Check console for errors (F12).
+          </div>
+        </div>
       )}
       
       {!isAuthenticated && !loading && (
