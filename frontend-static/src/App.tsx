@@ -1626,26 +1626,39 @@ export default function App(){
               </div>
               
               <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Wall Image (Optional)</label>
+                <label style={{display:'block',fontWeight:'500',marginBottom:4}}>
+                  📸 Wall Image (Optional)
+                </label>
+                <p style={{fontSize:12,color:'#94a3b8',marginBottom:8,marginTop:0}}>
+                  Add a photo reference of the selected wall section to help visualize the routes
+                </p>
                 <input 
                   type="text" 
-                  placeholder="Enter image URL (e.g., https://example.com/wall.jpg)" 
+                  placeholder="Paste image URL here (e.g., https://i.imgur.com/example.jpg)" 
                   value={wallImage} 
                   onChange={e=>setWallImage(e.target.value)}
                   style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
                 />
                 {wallImage && (
-                  <div style={{marginTop:8,border:'1px solid #475569',borderRadius:6,overflow:'hidden'}}>
+                  <div style={{marginTop:8,border:'1px solid #475569',borderRadius:6,overflow:'hidden',backgroundColor:'#0f172a'}}>
                     <img 
                       src={wallImage} 
                       alt="Wall preview" 
-                      style={{width:'100%',height:'auto',maxHeight:200,objectFit:'contain',backgroundColor:'#0f172a'}}
+                      style={{width:'100%',height:'auto',maxHeight:200,objectFit:'contain',display:'block'}}
                       onError={(e) => {
-                        e.currentTarget.style.display = 'none';
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const errorMsg = document.createElement('div');
+                        errorMsg.style.cssText = 'padding:16px;color:#ef4444;text-align:center;font-size:13px';
+                        errorMsg.textContent = '❌ Failed to load image. Check the URL.';
+                        target.parentElement?.appendChild(errorMsg);
                       }}
                     />
                   </div>
                 )}
+                <p style={{fontSize:11,color:'#64748b',marginTop:6,marginBottom:0}}>
+                  💡 Tip: Upload images to <a href="https://imgur.com" target="_blank" style={{color:'#3b82f6'}}>Imgur</a> or use a direct image link
+                </p>
               </div>
 
               <div style={{marginBottom:16}}>
@@ -2638,57 +2651,73 @@ export default function App(){
               </form>
               
               {/* Link Google Account Section */}
-              {isGoogleConfigured && (
-                <div style={{
-                  backgroundColor:'#0f172a',
-                  padding:16,
-                  borderRadius:8,
-                  border:'1px solid #475569',
-                  marginTop:16
-                }}>
-                  <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600'}}>Link Google Account</h3>
-                  <p style={{fontSize:14,color:'#94a3b8',marginBottom:16}}>
-                    Link your Google account for easy sign-in
-                  </p>
-                  <div style={{
-                    display:'flex',
-                    justifyContent:'center'
-                  }}>
-                    <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
-                      <GoogleLogin
-                        onSuccess={async (credentialResponse: CredentialResponse) => {
-                          try {
-                            if (!credentialResponse.credential) {
-                              throw new Error('No credential received from Google');
+              <div style={{
+                backgroundColor:'#0f172a',
+                padding:16,
+                borderRadius:8,
+                border:'1px solid #475569',
+                marginTop:16
+              }}>
+                <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600'}}>Link Google Account</h3>
+                {isGoogleConfigured ? (
+                  <>
+                    <p style={{fontSize:14,color:'#94a3b8',marginBottom:16}}>
+                      Link your Google account for easy sign-in
+                    </p>
+                    <div style={{
+                      display:'flex',
+                      justifyContent:'center'
+                    }}>
+                      <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
+                        <GoogleLogin
+                          onSuccess={async (credentialResponse: CredentialResponse) => {
+                            try {
+                              if (!credentialResponse.credential) {
+                                throw new Error('No credential received from Google');
+                              }
+                              
+                              const result = await api.googleLogin(credentialResponse.credential);
+                              setSettingsSuccess(true);
+                              
+                              // Reload user data
+                              const loadedClimbers = await api.getClimbers();
+                              setClimbers(loadedClimbers);
+                              
+                              setTimeout(() => {
+                                setShowSettings(false);
+                                setSettingsSuccess(false);
+                              }, 2000);
+                            } catch (err: any) {
+                              setSettingsError(err.message || 'Failed to link Google account');
                             }
-                            
-                            const result = await api.googleLogin(credentialResponse.credential);
-                            setSettingsSuccess(true);
-                            
-                            // Reload user data
-                            const loadedClimbers = await api.getClimbers();
-                            setClimbers(loadedClimbers);
-                            
-                            setTimeout(() => {
-                              setShowSettings(false);
-                              setSettingsSuccess(false);
-                            }, 2000);
-                          } catch (err: any) {
-                            setSettingsError(err.message || 'Failed to link Google account');
-                          }
-                        }}
-                        onError={() => {
-                          setSettingsError('Google linking failed. Please try again.');
-                        }}
-                        theme="outline"
-                        size="large"
-                        shape="pill"
-                        text="continue_with"
-                      />
+                          }}
+                          onError={() => {
+                            setSettingsError('Google linking failed. Please try again.');
+                          }}
+                          theme="outline"
+                          size="large"
+                          shape="pill"
+                          text="continue_with"
+                        />
+                      </div>
                     </div>
+                  </>
+                ) : (
+                  <div style={{
+                    padding:16,
+                    backgroundColor:'#1e293b',
+                    borderRadius:6,
+                    border:'1px solid #475569'
+                  }}>
+                    <p style={{fontSize:14,color:'#94a3b8',marginBottom:8}}>
+                      ℹ️ Google Sign-In is not yet configured by the administrator.
+                    </p>
+                    <p style={{fontSize:13,color:'#64748b',marginBottom:0}}>
+                      Contact your admin to enable Google authentication. See <code style={{backgroundColor:'#0f172a',padding:'2px 6px',borderRadius:4,fontSize:12}}>GOOGLE_OAUTH_SETUP.md</code> for setup instructions.
+                    </p>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               
               <div style={{display:'flex',gap:12,marginTop:16}}>
                 <button
