@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as climberController from '../controllers/climberController';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ const router = Router();
  * PUT /api/user/settings - Update user settings (authenticated)
  */
 
-router.get('/', climberController.getAllClimbers);
+router.get('/', optionalAuth, climberController.getAllClimbers);
 router.post('/', authenticateToken, requireAdmin, climberController.addClimber);
 router.delete('/:id', authenticateToken, requireAdmin, climberController.deleteClimber);
 

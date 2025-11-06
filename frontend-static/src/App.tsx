@@ -149,24 +149,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   
   // Check if Google OAuth is configured
   const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
-  const [serverGoogleEnabled, setServerGoogleEnabled] = useState<boolean | null>(null);
-  const isFrontendGoogleConfigured = googleClientId && googleClientId.length > 0;
-  const isGoogleConfigured = isFrontendGoogleConfigured && serverGoogleEnabled === true;
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const cfg = await api.getGoogleConfig();
-        if (!mounted) return;
-        setServerGoogleEnabled(!!cfg.enabled);
-      } catch (e) {
-        if (!mounted) return;
-        setServerGoogleEnabled(false);
-      }
-    })();
-    return () => { mounted = false };
-  }, []);
+  const isGoogleConfigured = googleClientId && googleClientId.length > 0;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -192,9 +175,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     try {
       if (!credentialResponse.credential) {
         throw new Error('No credential received from Google');
-      }
-      if (!isGoogleConfigured) {
-        throw new Error('Google Sign-In is not fully configured on this server. Contact your admin.');
       }
       
       const result = await api.googleLogin(credentialResponse.credential);

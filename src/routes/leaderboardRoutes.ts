@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as sessionController from '../controllers/sessionController';
+import { optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -8,6 +9,6 @@ const router = Router();
  * GET /api/leaderboard - Get leaderboard
  */
 
-router.get('/', sessionController.getLeaderboard);
+router.get('/', optionalAuth, sessionController.getLeaderboard);
 
 export default router;

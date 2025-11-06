@@ -39,3 +39,25 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
   }
   next();
 }
+
+/**
+ * Optional authentication middleware - sets req.user if token is valid but doesn't fail if missing
+ */
+export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    // No token provided, continue without user
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      // Invalid token, continue without user
+      return next();
+    }
+    req.user = user;
+    next();
+  });
+}

@@ -106,17 +106,6 @@ export async function initDB() {
     UPDATE climbers SET hidden = TRUE WHERE name ILIKE '%thanos%'
   `);
   
-  // Add hidden column for hiding climbers from public view (admin-only)
-  await pool.query(`
-    DO $$ 
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                     WHERE table_name='climbers' AND column_name='hidden') THEN
-        ALTER TABLE climbers ADD COLUMN hidden BOOLEAN DEFAULT FALSE;
-      END IF;
-    END $$;
-  `);
-  
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
       id SERIAL PRIMARY KEY,
