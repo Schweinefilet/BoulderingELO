@@ -347,13 +347,13 @@ export async function saveWallTotals(wallTotals: Record<string, Record<string, n
 }
 
 // Wall section images configuration
-export async function getWallSectionImages(): Promise<Record<string, string>> {
+export async function getWallSectionImages(): Promise<Record<string, string | string[]>> {
   const response = await fetch(`${API_URL}/api/settings/wall-section-images`);
-  const result = await handleResponse<{ data: Record<string, string> }>(response);
+  const result = await handleResponse<{ data: Record<string, string | string[]> }>(response);
   return result.data || {};
 }
 
-export async function saveWallSectionImages(wallSectionImages: Record<string, string>): Promise<void> {
+export async function saveWallSectionImages(wallSectionImages: Record<string, string[]>): Promise<void> {
   const response = await fetch(`${API_URL}/api/settings/wall-section-images`, {
     method: 'POST',
     headers: getHeaders(true),

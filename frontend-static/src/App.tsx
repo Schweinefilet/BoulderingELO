@@ -67,7 +67,7 @@ async function saveWallTotalsToAPI(totals: Record<string, Record<string, number>
 }
 
 // Save wall section images to database via API
-async function saveWallSectionImagesToAPI(images: Record<string, string>) {
+async function saveWallSectionImagesToAPI(images: Record<string, string[]>) {
   try {
     await api.saveWallSectionImages(images);
   } catch (e) {
@@ -463,7 +463,8 @@ export default function App(){
   // Wall totals state (loaded from API)
   const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(DEFAULT_wallTotals)
   const [wallTotalsLoaded, setWallTotalsLoaded] = useState(false)
-  const [wallSectionImages, setWallSectionImages] = useState<Record<string, string>>({}) // Store image URLs for each wall section
+  const [wallSectionImages, setWallSectionImages] = useState<Record<string, string[]>>({}) // Store array of image URLs for each wall section
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track current image in carousel
   
   // Helper function to format wall section names properly
   const formatWallSectionName = (section: string): string => {
@@ -605,7 +606,18 @@ export default function App(){
     const loadWallSectionImages = async () => {
       try {
         const images = await api.getWallSectionImages();
-        setWallSectionImages(images);
+        // Convert old single-string format to array format for backwards compatibility
+        const imagesArray: Record<string, string[]> = {};
+        for (const [section, value] of Object.entries(images)) {
+          if (Array.isArray(value)) {
+            imagesArray[section] = value;
+          } else if (typeof value === 'string') {
+            imagesArray[section] = [value];
+          } else {
+            imagesArray[section] = [];
+          }
+        }
+        setWallSectionImages(imagesArray);
       } catch (err) {
         console.error('Failed to load wall section images:', err);
         // Use empty object if API fails
@@ -1690,7 +1702,7 @@ export default function App(){
                 <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Wall Section</label>
                 <select 
                   value={dropdownWall} 
-                  onChange={e=>setDropdownWall(e.target.value as any)} 
+                  onChange={e=>{setDropdownWall(e.target.value as any); setCurrentImageIndex(0);}} 
                   style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
                 >
                   {Object.keys(wallTotals).map(section => (
@@ -1700,14 +1712,15 @@ export default function App(){
                   ))}
                 </select>
                 
-                {/* Display admin-uploaded wall section reference image */}
-                {wallSectionImages[dropdownWall] && (
+                {/* Display admin-uploaded wall section reference images */}
+                {wallSectionImages[dropdownWall] && wallSectionImages[dropdownWall].length > 0 && (
                   <div style={{
                     marginTop:12,
                     border:'2px solid #3b82f6',
                     borderRadius:8,
                     overflow:'hidden',
-                    backgroundColor:'#000'
+                    backgroundColor:'#000',
+                    position:'relative'
                   }}>
                     <div style={{
                       backgroundColor:'#1e293b',
@@ -1715,24 +1728,86 @@ export default function App(){
                       borderBottom:'1px solid #3b82f6',
                       fontSize:12,
                       color:'#3b82f6',
-                      fontWeight:'600'
+                      fontWeight:'600',
+                      display:'flex',
+                      justifyContent:'space-between',
+                      alignItems:'center'
                     }}>
-                      📍 Wall Section Reference
+                      <span>📍 Wall Section Reference</span>
+                      {wallSectionImages[dropdownWall].length > 1 && (
+                        <span style={{fontSize:11,color:'#94a3b8'}}>
+                          {currentImageIndex + 1} / {wallSectionImages[dropdownWall].length}
+                        </span>
+                      )}
                     </div>
-                    <img 
-                      src={`${API_URL}${wallSectionImages[dropdownWall]}`} 
-                      alt={`${dropdownWall} wall reference`} 
-                      style={{
-                        width:'100%',
-                        height:'auto',
-                        maxHeight:250,
-                        objectFit:'contain',
-                        display:'block'
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.parentElement!.style.display = 'none';
-                      }}
-                    />
+                    <div style={{position:'relative'}}>
+                      <img 
+                        src={`${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`} 
+                        alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`} 
+                        style={{
+                          width:'100%',
+                          height:'auto',
+                          maxHeight:250,
+                          objectFit:'contain',
+                          display:'block'
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.parentElement!.parentElement!.style.display = 'none';
+                        }}
+                      />
+                      {wallSectionImages[dropdownWall].length > 1 && (
+                        <>
+                          <button
+                            onClick={() => setCurrentImageIndex((prev) => 
+                              prev === 0 ? wallSectionImages[dropdownWall].length - 1 : prev - 1
+                            )}
+                            style={{
+                              position:'absolute',
+                              left:8,
+                              top:'50%',
+                              transform:'translateY(-50%)',
+                              backgroundColor:'rgba(0,0,0,0.7)',
+                              color:'white',
+                              border:'none',
+                              borderRadius:'50%',
+                              width:36,
+                              height:36,
+                              fontSize:18,
+                              cursor:'pointer',
+                              display:'flex',
+                              alignItems:'center',
+                              justifyContent:'center'
+                            }}
+                          >
+                            ‹
+                          </button>
+                          <button
+                            onClick={() => setCurrentImageIndex((prev) => 
+                              prev === wallSectionImages[dropdownWall].length - 1 ? 0 : prev + 1
+                            )}
+                            style={{
+                              position:'absolute',
+                              right:8,
+                              top:'50%',
+                              transform:'translateY(-50%)',
+                              backgroundColor:'rgba(0,0,0,0.7)',
+                              color:'white',
+                              border:'none',
+                              borderRadius:'50%',
+                              width:36,
+                              height:36,
+                              fontSize:18,
+                              cursor:'pointer',
+                              display:'flex',
+                              alignItems:'center',
+                              justifyContent:'center'
+                            }}
+                          >
+                            ›
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -4358,8 +4433,84 @@ export default function App(){
                           marginBottom:16
                         }}>
                           <label style={{fontSize:13,color:'#94a3b8',display:'block',marginBottom:8}}>
-                            📸 Wall Section Reference Image
+                            📸 Wall Section Reference Images
                           </label>
+                          
+                          {/* Display existing images */}
+                          {wallSectionImages[section] && wallSectionImages[section].length > 0 && (
+                            <div style={{
+                              display:'grid',
+                              gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))',
+                              gap:8,
+                              marginBottom:12
+                            }}>
+                              {wallSectionImages[section].map((imagePath, idx) => (
+                                <div key={idx} style={{
+                                  position:'relative',
+                                  aspectRatio:'1',
+                                  backgroundColor:'#1e293b',
+                                  borderRadius:6,
+                                  overflow:'hidden',
+                                  border:'1px solid #475569'
+                                }}>
+                                  <img
+                                    src={`${API_URL}${imagePath}`}
+                                    alt={`${section} reference ${idx + 1}`}
+                                    style={{
+                                      width:'100%',
+                                      height:'100%',
+                                      objectFit:'cover'
+                                    }}
+                                  />
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(`Delete image ${idx + 1}?`)) {
+                                        try {
+                                          const imagePath = wallSectionImages[section][idx];
+                                          const resp = await fetch(`${API_URL}/api/settings/wall-section-image/delete`, {
+                                            method: 'POST',
+                                            headers: {
+                                              'Content-Type': 'application/json',
+                                              'Authorization': `Bearer ${api.getToken()}`
+                                            },
+                                            body: JSON.stringify({ section, imagePath })
+                                          });
+                                          const result = await resp.json();
+                                          if (!resp.ok) throw new Error(result.error || 'Failed to delete image');
+                                          // Use returned images array if provided
+                                          const images = result.images || result.data?.images || [];
+                                          const updated = { ...wallSectionImages, [section]: images };
+                                          setWallSectionImages(updated);
+                                        } catch (err: any) {
+                                          alert('Failed to delete image: ' + (err.message || 'Unknown error'));
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      position:'absolute',
+                                      top:4,
+                                      right:4,
+                                      backgroundColor:'rgba(220, 38, 38, 0.9)',
+                                      color:'white',
+                                      border:'none',
+                                      borderRadius:'50%',
+                                      width:20,
+                                      height:20,
+                                      fontSize:12,
+                                      cursor:'pointer',
+                                      display:'flex',
+                                      alignItems:'center',
+                                      justifyContent:'center',
+                                      padding:0
+                                    }}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
                           <input
                             type="file"
                             accept="image/*"
@@ -4387,15 +4538,18 @@ export default function App(){
                                 const result = await response.json();
                                 const imagePath = result.data.imagePath;
                                 
-                                // Update local state
+                                // Add to existing images array
                                 const updated = {
                                   ...wallSectionImages,
-                                  [section]: imagePath
+                                  [section]: [...(wallSectionImages[section] || []), imagePath]
                                 };
                                 setWallSectionImages(updated);
                                 
                                 // Also save to database
                                 await saveWallSectionImagesToAPI(updated);
+                                
+                                // Clear file input
+                                e.target.value = '';
                               } catch (err: any) {
                                 alert('Failed to upload image: ' + (err.message || 'Unknown error'));
                               }
@@ -4412,52 +4566,8 @@ export default function App(){
                               cursor:'pointer'
                             }}
                           />
-                          {wallSectionImages[section] && (
-                            <div style={{marginTop:8,position:'relative'}}>
-                              <img
-                                src={`${API_URL}${wallSectionImages[section]}`}
-                                alt={`${section} wall`}
-                                style={{
-                                  width:'100%',
-                                  maxHeight:200,
-                                  objectFit:'contain',
-                                  borderRadius:6,
-                                  border:'1px solid #475569',
-                                  backgroundColor:'#000'
-                                }}
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                              <button
-                                onClick={async () => {
-                                  if (confirm('Delete this image?')) {
-                                    const updated = {...wallSectionImages};
-                                    delete updated[section];
-                                    setWallSectionImages(updated);
-                                    await saveWallSectionImagesToAPI(updated);
-                                  }
-                                }}
-                                style={{
-                                  position:'absolute',
-                                  top:8,
-                                  right:8,
-                                  padding:'4px 8px',
-                                  backgroundColor:'#dc2626',
-                                  color:'white',
-                                  border:'none',
-                                  borderRadius:4,
-                                  cursor:'pointer',
-                                  fontSize:11,
-                                  fontWeight:'600'
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
                           <p style={{fontSize:11,color:'#64748b',marginTop:6,marginBottom:0}}>
-                            💡 Upload image directly (HEIF, HEIC, JPG, PNG). Max 10MB. This helps climbers identify which wall section to log climbs for.
+                            💡 Upload multiple images (HEIF, HEIC, JPG, PNG). Max 10MB each. This helps climbers identify which wall section to log climbs for.
                           </p>
                         </div>
 

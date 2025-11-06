@@ -54,26 +54,26 @@ router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single
       return sendError(res, 'Wall section name required', 400);
     }
     
-    // Get current images
-    const wallSectionImages = await getSetting('wallSectionImages') || {};
-    
-    // Delete old image file if it exists
-    if (wallSectionImages[section]) {
-      const oldImagePath = path.join(__dirname, '../../', wallSectionImages[section]);
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
+    // Get current images (stored as arrays per section)
+    const wallSectionImages = (await getSetting('wallSectionImages')) || {};
+
+    // Ensure array exists for this section
+    if (!Array.isArray(wallSectionImages[section])) {
+      wallSectionImages[section] = [];
     }
-    
+
     // Store relative path from project root
     const imagePath = `/uploads/wall-sections/${req.file.filename}`;
-    wallSectionImages[section] = imagePath;
-    
+
+    // Append new image path
+    wallSectionImages[section].push(imagePath);
+
     await setSetting('wallSectionImages', wallSectionImages);
-    
+
     sendSuccess(res, { 
       message: 'Image uploaded successfully',
-      imagePath: imagePath
+      imagePath: imagePath,
+      images: wallSectionImages[section]
     });
   } catch (error: any) {
     console.error('Error uploading wall image:', error);
@@ -135,6 +135,37 @@ router.post('/wall-section-images', authenticateToken, requireAdmin, async (req,
     sendSuccess(res, { message: 'Wall section images updated successfully' });
   } catch (error: any) {
     console.error('Error setting wall section images:', error);
+    sendError(res, error.message);
+  }
+});
+
+// Delete a single image for a wall section (admin only)
+router.post('/wall-section-image/delete', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { section, imagePath } = req.body as { section?: string; imagePath?: string };
+    if (!section || !imagePath) return sendError(res, 'section and imagePath required', 400);
+
+    const wallSectionImages = (await getSetting('wallSectionImages')) || {};
+    const images = Array.isArray(wallSectionImages[section]) ? wallSectionImages[section] : [];
+    const idx = images.indexOf(imagePath);
+    if (idx === -1) return sendError(res, 'Image not found for section', 404);
+
+    // Remove from array
+    images.splice(idx, 1);
+    wallSectionImages[section] = images;
+
+    // Delete file from disk if exists and it's an uploads path
+    try {
+      const abs = path.join(__dirname, '../../', imagePath);
+      if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    } catch (e) {
+      console.warn('Failed to delete image file from disk:', e);
+    }
+
+    await setSetting('wallSectionImages', wallSectionImages);
+    sendSuccess(res, { message: 'Image deleted', images });
+  } catch (error: any) {
+    console.error('Error deleting wall section image:', error);
     sendError(res, error.message);
   }
 });
