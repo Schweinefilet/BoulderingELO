@@ -203,4 +203,69 @@ export async function updateClimberProfile(req: AuthRequest, res: Response) {
   }
 }
 
+/**
+ * Add a wall section to the expired sections list
+ */
+export async function addExpiredSection(req: AuthRequest, res: Response) {
+  try {
+    const { sectionName } = req.body;
+    
+    if (!sectionName) {
+      return sendError(res, 'sectionName required', 400);
+    }
+    
+    const expiredSections = (await db.getSetting('expiredSections')) || [];
+    
+    // Add section if not already in list
+    if (!expiredSections.includes(sectionName)) {
+      expiredSections.push(sectionName);
+      await db.setSetting('expiredSections', expiredSections);
+    }
+    
+    return sendSuccess(res, { 
+      message: 'Section added to expired list',
+      expiredSections 
+    });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Get list of expired sections
+ */
+export async function getExpiredSections(req: AuthRequest, res: Response) {
+  try {
+    const expiredSections = (await db.getSetting('expiredSections')) || [];
+    return sendSuccess(res, { expiredSections });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Remove a section from expired list (if routes are reinstated)
+ */
+export async function removeExpiredSection(req: AuthRequest, res: Response) {
+  try {
+    const { sectionName } = req.body;
+    
+    if (!sectionName) {
+      return sendError(res, 'sectionName required', 400);
+    }
+    
+    const expiredSections = (await db.getSetting('expiredSections')) || [];
+    const filtered = expiredSections.filter((s: string) => s !== sectionName);
+    
+    await db.setSetting('expiredSections', filtered);
+    
+    return sendSuccess(res, { 
+      message: 'Section removed from expired list',
+      expiredSections: filtered 
+    });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
 

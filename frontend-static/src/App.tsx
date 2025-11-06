@@ -105,13 +105,14 @@ function saveExpiryDates(config: ExpiryConfig) {
 function checkAndResetExpiredSections(
   wallTotals: Record<string, Record<string, number>>,
   expiryDates: ExpiryConfig
-): { updated: boolean; newTotals: Record<string, Record<string, number>>; newExpiry: ExpiryConfig } {
+): { updated: boolean; newTotals: Record<string, Record<string, number>>; newExpiry: ExpiryConfig; expiredSections: string[] } {
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Start of today
   
   let updated = false;
   const newTotals = { ...wallTotals };
   const newExpiry = { ...expiryDates };
+  const expiredSections: string[] = [];
   
   Object.keys(expiryDates).forEach(section => {
     const expiryDate = new Date(expiryDates[section]);
@@ -129,11 +130,13 @@ function checkAndResetExpiredSections(
       };
       // Remove the expiry date
       delete newExpiry[section];
+      // Track which section expired
+      expiredSections.push(section);
       updated = true;
     }
   });
   
-  return { updated, newTotals, newExpiry };
+  return { updated, newTotals, newExpiry, expiredSections };
 }
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -689,7 +692,17 @@ export default function App(){
         await saveWallTotalsToAPI(result.newTotals);
         setExpiryDates(result.newExpiry);
         saveExpiryDates(result.newExpiry);
-        alert('Some wall sections have expired and been reset to 0 routes.');
+        
+        // Notify API about expired sections so scores can be recalculated
+        for (const section of result.expiredSections) {
+          try {
+            await api.addExpiredSection(section);
+          } catch (e) {
+            console.error('Failed to add expired section to API:', e);
+          }
+        }
+        
+        alert(`Wall sections expired: ${result.expiredSections.join(', ')}. Routes have been reset and scores will be recalculated.`);
       }
     };
     

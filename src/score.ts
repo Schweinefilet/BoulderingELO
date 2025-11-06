@@ -39,10 +39,14 @@ export function validateCounts(counts: Partial<Counts>): Counts {
 }
 
 // Combine wall counts into total counts
-export function combineCounts(wallCounts: WallCounts): Counts {
+export function combineCounts(wallCounts: WallCounts, excludeSections?: string[]): Counts {
   const total: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
   // Support dynamic wall sections instead of hard-coded ones
   for (const wall of Object.keys(wallCounts)) {
+    // Skip sections that should be excluded (expired sections)
+    if (excludeSections && excludeSections.includes(wall)) {
+      continue;
+    }
     for (const color of ORDER) {
       total[color] += wallCounts[wall][color] || 0;
     }

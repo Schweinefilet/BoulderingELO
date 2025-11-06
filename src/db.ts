@@ -392,12 +392,19 @@ export async function getSessionById(id: number) {
 }
 
 export async function leaderboard(from?: string, to?: string, includeHidden: boolean = false) {
+  // Get list of expired sections to exclude from scoring
+  const expiredSections = await getSetting('expiredSections') || [];
+  
   let query = `
     SELECT DISTINCT ON (c.id) 
+      c.id as climber_id,
       c.name as climber, 
-      s.score as total_score
+      s.id as session_id,
+      s.score as original_score,
+      w.counts as wall_counts
     FROM sessions s
     JOIN climbers c ON s.climber_id = c.id
+    LEFT JOIN wall_counts w ON s.id = w.session_id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -419,10 +426,26 @@ export async function leaderboard(from?: string, to?: string, includeHidden: boo
   query += ' ORDER BY c.id, s.date DESC';
   
   const result = await pool.query(query, params);
-  const leaderboard = result.rows.map((row: any) => ({
-    climber: row.climber,
-    total_score: parseFloat(row.total_score)
-  }));
+  
+  // Import scoring functions
+  const { combineCounts, scoreSession } = await import('./score');
+  
+  const leaderboard = result.rows.map((row: any) => {
+    let score = parseFloat(row.original_score);
+    
+    // If there are expired sections and this session has wall_counts, recalculate
+    if (expiredSections.length > 0 && row.wall_counts) {
+      const wallCounts = row.wall_counts as WallCounts;
+      // Recalculate score excluding expired sections
+      const activeCounts = combineCounts(wallCounts, expiredSections);
+      score = scoreSession(activeCounts);
+    }
+    
+    return {
+      climber: row.climber,
+      total_score: score
+    };
+  });
   
   // Sort by score descending
   leaderboard.sort((a, b) => b.total_score - a.total_score);
