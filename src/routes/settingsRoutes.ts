@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { getSetting, setSetting } from '../db';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { sendSuccess, sendError } from '../utils/response';
@@ -54,6 +55,27 @@ router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single
       return sendError(res, 'Wall section name required', 400);
     }
     
+    // Compress and optimize image
+    const compressedFilename = `compressed-${req.file.filename}`;
+    const compressedPath = path.join(path.dirname(req.file.path), compressedFilename);
+    
+    try {
+      await sharp(req.file.path)
+        .resize(1200, 1200, { // Max 1200px on longest side
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .jpeg({ quality: 80, progressive: true }) // Convert to progressive JPEG
+        .toFile(compressedPath);
+      
+      // Delete original file and use compressed version
+      fs.unlinkSync(req.file.path);
+    } catch (compressionError) {
+      console.error('Image compression failed, using original:', compressionError);
+      // If compression fails, rename original to compressed name
+      fs.renameSync(req.file.path, compressedPath);
+    }
+    
     // Get current images (stored as arrays per section)
     const wallSectionImages = (await getSetting('wallSectionImages')) || {};
 
@@ -63,7 +85,7 @@ router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single
     }
 
     // Store relative path from project root
-    const imagePath = `/uploads/wall-sections/${req.file.filename}`;
+    const imagePath = `/uploads/wall-sections/${compressedFilename}`;
 
     // Append new image path
     wallSectionImages[section].push(imagePath);

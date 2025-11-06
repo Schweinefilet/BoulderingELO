@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google'
 import { scoreSession, marginalGain, ORDER, BASE, combineCounts, type Counts, type WallCounts } from './lib/scoring'
 import * as store from './lib/storage'
@@ -9,6 +9,12 @@ import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
 import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
+
+// Detect if running on mobile device
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         window.innerWidth <= 768;
+};
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
@@ -1307,7 +1313,7 @@ export default function App(){
 
   return (
     <div style={{fontFamily:'Inter, Arial, sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
-      <BackgroundBeams />
+      {!isMobileDevice() && <BackgroundBeams />}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
@@ -1759,6 +1765,7 @@ export default function App(){
                       <img 
                         src={`${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`} 
                         alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`} 
+                        loading="lazy"
                         style={{
                           width:'100%',
                           height:'auto',
