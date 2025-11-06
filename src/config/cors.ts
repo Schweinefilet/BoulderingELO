@@ -9,10 +9,13 @@ export const corsOptions = cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    console.log('CORS check - Origin:', origin, 'Allowed origins:', ALLOWED_ORIGINS);
+    
     if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      console.log('✓ CORS allowed for:', origin);
       callback(null, true);
     } else {
-      console.log('Blocked by CORS:', origin);
+      console.log('✗ CORS blocked for:', origin);
       callback(null, false);
     }
   },
