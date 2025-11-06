@@ -130,6 +130,18 @@ export async function googleAuth(req: AuthRequest, res: Response) {
 }
 
 /**
+ * Return Google OAuth configuration status
+ */
+export async function getGoogleConfig(req: AuthRequest, res: Response) {
+  try {
+    const enabled = !!GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.length > 0;
+    return sendSuccess(res, { enabled, clientId: enabled ? GOOGLE_CLIENT_ID : null });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
  * Link Google account to currently logged-in user
  */
 export async function linkGoogleAccount(req: AuthRequest, res: Response) {

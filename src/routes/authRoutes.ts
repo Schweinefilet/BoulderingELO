@@ -16,6 +16,7 @@ const router = Router();
 router.post('/login', authController.login);
 router.post('/register', authController.register);
 router.post('/google', authController.googleAuth);
+router.get('/google-config', authController.getGoogleConfig);
 router.post('/link-google', authenticateToken, authController.linkGoogleAccount);
 router.post('/change-password', authenticateToken, authController.changePassword);
 

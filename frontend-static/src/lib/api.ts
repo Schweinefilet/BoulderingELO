@@ -142,6 +142,11 @@ export async function googleLogin(credential: string): Promise<{ token: string; 
   return handleResponse<{ token: string; user: User }>(response);
 }
 
+export async function getGoogleConfig(): Promise<{ enabled: boolean; clientId?: string | null }> {
+  const response = await fetch(`${API_URL}/api/auth/google-config`);
+  return handleResponse<{ enabled: boolean; clientId?: string | null }>(response);
+}
+
 export async function linkGoogleAccount(credential: string): Promise<{ success: boolean; message: string }> {
   const response = await fetchWithTimeout(`${API_URL}/api/auth/link-google`, {
     method: 'POST',
