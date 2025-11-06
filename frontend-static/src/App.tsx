@@ -689,6 +689,15 @@ export default function App(){
     }
   }, [wallTotals, wallTotalsLoaded]);
   
+  // Validate dropdownWall whenever wallCounts changes
+  useEffect(() => {
+    const availableSections = Object.keys(wallCounts);
+    if (availableSections.length > 0 && !availableSections.includes(dropdownWall)) {
+      console.log(`dropdownWall "${dropdownWall}" not found in wallCounts, switching to "${availableSections[0]}"`);
+      setDropdownWall(availableSections[0]);
+    }
+  }, [wallCounts, dropdownWall]);
+  
   // Check for expired sections on mount and daily
   useEffect(() => {
     const checkExpiry = async () => {
@@ -1229,9 +1238,16 @@ export default function App(){
     
     console.log('DEBUG values:', { current, maxForSection });
     
-    // Check if wallCounts doesn't have this section
+    // Check if wallCounts doesn't have this section - auto-fix instead of erroring
     if (current === undefined) {
-      alert(`Error: Wall section "${dropdownWall}" not found in wallCounts. Try refreshing the page.`);
+      const availableSections = Object.keys(wallCounts);
+      if (availableSections.length > 0) {
+        console.log(`Auto-fixing: Wall section "${dropdownWall}" not found, switching to "${availableSections[0]}"`);
+        setDropdownWall(availableSections[0]);
+        alert(`Wall section "${dropdownWall}" not found. Switched to "${availableSections[0]}". Please try again.`);
+      } else {
+        alert(`Error: No wall sections available. Try refreshing the page.`);
+      }
       return;
     }
     
