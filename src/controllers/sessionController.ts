@@ -146,7 +146,8 @@ export async function deleteSession(req: AuthRequest, res: Response) {
 export async function getLeaderboard(req: AuthRequest, res: Response) {
   try {
     const { from, to } = req.query as any;
-    const rows = await db.leaderboard(from as string | undefined, to as string | undefined);
+    const isAdmin = req.user?.role === 'admin';
+    const rows = await db.leaderboard(from as string | undefined, to as string | undefined, isAdmin);
     return res.json(rows);
   } catch (err: any) {
     return handleControllerError(res, err);

@@ -1408,9 +1408,11 @@ export default function App(){
           border:'1px solid #3b82f6'
         }}>
           <div style={{marginBottom:8}}>Loading data from API...</div>
+          <div style={{fontSize:12,color:'#94a3b8',marginBottom:8}}>
+            ⏰ <strong>First time loading?</strong> The free tier API may be sleeping.
+          </div>
           <div style={{fontSize:12,color:'#94a3b8'}}>
-            If this takes more than 10 seconds, the backend may be sleeping. 
-            Check console for errors (F12).
+            Please wait up to 50 seconds for the server to wake up, then refresh if needed.
           </div>
         </div>
       )}
@@ -2702,7 +2704,7 @@ export default function App(){
               padding:'16px',
               width:500,
               maxWidth:'100%',
-              maxHeight:'90vh',
+              maxHeight:'70vh',
               overflowY:'auto',
               WebkitOverflowScrolling:'touch' as any,
               scrollbarWidth:'none',
@@ -3661,7 +3663,7 @@ export default function App(){
             border:'2px solid #fbbf24',
             width:'100%',
             maxWidth:900,
-            maxHeight:'90vh',
+            maxHeight:'70vh',
             overflow:'hidden',
             display:'flex',
             flexDirection:'column'
@@ -4532,11 +4534,17 @@ export default function App(){
                                 });
                                 
                                 if (!response.ok) {
-                                  throw new Error('Upload failed');
+                                  const errorData = await response.json().catch(() => ({}));
+                                  throw new Error(errorData.error || 'Upload failed');
                                 }
                                 
                                 const result = await response.json();
-                                const imagePath = result.data.imagePath;
+                                // Handle both response formats: result.imagePath or result.data.imagePath
+                                const imagePath = result.imagePath || result.data?.imagePath;
+                                
+                                if (!imagePath) {
+                                  throw new Error('No image path returned from server');
+                                }
                                 
                                 // Add to existing images array
                                 const updated = {

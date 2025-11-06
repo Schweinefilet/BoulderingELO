@@ -90,6 +90,33 @@ export async function initDB() {
     END $$;
   `);
   
+  // Add hidden column for hiding climbers from public view (admin-only)
+  await pool.query(`
+    DO $$ 
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name='climbers' AND column_name='hidden') THEN
+        ALTER TABLE climbers ADD COLUMN hidden BOOLEAN DEFAULT FALSE;
+      END IF;
+    END $$;
+  `);
+  
+  // Mark Thanos as hidden
+  await pool.query(`
+    UPDATE climbers SET hidden = TRUE WHERE name ILIKE '%thanos%'
+  `);
+  
+  // Add hidden column for hiding climbers from public view (admin-only)
+  await pool.query(`
+    DO $$ 
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name='climbers' AND column_name='hidden') THEN
+        ALTER TABLE climbers ADD COLUMN hidden BOOLEAN DEFAULT FALSE;
+      END IF;
+    END $$;
+  `);
+  
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
       id SERIAL PRIMARY KEY,
@@ -248,8 +275,13 @@ export async function linkGoogleAccount(climberId: number, googleId: string) {
   );
 }
 
-export async function listClimbers() {
-  const result = await pool.query('SELECT * FROM climbers ORDER BY name');
+export async function listClimbers(includeHidden: boolean = false) {
+  let query = 'SELECT * FROM climbers';
+  if (!includeHidden) {
+    query += ' WHERE hidden = FALSE';
+  }
+  query += ' ORDER BY name';
+  const result = await pool.query(query);
   return result.rows as Climber[];
 }
 
@@ -359,7 +391,7 @@ export async function getSessionById(id: number) {
   };
 }
 
-export async function leaderboard(from?: string, to?: string) {
+export async function leaderboard(from?: string, to?: string, includeHidden: boolean = false) {
   let query = `
     SELECT DISTINCT ON (c.id) 
       c.name as climber, 
@@ -370,6 +402,10 @@ export async function leaderboard(from?: string, to?: string) {
   `;
   const params: any[] = [];
   let paramCount = 1;
+  
+  if (!includeHidden) {
+    query += ` AND c.hidden = FALSE`;
+  }
   
   if (from) {
     query += ` AND s.date >= $${paramCount++}`;

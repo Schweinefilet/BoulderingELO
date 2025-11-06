@@ -8,7 +8,8 @@ import { sendSuccess, sendError, handleControllerError } from '../utils/response
  */
 export async function getAllClimbers(req: AuthRequest, res: Response) {
   try {
-    const rows = await db.listClimbers();
+    const isAdmin = req.user?.role === 'admin';
+    const rows = await db.listClimbers(isAdmin);
     return res.json(rows);
   } catch (err: any) {
     return handleControllerError(res, err);
