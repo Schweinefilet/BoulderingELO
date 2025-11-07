@@ -1779,7 +1779,11 @@ export default function App(){
                     </div>
                     <div style={{position:'relative'}}>
                       <img 
-                        src={`${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`} 
+                        src={
+                          wallSectionImages[dropdownWall][currentImageIndex].startsWith('http')
+                            ? wallSectionImages[dropdownWall][currentImageIndex]
+                            : `${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`
+                        }
                         alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`} 
                         loading="lazy"
                         style={{
@@ -4492,7 +4496,11 @@ export default function App(){
                                   border:'1px solid #475569'
                                 }}>
                                   <img
-                                    src={`${API_URL}${imagePath}`}
+                                    src={
+                                      imagePath.startsWith('http')
+                                        ? imagePath
+                                        : `${API_URL}${imagePath}`
+                                    }
                                     alt={`${section} reference ${idx + 1}`}
                                     style={{
                                       width:'100%',
@@ -4610,8 +4618,62 @@ export default function App(){
                               cursor:'pointer'
                             }}
                           />
+                          
+                          {/* Dropbox/URL Link Option */}
+                          <div style={{marginTop:8,marginBottom:8}}>
+                            <label style={{display:'block',fontSize:12,color:'#94a3b8',marginBottom:4}}>
+                              Or paste a Dropbox/Imgur link:
+                            </label>
+                            <div style={{display:'flex',gap:8}}>
+                              <input
+                                type="text"
+                                placeholder="https://www.dropbox.com/... or https://i.imgur.com/..."
+                                onKeyDown={async (e) => {
+                                  if (e.key === 'Enter') {
+                                    const input = e.currentTarget;
+                                    let url = input.value.trim();
+                                    if (!url) return;
+                                    
+                                    try {
+                                      // Convert Dropbox URL to direct link
+                                      if (url.includes('dropbox.com')) {
+                                        url = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+                                        url = url.replace('?dl=0', '');
+                                        url = url.replace('?dl=1', '');
+                                      }
+                                      
+                                      // Add to existing images array
+                                      const updated = {
+                                        ...wallSectionImages,
+                                        [section]: [...(wallSectionImages[section] || []), url]
+                                      };
+                                      setWallSectionImages(updated);
+                                      
+                                      // Save to database
+                                      await saveWallSectionImagesToAPI(updated);
+                                      
+                                      // Clear input
+                                      input.value = '';
+                                    } catch (err: any) {
+                                      alert('Failed to add image URL: ' + (err.message || 'Unknown error'));
+                                    }
+                                  }
+                                }}
+                                style={{
+                                  flex:1,
+                                  padding:'8px 12px',
+                                  backgroundColor:'#1e293b',
+                                  border:'1px solid #475569',
+                                  borderRadius:4,
+                                  color:'white',
+                                  fontSize:13
+                                }}
+                              />
+                            </div>
+                          </div>
+                          
                           <p style={{fontSize:11,color:'#64748b',marginTop:6,marginBottom:0}}>
-                            💡 Upload multiple images (HEIF, HEIC, JPG, PNG). Max 10MB each. This helps climbers identify which wall section to log climbs for.
+                            💡 Upload multiple images (HEIF, HEIC, JPG, PNG). Max 10MB each. Or paste Dropbox/Imgur links. Press Enter to add link.
                           </p>
                         </div>
 

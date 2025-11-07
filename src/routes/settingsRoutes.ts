@@ -6,11 +6,17 @@ import sharp from 'sharp';
 import { getSetting, setSetting } from '../db';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { sendSuccess, sendError } from '../utils/response';
+import { 
+  cloudinaryStorage, 
+  isCloudinaryConfigured, 
+  deleteCloudinaryImage, 
+  extractPublicIdFromUrl 
+} from '../config/cloudStorage';
 
 const router = Router();
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
+// Configure multer storage - use Cloudinary if configured, otherwise local disk
+const localStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads/wall-sections');
     // Create directory if it doesn't exist
@@ -28,7 +34,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({
-  storage: storage,
+  storage: isCloudinaryConfigured ? cloudinaryStorage! : localStorage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
@@ -50,30 +56,44 @@ router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single
     
     const { section } = req.body;
     if (!section) {
-      // Delete uploaded file if section not provided
-      fs.unlinkSync(req.file.path);
+      // Delete uploaded file if section not provided (only for local storage)
+      if (!isCloudinaryConfigured && req.file.path) {
+        fs.unlinkSync(req.file.path);
+      }
       return sendError(res, 'Wall section name required', 400);
     }
     
-    // Compress and optimize image
-    const compressedFilename = `compressed-${req.file.filename}`;
-    const compressedPath = path.join(path.dirname(req.file.path), compressedFilename);
+    let imagePath: string;
     
-    try {
-      await sharp(req.file.path)
-        .resize(1200, 1200, { // Max 1200px on longest side
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 80, progressive: true }) // Convert to progressive JPEG
-        .toFile(compressedPath);
+    if (isCloudinaryConfigured) {
+      // Cloudinary handles compression and optimization automatically
+      imagePath = (req.file as any).path; // Cloudinary URL
+      console.log('Image uploaded to Cloudinary:', imagePath);
+    } else {
+      // Local storage - compress and optimize image
+      const compressedFilename = `compressed-${req.file.filename}`;
+      const compressedPath = path.join(path.dirname(req.file.path), compressedFilename);
       
-      // Delete original file and use compressed version
-      fs.unlinkSync(req.file.path);
-    } catch (compressionError) {
-      console.error('Image compression failed, using original:', compressionError);
-      // If compression fails, rename original to compressed name
-      fs.renameSync(req.file.path, compressedPath);
+      try {
+        await sharp(req.file.path)
+          .resize(1200, 1200, { // Max 1200px on longest side
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .jpeg({ quality: 80, progressive: true }) // Convert to progressive JPEG
+          .toFile(compressedPath);
+        
+        // Delete original file and use compressed version
+        fs.unlinkSync(req.file.path);
+      } catch (compressionError) {
+        console.error('Image compression failed, using original:', compressionError);
+        // If compression fails, rename original to compressed name
+        fs.renameSync(req.file.path, compressedPath);
+      }
+      
+      // Store relative path from project root
+      imagePath = `/uploads/wall-sections/${compressedFilename}`;
+      console.log('Image uploaded to local storage:', imagePath);
     }
     
     // Get current images (stored as arrays per section)
@@ -84,9 +104,6 @@ router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single
       wallSectionImages[section] = [];
     }
 
-    // Store relative path from project root
-    const imagePath = `/uploads/wall-sections/${compressedFilename}`;
-
     // Append new image path
     wallSectionImages[section].push(imagePath);
 
@@ -95,12 +112,13 @@ router.post('/upload-wall-image', authenticateToken, requireAdmin, upload.single
     sendSuccess(res, { 
       message: 'Image uploaded successfully',
       imagePath: imagePath,
-      images: wallSectionImages[section]
+      images: wallSectionImages[section],
+      storage: isCloudinaryConfigured ? 'cloudinary' : 'local'
     });
   } catch (error: any) {
     console.error('Error uploading wall image:', error);
-    // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
+    // Clean up uploaded file on error (only for local storage)
+    if (!isCloudinaryConfigured && req.file && req.file.path && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
     sendError(res, error.message);
@@ -176,12 +194,25 @@ router.post('/wall-section-image/delete', authenticateToken, requireAdmin, async
     images.splice(idx, 1);
     wallSectionImages[section] = images;
 
-    // Delete file from disk if exists and it's an uploads path
+    // Delete file based on storage type
     try {
-      const abs = path.join(__dirname, '../../', imagePath);
-      if (fs.existsSync(abs)) fs.unlinkSync(abs);
+      if (imagePath.startsWith('http')) {
+        // Cloudinary URL - delete from Cloudinary
+        const publicId = extractPublicIdFromUrl(imagePath);
+        if (publicId) {
+          await deleteCloudinaryImage(publicId);
+          console.log('Deleted from Cloudinary:', publicId);
+        }
+      } else {
+        // Local file path - delete from disk
+        const abs = path.join(__dirname, '../../', imagePath);
+        if (fs.existsSync(abs)) {
+          fs.unlinkSync(abs);
+          console.log('Deleted from local storage:', abs);
+        }
+      }
     } catch (e) {
-      console.warn('Failed to delete image file from disk:', e);
+      console.warn('Failed to delete image file:', e);
     }
 
     await setSetting('wallSectionImages', wallSectionImages);
