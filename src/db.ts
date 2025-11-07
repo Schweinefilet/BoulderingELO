@@ -468,12 +468,23 @@ export async function updateClimberPassword(climberId: number, password: string)
   await pool.query('UPDATE climbers SET password = $1 WHERE id = $2', [password, climberId]);
 }
 
-export async function updateUserSettings(climberId: number, settings: { name?: string; country?: string; started_bouldering?: string; bio?: string }) {
-  const { name, country, started_bouldering, bio } = settings;
+export async function updateUserSettings(climberId: number, settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string }) {
+  const { username, name, country, started_bouldering, bio } = settings;
+  
+  // Update climber profile (which includes username)
   const result = await pool.query(
-    'UPDATE climbers SET name = COALESCE($1, name), country = $2, started_bouldering = $3, bio = $4 WHERE id = $5 RETURNING *',
-    [name || null, country || null, started_bouldering || null, bio || null, climberId]
+    `UPDATE climbers 
+     SET name = COALESCE($1, name),
+         username = COALESCE($2, username),
+         country = COALESCE($3, country),
+         started_bouldering = COALESCE($4, started_bouldering),
+         bio = COALESCE($5, bio)
+     WHERE id = $6 
+     RETURNING *`,
+    [name || null, username ? username.toLowerCase() : null, country || null, 
+     started_bouldering || null, bio || null, climberId]
   );
+  
   return result.rows[0];
 }
 

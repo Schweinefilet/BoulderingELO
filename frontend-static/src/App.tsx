@@ -699,6 +699,7 @@ export default function App(){
   
   // Settings modal state
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsUsername, setSettingsUsername] = useState('')
   const [settingsName, setSettingsName] = useState('')
   const [settingsCountry, setSettingsCountry] = useState('')
   const [settingsStarted, setSettingsStarted] = useState('')
@@ -1664,6 +1665,7 @@ export default function App(){
                   // Load current settings when opening modal
                   const currentClimber = climbers.find(c => c.id === user?.climberId);
                   if (currentClimber) {
+                    setSettingsUsername(user?.username || '');
                     setSettingsName(currentClimber.name || '');
                     setSettingsCountry(currentClimber.country || '');
                     setSettingsStarted(currentClimber.started_bouldering || '');
@@ -2030,17 +2032,33 @@ export default function App(){
               
               <div style={{marginBottom:16}}>
                 <label style={{display:'block',fontWeight:'500',marginBottom:8}}>📍 Wall Section</label>
-                <select 
-                  value={dropdownWall} 
-                  onChange={e=>{setDropdownWall(e.target.value as any); setCurrentImageIndex(0);}} 
-                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                >
-                  {Object.keys(wallTotals).map(section => (
-                    <option key={section} value={section}>
-                      {formatWallSectionName(section)}
-                    </option>
-                  ))}
-                </select>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',gap:8}}>
+                  {Object.keys(wallTotals).map(section => {
+                    const isSelected = dropdownWall === section;
+                    const displayName = formatWallSectionName(section);
+                    return (
+                      <button
+                        key={section}
+                        onClick={()=>{setDropdownWall(section as any); setCurrentImageIndex(0);}}
+                        style={{
+                          padding:'12px',
+                          border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
+                          borderRadius:8,
+                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
+                          color: isSelected ? '#3b82f6' : '#cbd5e1',
+                          fontWeight: isSelected ? '700' : '600',
+                          fontSize:13,
+                          cursor:'pointer',
+                          transition:'all 0.2s',
+                          boxShadow: isSelected ? '0 0 12px rgba(59, 130, 246, 0.4)' : 'none',
+                          textAlign:'center'
+                        }}
+                      >
+                        {displayName}
+                      </button>
+                    );
+                  })}
+                </div>
                 
                 {/* Display admin-uploaded wall section reference images */}
                 {wallSectionImages[dropdownWall] && wallSectionImages[dropdownWall].length > 0 && (
@@ -2240,18 +2258,18 @@ export default function App(){
                 </button>
               </div>
 
-              <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:13,border:'1px solid #475569'}}>
+              <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:13,border:'1px solid #475569',overflowX:'auto'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
                   <thead>
                     <tr style={{borderBottom:'1px solid #475569'}}>
-                      <th style={{textAlign:'left',padding:'8px 4px',color:'#94a3b8',fontWeight:'600'}}>Wall Section</th>
-                      <th style={{textAlign:'center',padding:'8px 4px',color:'#10b981',fontWeight:'600'}}>Green</th>
-                      <th style={{textAlign:'center',padding:'8px 4px',color:'#3b82f6',fontWeight:'600'}}>Blue</th>
-                      <th style={{textAlign:'center',padding:'8px 4px',color:'#eab308',fontWeight:'600'}}>Yellow</th>
-                      <th style={{textAlign:'center',padding:'8px 4px',color:'#f97316',fontWeight:'600'}}>Orange</th>
-                      <th style={{textAlign:'center',padding:'8px 4px',color:'#ef4444',fontWeight:'600'}}>Red</th>
-                      <th style={{textAlign:'center',padding:'8px 4px',color:'#d1d5db',fontWeight:'600'}}>Black</th>
+                      <th style={{textAlign:'left',padding:'8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
+                      <th style={{textAlign:'center',padding:'8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
+                      <th style={{textAlign:'center',padding:'8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
+                      <th style={{textAlign:'center',padding:'8px 6px',color:'#eab308',fontWeight:'600',width:'12.5%'}}>Yellow</th>
+                      <th style={{textAlign:'center',padding:'8px 6px',color:'#f97316',fontWeight:'600',width:'12.5%'}}>Orange</th>
+                      <th style={{textAlign:'center',padding:'8px 6px',color:'#ef4444',fontWeight:'600',width:'12.5%'}}>Red</th>
+                      <th style={{textAlign:'center',padding:'8px 6px',color:'#d1d5db',fontWeight:'600',width:'12.5%'}}>Black</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2262,13 +2280,13 @@ export default function App(){
                       
                       return (
                         <tr key={section} style={{borderBottom:'1px solid #334155'}}>
-                          <td style={{padding:'8px 4px',color:'#cbd5e1',fontWeight:'500'}}>{displayName}</td>
-                          <td style={{textAlign:'center',padding:'8px 4px',color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 4px',color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 4px',color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 4px',color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 4px',color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 4px',color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black ?? '?'}</td>
+                          <td style={{padding:'8px 6px',color:'#cbd5e1',fontWeight:'500'}}>{displayName}</td>
+                          <td style={{textAlign:'center',padding:'8px 6px',color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 6px',color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 6px',color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 6px',color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 6px',color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 6px',color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black ?? '?'}</td>
                         </tr>
                       );
                     })}
@@ -3081,12 +3099,18 @@ export default function App(){
                 
                 try {
                   await api.updateUserSettings({
+                    username: settingsUsername,
                     name: settingsName,
                     country: settingsCountry,
                     started_bouldering: settingsStarted,
                     bio: settingsBio
                   });
                   setSettingsSuccess(true);
+                  
+                  // Update user object if username changed
+                  if (user && settingsUsername !== user.username) {
+                    setUser({ ...user, username: settingsUsername });
+                  }
                   
                   // Reload climbers data to reflect changes
                   const loadedClimbers = await api.getClimbers();
@@ -3100,6 +3124,32 @@ export default function App(){
                   setSettingsError(err.message || 'Failed to update settings');
                 }
               }}>
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:12,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:12
+                }}>
+                  <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>Username</label>
+                  <input
+                    type="text"
+                    value={settingsUsername}
+                    onChange={e => setSettingsUsername(e.target.value)}
+                    placeholder="Your username"
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#1e293b',
+                      color:'white',
+                      fontSize:14,
+                      boxSizing:'border-box'
+                    }}
+                  />
+                </div>
+
                 <div style={{
                   backgroundColor:'#0f172a',
                   padding:12,
