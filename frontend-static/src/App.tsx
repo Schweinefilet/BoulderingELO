@@ -227,6 +227,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       const result = await api.googleLogin(credentialResponse.credential);
       api.setToken(result.token);
       api.setUser(result.user);
+      
+      // Mark that we don't need to show the Google link reminder since user just logged in with Google
+      sessionStorage.setItem('googleLinkReminderShown', 'true');
+      
       setLoading(false);
       onLogin();
     } catch (err: any) {
@@ -248,6 +252,9 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       // Set token and user in localStorage first
       api.setToken(result.token);
       api.setUser(result.user);
+      
+      // Mark that we don't need to show the Google link reminder since user just signed up with Google
+      sessionStorage.setItem('googleLinkReminderShown', 'true');
       
       // Reset form fields
       setGoogleCredential(null);
@@ -2452,14 +2459,22 @@ export default function App(){
                         <tr key={section} style={{borderBottom:'1px solid #334155'}}>
                           <td style={{
                             padding:'8px 6px',
-                            color:'#cbd5e1',
-                            fontWeight:'500',
-                            backgroundColor: isSelectedWall ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                            border: isSelectedWall ? '2px solid #3b82f6' : '2px solid transparent',
-                            borderRight: isSelectedWall ? '2px solid #3b82f6' : '2px solid transparent',
                             transition: 'all 0.2s'
-                          }}>{displayName}</td>
-                          {ORDER.map((color: keyof Counts) => {
+                          }}>
+                            <div style={{
+                              display: 'inline-block',
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              color:'#cbd5e1',
+                              fontWeight:'500',
+                              backgroundColor: isSelectedWall ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                              border: isSelectedWall ? '2px solid #3b82f6' : '2px solid transparent',
+                              transition: 'all 0.2s'
+                            }}>
+                              {displayName}
+                            </div>
+                          </td>
+                          {['green', 'blue', 'yellow', 'orange', 'red', 'black'].map((color) => {
                             const isSelectedColor = color === dropdownColor;
                             const isEdited = lastEditedCell?.wall === section && lastEditedCell?.color === color;
                             const isSelectedCell = isSelectedWall && isSelectedColor;
@@ -2468,30 +2483,36 @@ export default function App(){
                               <td key={color} style={{
                                 textAlign:'center',
                                 padding:'8px 6px',
-                                color: color === 'green' ? '#10b981' : 
-                                       color === 'blue' ? '#3b82f6' :
-                                       color === 'yellow' ? '#eab308' :
-                                       color === 'orange' ? '#f97316' :
-                                       color === 'red' ? '#ef4444' : '#d1d5db',
                                 fontWeight:'600',
-                                backgroundColor: isEdited ? 'rgba(16, 185, 129, 0.25)' : 
-                                               isSelectedCell ? 'rgba(59, 130, 246, 0.2)' :
-                                               isSelectedColor ? 'rgba(59, 130, 246, 0.1)' :
-                                               'transparent',
-                                border: isSelectedColor ? '2px solid #3b82f6' : '2px solid transparent',
                                 transition: 'all 0.3s',
                                 position: 'relative' as const
                               }}>
-                                {isEdited && (
-                                  <span style={{
-                                    position: 'absolute' as const,
-                                    top: 2,
-                                    right: 2,
-                                    fontSize: 10,
-                                    animation: 'pulse 0.5s ease-in-out'
-                                  }}>✨</span>
-                                )}
-                                {sectionCounts[color]}/{sectionTotals[color] ?? '?'}
+                                <div style={{
+                                  display: 'inline-block',
+                                  padding: '4px 8px',
+                                  borderRadius: 6,
+                                  color: color === 'green' ? '#10b981' : 
+                                         color === 'blue' ? '#3b82f6' :
+                                         color === 'yellow' ? '#eab308' :
+                                         color === 'orange' ? '#f97316' :
+                                         color === 'red' ? '#ef4444' : '#d1d5db',
+                                  backgroundColor: isEdited ? 'rgba(16, 185, 129, 0.25)' : 
+                                                 isSelectedCell ? 'rgba(59, 130, 246, 0.2)' :
+                                                 'transparent',
+                                  border: isSelectedCell ? '2px solid #3b82f6' : '2px solid transparent',
+                                  transition: 'all 0.3s'
+                                }}>
+                                  {isEdited && (
+                                    <span style={{
+                                      position: 'absolute' as const,
+                                      top: 2,
+                                      right: 2,
+                                      fontSize: 10,
+                                      animation: 'pulse 0.5s ease-in-out'
+                                    }}>✨</span>
+                                  )}
+                                  {sectionCounts[color as keyof Counts]}/{sectionTotals[color] ?? '?'}
+                                </div>
                               </td>
                             );
                           })}
@@ -3056,7 +3077,7 @@ export default function App(){
         
         {/* Total Score Over Time */}
         <div style={{marginTop:16}}>
-          <h3>Total Score Over Time (Last 30 Days)</h3>
+          <h3>Total Score Over Time - Top 10 (Last 30 Days)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={(() => {
               // Filter sessions to last 30 days
@@ -3302,30 +3323,112 @@ export default function App(){
             <div style={{marginTop:24}}>
               <h3>Total Score (Comparison)</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={climbers
-                  .filter((c:any) => selectedClimbersForComparison.includes(c.id))
-                  .map((c:any)=>{
-                    const latestSession = sessions
-                      .filter((s:any)=>s.climberId===c.id)
-                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                <LineChart data={(() => {
+                  // Get all sessions for selected climbers in last 30 days
+                  const oneMonthAgo = new Date();
+                  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+                  
+                  const relevantSessions = sessions.filter((s: any) => 
+                    selectedClimbersForComparison.includes(s.climberId) &&
+                    new Date(s.date) >= oneMonthAgo
+                  );
+                  
+                  if (relevantSessions.length === 0) return [];
+                  
+                  // Get all dates between start and end
+                  const getAllDatesBetween = (start: Date, end: Date): string[] => {
+                    const dates: string[] = [];
+                    const current = new Date(start);
+                    while (current <= end) {
+                      dates.push(current.toISOString().split('T')[0]);
+                      current.setDate(current.getDate() + 1);
+                    }
+                    return dates;
+                  };
+                  
+                  const startDate = new Date(Math.max(
+                    new Date(relevantSessions[0].date).getTime(),
+                    oneMonthAgo.getTime()
+                  ));
+                  const endDate = new Date();
+                  const allDates = getAllDatesBetween(startDate, endDate);
+                  
+                  // Build cumulative score data for each climber
+                  const climberScores = new Map<number, Map<string, number>>();
+                  
+                  selectedClimbersForComparison.forEach((climberId: number) => {
+                    const climberSessions = relevantSessions
+                      .filter((s: any) => s.climberId === climberId)
+                      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
                     
-                    return {
-                      climber: c.name,
-                      score: latestSession?.score || 0
-                    };
-                  })
-                  .sort((a, b) => b.score - a.score) // Sort by score descending
-                }>
+                    const scoreByDate = new Map<string, number>();
+                    let currentScore = 0;
+                    
+                    climberSessions.forEach((session: any) => {
+                      currentScore = session.score;
+                      scoreByDate.set(session.date.split('T')[0], currentScore);
+                    });
+                    
+                    climberScores.set(climberId, scoreByDate);
+                  });
+                  
+                  // Create data points for each date
+                  return allDates.map(date => {
+                    const point: any = { date };
+                    
+                    selectedClimbersForComparison.forEach((climberId: number) => {
+                      const climber = climbers.find((c: any) => c.id === climberId);
+                      const scoreMap = climberScores.get(climberId);
+                      
+                      if (climber && scoreMap) {
+                        // Find the most recent score up to this date
+                        let score = 0;
+                        for (const [sessionDate, sessionScore] of Array.from(scoreMap.entries())) {
+                          if (sessionDate <= date) {
+                            score = sessionScore;
+                          }
+                        }
+                        point[climber.name] = score;
+                      }
+                    });
+                    
+                    return point;
+                  });
+                })()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-                  <XAxis dataKey="climber" stroke="#94a3b8" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#94a3b8"
+                    tickFormatter={(date) => {
+                      const d = new Date(date);
+                      return `${d.getMonth() + 1}/${d.getDate()}`;
+                    }}
+                  />
                   <YAxis stroke="#94a3b8" />
                   <Tooltip 
                     contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
                     formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                    labelFormatter={(label) => {
+                      const d = new Date(label);
+                      return d.toLocaleDateString();
+                    }}
                   />
                   <Legend />
-                  <Bar dataKey="score" name="Total Score" fill="#3b82f6" />
-                </BarChart>
+                  {selectedClimbersForComparison.map((climberId: number, idx: number) => {
+                    const climber = climbers.find((c: any) => c.id === climberId);
+                    const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+                    return climber ? (
+                      <Line 
+                        key={climberId}
+                        type="monotone"
+                        dataKey={climber.name}
+                        stroke={colors[idx % colors.length]}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    ) : null;
+                  })}
+                </LineChart>
               </ResponsiveContainer>
             </div>
 
