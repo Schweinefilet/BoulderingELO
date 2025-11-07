@@ -836,8 +836,12 @@ export default function App(){
   
   // Helper function to get total routes for a color across all wall sections
   const getTotalForColor = (color: string): number => {
-    return Object.values(wallTotals).reduce((sum, section) => {
-      return sum + (section[color] || 0);
+    return Object.entries(wallTotals).reduce((sum, [section, counts]) => {
+      // Skip expired sections when calculating totals
+      if (expiredSections.includes(section)) {
+        return sum;
+      }
+      return sum + (counts[color] || 0);
     }, 0);
   };
 
