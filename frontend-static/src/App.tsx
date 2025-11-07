@@ -3341,9 +3341,12 @@ export default function App(){
           
           peakRank = bestRank !== Infinity ? bestRank : null;
           
-          // Peak score is simply the current total score
-          const currentTotalScore = profileLeaderboardEntry?.total_score || 0;
-          peakScore = currentTotalScore > 0 ? currentTotalScore : null;
+          // Peak score is the maximum score ever achieved
+          if (scoreHistory.length > 0) {
+            peakScore = Math.max(...scoreHistory.map(s => s.score));
+          } else {
+            peakScore = null;
+          }
         }
         
         if (!profileClimber) return null;
