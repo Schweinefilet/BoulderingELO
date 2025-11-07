@@ -125,14 +125,15 @@ function checkAndResetExpiredSections(
     expiryDate.setHours(0, 0, 0, 0);
     
     if (now >= expiryDate && newTotals[section]) {
-      // Reset all routes to 0
+      // Reset all routes to null (displays as "?") instead of 0
+      // This allows climbers to still add climbs while admin updates totals
       newTotals[section] = {
-        green: 0,
-        blue: 0,
-        yellow: 0,
-        orange: 0,
-        red: 0,
-        black: 0
+        green: null as any,
+        blue: null as any,
+        yellow: null as any,
+        orange: null as any,
+        red: null as any,
+        black: null as any
       };
       // Remove the expiry date
       delete newExpiry[section];
@@ -539,6 +540,13 @@ export default function App(){
   const [renamingSection, setRenamingSection] = useState<string | null>(null)
   const [newSectionName, setNewSectionName] = useState('')
   const [renameValue, setRenameValue] = useState('')
+  
+  // Copy/Paste section data state
+  const [copiedSectionData, setCopiedSectionData] = useState<{
+    totals: Record<string, number>;
+    expiryDate?: string;
+    images?: string[];
+  } | null>(null)
   
   // Session editing state
   const [editingSession, setEditingSession] = useState<number | null>(null)
@@ -1134,6 +1142,64 @@ export default function App(){
       setExpiryDates(updated);
       saveExpiryDates(updated);
     }
+  }
+
+  // Copy section data (totals, expiry, images)
+  function copySectionData(section: string) {
+    setCopiedSectionData({
+      totals: { ...wallTotals[section] },
+      expiryDate: expiryDates[section],
+      images: wallSectionImages[section] ? [...wallSectionImages[section]] : undefined
+    });
+    alert(`Copied data from "${section}"`);
+  }
+
+  // Paste section data to another section
+  async function pasteSectionData(section: string) {
+    if (!copiedSectionData) {
+      alert('No section data copied yet');
+      return;
+    }
+
+    if (!confirm(`Paste copied data to "${section}"? This will overwrite current totals, expiry date, and images.`)) {
+      return;
+    }
+
+    // Update totals
+    const updatedTotals = {
+      ...wallTotals,
+      [section]: { ...copiedSectionData.totals }
+    };
+    setWallTotals(updatedTotals);
+    await saveWallTotalsToAPI(updatedTotals);
+
+    // Update expiry date
+    if (copiedSectionData.expiryDate) {
+      const updatedExpiry = {
+        ...expiryDates,
+        [section]: copiedSectionData.expiryDate
+      };
+      setExpiryDates(updatedExpiry);
+      saveExpiryDates(updatedExpiry);
+    } else {
+      // Clear expiry if source section had none
+      const updatedExpiry = { ...expiryDates };
+      delete updatedExpiry[section];
+      setExpiryDates(updatedExpiry);
+      saveExpiryDates(updatedExpiry);
+    }
+
+    // Update images
+    if (copiedSectionData.images && copiedSectionData.images.length > 0) {
+      const updatedImages = {
+        ...wallSectionImages,
+        [section]: [...copiedSectionData.images]
+      };
+      setWallSectionImages(updatedImages);
+      await saveWallSectionImagesToAPI(updatedImages);
+    }
+
+    alert(`Pasted data to "${section}"`);
   }
 
   async function resetToDefaults() {
@@ -4446,24 +4512,60 @@ export default function App(){
                           )}
                           <div style={{display:'flex',gap:8}}>
                             {renamingSection !== section && (
-                              <button
-                                onClick={() => {
-                                  setRenamingSection(section);
-                                  setRenameValue(section);
-                                }}
-                                style={{
-                                  padding:'6px 12px',
-                                  backgroundColor:'#3b82f6',
-                                  color:'white',
-                                  border:'none',
-                                  borderRadius:6,
-                                  cursor:'pointer',
-                                  fontSize:12,
-                                  fontWeight:'600'
-                                }}
-                              >
-                                Rename
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => copySectionData(section)}
+                                  style={{
+                                    padding:'6px 12px',
+                                    backgroundColor:'#8b5cf6',
+                                    color:'white',
+                                    border:'none',
+                                    borderRadius:6,
+                                    cursor:'pointer',
+                                    fontSize:12,
+                                    fontWeight:'600'
+                                  }}
+                                  title="Copy section data (totals, expiry, images)"
+                                >
+                                  📋 Copy
+                                </button>
+                                <button
+                                  onClick={() => pasteSectionData(section)}
+                                  disabled={!copiedSectionData}
+                                  style={{
+                                    padding:'6px 12px',
+                                    backgroundColor: copiedSectionData ? '#10b981' : '#475569',
+                                    color:'white',
+                                    border:'none',
+                                    borderRadius:6,
+                                    cursor: copiedSectionData ? 'pointer' : 'not-allowed',
+                                    fontSize:12,
+                                    fontWeight:'600',
+                                    opacity: copiedSectionData ? 1 : 0.6
+                                  }}
+                                  title={copiedSectionData ? "Paste copied data here" : "Copy a section first"}
+                                >
+                                  📄 Paste
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRenamingSection(section);
+                                    setRenameValue(section);
+                                  }}
+                                  style={{
+                                    padding:'6px 12px',
+                                    backgroundColor:'#3b82f6',
+                                    color:'white',
+                                    border:'none',
+                                    borderRadius:6,
+                                    cursor:'pointer',
+                                    fontSize:12,
+                                    fontWeight:'600'
+                                  }}
+                                >
+                                  Rename
+                                </button>
+                              </>
                             )}
                             <button
                               onClick={() => deleteWallSection(section)}
@@ -4528,7 +4630,7 @@ export default function App(){
                           )}
                           <span style={{fontSize:12,color:'#64748b',fontStyle:'italic'}}>
                             {expiryDates[section] 
-                              ? `Routes will reset to 0 on ${new Date(expiryDates[section]).toLocaleDateString()}`
+                              ? `Routes will reset to ? on ${new Date(expiryDates[section]).toLocaleDateString()}`
                               : 'No expiry set'}
                           </span>
                         </div>
