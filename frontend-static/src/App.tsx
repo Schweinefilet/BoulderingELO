@@ -235,9 +235,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       setShowGoogleNamePrompt(false);
       api.setToken(result.token);
       api.setUser(result.user);
+      
+      // Reset form fields
+      setGoogleCredential(null);
+      setGoogleName('');
+      setGoogleUsername('');
+      setGoogleEmail('');
+      
+      // Call the login success handler
       onLogin();
     } catch (err: any) {
       setError(err.message || 'Google sign-up failed');
+    } finally {
       setLoading(false);
     }
   }
@@ -948,6 +957,9 @@ export default function App(){
   }
 
   function handleLogout() {
+    if (!confirm('Are you sure you want to log out?')) {
+      return;
+    }
     api.clearToken();
     setIsAuthenticated(false);
     setUser(null);
@@ -3068,29 +3080,26 @@ export default function App(){
           backgroundColor:'rgba(0,0,0,0.7)',
           display:'flex',
           justifyContent:'center',
-          alignItems:'flex-start',
+          alignItems:'center',
           zIndex:1000,
           padding:20,
           overflowY:'auto',
           WebkitOverflowScrolling:'touch' as any
         }}>
-          <GlowBorder glowColor="rgba(16, 185, 129, 0.5)" borderRadius={12} backgroundColor="#1e293b">
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              style={{
-              padding:'16px',
-              width:500,
-              maxWidth:'100%',
-              maxHeight:'70vh',
-              overflowY:'auto',
-              WebkitOverflowScrolling:'touch' as any,
-              scrollbarWidth:'none',
-              msOverflowStyle:'none',
-              marginTop:10,
-              marginBottom:10
-            }}
-              className="hide-scrollbar"
-            >
+          <div style={{width:500,maxWidth:'100%',maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
+            <GlowBorder glowColor="rgba(16, 185, 129, 0.5)" borderRadius={12} backgroundColor="#1e293b">
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                padding:'16px',
+                overflowY:'auto',
+                WebkitOverflowScrolling:'touch' as any,
+                scrollbarWidth:'none',
+                msOverflowStyle:'none',
+                maxHeight:'90vh'
+              }}
+                className="hide-scrollbar"
+              >
               <h2 style={{marginTop:0,marginBottom:16,fontSize:20}}>Account Settings</h2>
               <form onSubmit={async (e) => {
                 e.preventDefault();
@@ -3402,73 +3411,132 @@ export default function App(){
               </form>
               
               {/* Link Google Account Section */}
+              {(() => {
+                const currentClimber = climbers.find(c => c.id === user?.climberId);
+                const hasGoogleLinked = currentClimber?.google_id;
+                
+                // Only show if Google account is not already linked
+                if (hasGoogleLinked) return null;
+                
+                return (
+                  <div style={{
+                    backgroundColor:'#0f172a',
+                    padding:16,
+                    borderRadius:8,
+                    border:'1px solid #475569',
+                    marginTop:16
+                  }}>
+                    <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600'}}>Link Google Account</h3>
+                    {isGoogleConfigured ? (
+                      <>
+                        <p style={{fontSize:14,color:'#94a3b8',marginBottom:16}}>
+                          Link your Google account for easy sign-in
+                        </p>
+                        <div style={{
+                          display:'flex',
+                          justifyContent:'center'
+                        }}>
+                          <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
+                            <GoogleLogin
+                              onSuccess={async (credentialResponse: CredentialResponse) => {
+                                try {
+                                  if (!credentialResponse.credential) {
+                                    throw new Error('No credential received from Google');
+                                  }
+                                  
+                                  // Use the link endpoint instead of regular Google login
+                                  await api.linkGoogleAccount(credentialResponse.credential);
+                                  setSettingsSuccess(true);
+                                  
+                                  // Reload user data
+                                  const loadedClimbers = await api.getClimbers();
+                                  setClimbers(loadedClimbers);
+                                  
+                                  setTimeout(() => {
+                                    setShowSettings(false);
+                                    setSettingsSuccess(false);
+                                  }, 2000);
+                                } catch (err: any) {
+                                  setSettingsError(err.message || 'Failed to link Google account');
+                                }
+                              }}
+                              onError={() => {
+                                setSettingsError('Google linking failed. Please try again.');
+                              }}
+                              theme="outline"
+                              size="large"
+                              shape="pill"
+                              text="continue_with"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{
+                        padding:16,
+                        backgroundColor:'#1e293b',
+                        borderRadius:6,
+                        border:'1px solid #475569'
+                      }}>
+                        <p style={{fontSize:14,color:'#94a3b8',marginBottom:8}}>
+                          ℹ️ Google Sign-In is not yet configured by the administrator.
+                        </p>
+                        <p style={{fontSize:13,color:'#64748b',marginBottom:0}}>
+                          Contact your admin to enable Google authentication. See <code style={{backgroundColor:'#0f172a',padding:'2px 6px',borderRadius:4,fontSize:12}}>GOOGLE_OAUTH_SETUP.md</code> for setup instructions.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              
+              {/* Delete Account Section */}
               <div style={{
-                backgroundColor:'#0f172a',
+                backgroundColor:'#7f1d1d',
                 padding:16,
                 borderRadius:8,
-                border:'1px solid #475569',
+                border:'1px solid #991b1b',
                 marginTop:16
               }}>
-                <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600'}}>Link Google Account</h3>
-                {isGoogleConfigured ? (
-                  <>
-                    <p style={{fontSize:14,color:'#94a3b8',marginBottom:16}}>
-                      Link your Google account for easy sign-in
-                    </p>
-                    <div style={{
-                      display:'flex',
-                      justifyContent:'center'
-                    }}>
-                      <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
-                        <GoogleLogin
-                          onSuccess={async (credentialResponse: CredentialResponse) => {
-                            try {
-                              if (!credentialResponse.credential) {
-                                throw new Error('No credential received from Google');
-                              }
-                              
-                              // Use the link endpoint instead of regular Google login
-                              await api.linkGoogleAccount(credentialResponse.credential);
-                              setSettingsSuccess(true);
-                              
-                              // Reload user data
-                              const loadedClimbers = await api.getClimbers();
-                              setClimbers(loadedClimbers);
-                              
-                              setTimeout(() => {
-                                setShowSettings(false);
-                                setSettingsSuccess(false);
-                              }, 2000);
-                            } catch (err: any) {
-                              setSettingsError(err.message || 'Failed to link Google account');
-                            }
-                          }}
-                          onError={() => {
-                            setSettingsError('Google linking failed. Please try again.');
-                          }}
-                          theme="outline"
-                          size="large"
-                          shape="pill"
-                          text="continue_with"
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{
-                    padding:16,
-                    backgroundColor:'#1e293b',
+                <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600',color:'#fca5a5'}}>Danger Zone</h3>
+                <p style={{fontSize:14,color:'#fecaca',marginBottom:12}}>
+                  ⚠️ Once you delete your account, there is no going back. This will permanently delete all your data including sessions and climbs.
+                </p>
+                <button
+                  onClick={async () => {
+                    const confirmFirst = confirm('Are you sure you want to delete your account? This action cannot be undone!');
+                    if (!confirmFirst) return;
+                    
+                    const confirmSecond = confirm('This is your final warning. Type your username to confirm deletion.\n\nYour username: ' + user?.username);
+                    if (!confirmSecond) return;
+                    
+                    const typedUsername = prompt('Type your username to confirm deletion:');
+                    if (typedUsername !== user?.username) {
+                      alert('Username does not match. Account deletion cancelled.');
+                      return;
+                    }
+                    
+                    try {
+                      await api.deleteAccount();
+                      alert('Your account has been permanently deleted.');
+                      handleLogout();
+                    } catch (err: any) {
+                      setSettingsError(err.message || 'Failed to delete account');
+                    }
+                  }}
+                  style={{
+                    padding:'10px 20px',
+                    backgroundColor:'#dc2626',
+                    color:'white',
+                    border:'none',
                     borderRadius:6,
-                    border:'1px solid #475569'
-                  }}>
-                    <p style={{fontSize:14,color:'#94a3b8',marginBottom:8}}>
-                      ℹ️ Google Sign-In is not yet configured by the administrator.
-                    </p>
-                    <p style={{fontSize:13,color:'#64748b',marginBottom:0}}>
-                      Contact your admin to enable Google authentication. See <code style={{backgroundColor:'#0f172a',padding:'2px 6px',borderRadius:4,fontSize:12}}>GOOGLE_OAUTH_SETUP.md</code> for setup instructions.
-                    </p>
-                  </div>
-                )}
+                    fontSize:14,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Delete Account Permanently
+                </button>
               </div>
               
               <div style={{display:'flex',gap:12,marginTop:16}}>
@@ -3543,6 +3611,7 @@ export default function App(){
               </div>
             </div>
           </GlowBorder>
+          </div>
         </div>
       )}
 

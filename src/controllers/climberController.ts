@@ -66,3 +66,23 @@ export async function updateSettings(req: AuthRequest, res: Response) {
     return handleControllerError(res, err);
   }
 }
+
+/**
+ * Delete user account
+ */
+export async function deleteAccount(req: AuthRequest, res: Response) {
+  try {
+    const climberId = req.user!.climberId;
+    
+    // Delete the climber (cascades to sessions)
+    const deleted = await db.deleteClimber(climberId);
+    
+    if (!deleted) {
+      return sendError(res, 'Account not found', 404);
+    }
+    
+    return sendSuccess(res, { message: 'Account deleted successfully' });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}

@@ -174,13 +174,21 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return handleResponse<{ success: boolean; message: string }>(response);
 }
 
-export async function updateUserSettings(settings: { name?: string; country?: string; started_bouldering?: string; bio?: string }): Promise<{ success: boolean; user: any }> {
+export async function updateUserSettings(settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string }): Promise<{ success: boolean; user: any }> {
   const response = await fetch(`${API_URL}/api/user/settings`, {
     method: 'PUT',
     headers: getHeaders(true),
     body: JSON.stringify(settings)
   });
   return handleResponse<{ success: boolean; user: any }>(response);
+}
+
+export async function deleteAccount(): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/api/user/delete`, {
+    method: 'DELETE',
+    headers: getHeaders(true)
+  });
+  return handleResponse<{ success: boolean; message: string }>(response);
 }
 
 export async function mergeKeithAccounts(): Promise<{ success: boolean; message: string; details: any }> {
