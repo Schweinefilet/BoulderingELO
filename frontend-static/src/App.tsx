@@ -2561,16 +2561,45 @@ export default function App(){
                       {ORDER.map((color:keyof Counts)=> {
                         const total = sectionTotals[color];
                         const displayTotal = total !== undefined && total !== null ? total : '?';
+                        const currentCount = sectionCounts[color];
                         return (
                           <div key={color}>
-                            <label style={{display:'block',fontSize:12,fontWeight:'500',marginBottom:6,textTransform:'capitalize'}}>
-                              {color} ({sectionCounts[color]}/{displayTotal})
+                            <label 
+                              style={{
+                                display:'block',
+                                fontSize:12,
+                                fontWeight:'500',
+                                marginBottom:6,
+                                textTransform:'capitalize',
+                                cursor:'pointer',
+                                userSelect:'none',
+                                transition:'color 0.2s'
+                              }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                // Left click = increment, right click = decrement
+                                const newVal = currentCount + 1;
+                                const maxVal = typeof total === 'number' ? total : Infinity;
+                                if (newVal <= maxVal) {
+                                  updateWallCount(section, color, newVal.toString());
+                                }
+                              }}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                // Right click = decrement
+                                const newVal = Math.max(0, currentCount - 1);
+                                updateWallCount(section, color, newVal.toString());
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                            >
+                              {color} ({currentCount}/{displayTotal})
                             </label>
                             <input 
                               type="number" 
                               min={0}
                               max={typeof total === 'number' ? total : undefined}
-                              value={sectionCounts[color]} 
+                              value={currentCount} 
                               onChange={e=>updateWallCount(section,color,e.target.value)}
                               style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
                             />
