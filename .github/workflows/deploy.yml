@@ -35,6 +35,10 @@ jobs:
           npm ci
 
       - name: Build
+        env:
+          VITE_API_URL: https://bouldering-elo-api.onrender.com
+          VITE_GOOGLE_CLIENT_ID: 308250500589-p5ite3hq4bb1s1ebjbt9reasin9gpi9e.apps.googleusercontent.com
+          VITE_BASE: /BoulderingELO/
         run: |
           cd frontend-static
           npm run build
