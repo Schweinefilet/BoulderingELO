@@ -154,6 +154,12 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Google sign-up name confirmation state
+  const [showGoogleNamePrompt, setShowGoogleNamePrompt] = useState(false);
+  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
+  const [googleName, setGoogleName] = useState('');
+  const [googleEmail, setGoogleEmail] = useState('');
+  
   // Check if Google OAuth is configured
   const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
   const isGoogleConfigured = googleClientId && 
@@ -187,6 +193,22 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         throw new Error('No credential received from Google');
       }
       
+      // If in register mode, show name prompt first
+      if (mode === 'register') {
+        // Decode JWT to get name (JWT format: header.payload.signature)
+        const base64Url = credentialResponse.credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        
+        setGoogleCredential(credentialResponse.credential);
+        setGoogleName(payload.name || '');
+        setGoogleEmail(payload.email || '');
+        setShowGoogleNamePrompt(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Login mode - proceed directly
       const result = await api.googleLogin(credentialResponse.credential);
       api.setToken(result.token);
       api.setUser(result.user);
@@ -194,6 +216,24 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     } catch (err: any) {
       setError(err.message || 'Google login failed');
     } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmGoogleSignUp() {
+    if (!googleCredential) return;
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Send to backend with the confirmed name
+      const result = await api.googleLogin(googleCredential, googleName);
+      api.setToken(result.token);
+      api.setUser(result.user);
+      onLogin();
+    } catch (err: any) {
+      setError(err.message || 'Google sign-up failed');
       setLoading(false);
     }
   }
@@ -399,6 +439,65 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </>
         )}
       </div>
+
+      {/* Google Name Confirmation Modal */}
+      {showGoogleNamePrompt && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => {
+            setShowGoogleNamePrompt(false);
+            setGoogleCredential(null);
+            setGoogleName('');
+            setGoogleEmail('');
+          }}
+        >
+          <div 
+            className="bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-4">Confirm Your Name</h3>
+            <p className="text-gray-300 text-sm mb-4">
+              You're signing up with <span className="font-semibold text-white">{googleEmail}</span>
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={googleName}
+                onChange={(e) => setGoogleName(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your full name"
+                autoFocus
+              />
+              <p className="text-gray-400 text-xs mt-1">
+                This will be displayed on the leaderboard
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={confirmGoogleSignUp}
+                disabled={!googleName.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition-colors"
+              >
+                Create Account
+              </button>
+              <button
+                onClick={() => {
+                  setShowGoogleNamePrompt(false);
+                  setGoogleCredential(null);
+                  setGoogleName('');
+                  setGoogleEmail('');
+                }}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

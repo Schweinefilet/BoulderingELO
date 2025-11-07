@@ -52,7 +52,7 @@ export async function login(req: AuthRequest, res: Response) {
  */
 export async function googleAuth(req: AuthRequest, res: Response) {
   try {
-    const { credential } = req.body;
+    const { credential, customName } = req.body;
     
     if (!credential) {
       return sendError(res, 'Google credential required', 400);
@@ -74,7 +74,8 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     }
     
     const email = payload.email;
-    const name = payload.name || email.split('@')[0];
+    // Use customName if provided, otherwise use name from Google, or email prefix as fallback
+    const name = customName || payload.name || email.split('@')[0];
     const googleId = payload.sub;
     
     // Check if a user exists with this Google ID
