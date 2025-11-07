@@ -9,6 +9,8 @@ import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
 import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
+import { InlineMath, BlockMath } from 'react-katex'
+import 'katex/dist/katex.min.css'
 
 // Detect if running on mobile device
 const isMobileDevice = () => {
@@ -1974,26 +1976,50 @@ export default function App(){
       )}
       
       <GlowingCard>
-        <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,marginBottom:20}}>
-          <h3 style={{marginTop:0}}>Scoring Formula</h3>
-          <div style={{fontSize:15,marginBottom:12,padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6,overflowX:'auto'}}>
-            {'$$\\text{Score} = \\sum_{c \\in \\text{colors}} \\left( b_c \\times \\left[ W(n_{\\text{cum}} + n_c) - W(n_{\\text{cum}}) \\right] \\right)$$'}
+        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20}}>
+          <h3 style={{marginTop:0,marginBottom:16}}>Scoring Formula</h3>
+          
+          <div style={{fontSize:15,marginBottom:16,padding:'16px',backgroundColor:'#0f172a',borderRadius:6,overflowX:'auto',textAlign:'center'}}>
+            <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cum}} + n_c) - W(n_{\text{cum}}) \right] \right)" />
           </div>
-          <div style={{fontSize:14,marginBottom:8,padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
-            {'where $W(n) = \\frac{1 - r^n}{1 - r}$, with $r = 0.95$'}
+          
+          <div style={{fontSize:14,marginBottom:16,padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6}}>
+            <div style={{marginBottom:8}}>where the weighting function is:</div>
+            <div style={{textAlign:'center'}}>
+              <InlineMath math="W(n) = \frac{1 - r^n}{1 - r}" />
+              {' with '}
+              <InlineMath math="r = 0.95" />
+            </div>
           </div>
-          <div style={{fontSize:13,color:'#94a3b8',lineHeight:1.6}}>
-            <strong>{'Base Points ($b_c$):'}</strong> Black(120), Red(56), Orange(12.5), Yellow(3.5), Blue(0.75), Green(0.25)
-            <br/>
-            <strong>{'$n_{\\text{cum}}$'}</strong> = cumulative count of all higher-ranked colors processed so far
-            <br/>
-            <strong>{'$n_c$'}</strong> = count of climbs for color {'$c$'}
-            <br/>
-            <strong>Processing order:</strong> Black (≥V9) → Red (V7-V8) → Orange (V5-V6) → Yellow (V3-V4) → Blue (V1-V2) → Green (V0-V1)
+          
+          <div style={{fontSize:14,color:'#cbd5e1',lineHeight:1.8,marginBottom:16}}>
+            <h4 style={{marginTop:0,marginBottom:12,color:'#94a3b8'}}>How it works:</h4>
+            <ol style={{paddingLeft:24,margin:0}}>
+              <li style={{marginBottom:8}}>
+                <strong>Colors are processed from hardest to easiest:</strong> Black → Red → Orange → Yellow → Blue → Green
+              </li>
+              <li style={{marginBottom:8}}>
+                <strong>Each color has a base point value</strong> (<InlineMath math="b_c" />):
+                <div style={{marginTop:6,padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:4,fontSize:13}}>
+                  Black(120) · Red(56) · Orange(12.5) · Yellow(3.5) · Blue(0.75) · Green(0.25)
+                </div>
+              </li>
+              <li style={{marginBottom:8}}>
+                <strong>Diminishing returns apply</strong> - your first climbs are worth more than later ones of the same difficulty
+              </li>
+              <li style={{marginBottom:8}}>
+                <InlineMath math="n_{\text{cum}}" /> = total count of all harder colors already processed<br/>
+                <InlineMath math="n_c" /> = number of climbs for the current color
+              </li>
+              <li style={{marginBottom:8}}>
+                <strong>The marginal gain decreases</strong> as you accumulate more climbs, rewarding diverse progression over repetition
+              </li>
+            </ol>
           </div>
-          <p style={{fontSize:14,marginBottom:8,marginTop:12}}>
-            Basically, climb harder stuff to get more points!
-          </p>
+          
+          <div style={{padding:'12px 16px',backgroundColor:'rgba(59, 130, 246, 0.1)',border:'1px solid rgba(59, 130, 246, 0.3)',borderRadius:6,color:'#93c5fd'}}>
+            <strong>💡 TL;DR:</strong> Climb harder routes (especially Black/Red/Orange) for more points. Your first few climbs of each difficulty are worth the most, so focus on variety and progression!
+          </div>
         </div>
       </GlowingCard>
       
@@ -4264,14 +4290,23 @@ export default function App(){
         
         // Calculate current climbs (from most recent session)
         const latestSession = profileSessions[0];
-        const currentClimbs = latestSession ? {
-          green: latestSession.green || 0,
-          blue: latestSession.blue || 0,
-          yellow: latestSession.yellow || 0,
-          orange: latestSession.orange || 0,
-          red: latestSession.red || 0,
-          black: latestSession.black || 0
-        } : { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+        const currentClimbs = latestSession && latestSession.wallCounts ? (() => {
+          // Recalculate color totals from wallCounts, excluding expired sections
+          const totals = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+          Object.keys(latestSession.wallCounts).forEach(section => {
+            // Skip expired sections
+            if (!expiredSections.includes(section)) {
+              const sectionCounts = latestSession.wallCounts[section];
+              totals.green += sectionCounts.green || 0;
+              totals.blue += sectionCounts.blue || 0;
+              totals.yellow += sectionCounts.yellow || 0;
+              totals.orange += sectionCounts.orange || 0;
+              totals.red += sectionCounts.red || 0;
+              totals.black += sectionCounts.black || 0;
+            }
+          });
+          return totals;
+        })() : { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
         
         // Calculate rank history and peak score
         const rankHistory: {date: string, rank: number}[] = [];
