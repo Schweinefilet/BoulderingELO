@@ -2489,10 +2489,16 @@ export default function App(){
                                 transition: 'all 0.3s',
                                 position: 'relative' as const
                               }}>
-                                <div style={{
+                                <div 
+                                  onClick={() => {
+                                    setDropdownWall(section);
+                                    setDropdownColor(color);
+                                  }}
+                                  style={{
                                   display: 'inline-block',
                                   padding: '4px 8px',
                                   borderRadius: 6,
+                                  cursor: 'pointer',
                                   color: color === 'green' ? '#10b981' : 
                                          color === 'blue' ? '#3b82f6' :
                                          color === 'yellow' ? '#eab308' :
