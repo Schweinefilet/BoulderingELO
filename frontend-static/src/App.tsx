@@ -2772,6 +2772,33 @@ export default function App(){
         <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
           <div style={{padding:24}}>
             <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>Sessions</h2>
+          
+          {/* Expired Sections Notice */}
+          {expiredSections.length > 0 && (
+            <div style={{
+              backgroundColor:'rgba(249, 115, 22, 0.1)',
+              border:'1px solid rgba(249, 115, 22, 0.3)',
+              borderRadius:8,
+              padding:'12px 16px',
+              marginBottom:20,
+              color:'#fdba74',
+              fontSize:13
+            }}>
+              <div style={{fontWeight:'600',marginBottom:4}}>
+                ⚠️ Replaced Sections
+              </div>
+              <div>
+                {expiredSections.map((section, idx) => (
+                  <span key={idx}>
+                    <strong>{formatWallSectionName(section)}</strong>
+                    {idx < expiredSections.length - 1 && ', '}
+                  </span>
+                ))}
+                {' - Climbs from these sections no longer count toward scores'}
+              </div>
+            </div>
+          )}
+          
           <div>
             {(() => {
               // Group sessions by date
