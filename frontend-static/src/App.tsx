@@ -2146,42 +2146,6 @@ export default function App(){
                   </div>
                 )}
               </div>
-              
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontWeight:'500',marginBottom:4}}>
-                  📸 Wall Image (Optional)
-                </label>
-                <p style={{fontSize:12,color:'#94a3b8',marginBottom:8,marginTop:0}}>
-                  Add a photo reference of the selected wall section to help visualize the routes
-                </p>
-                <input 
-                  type="text" 
-                  placeholder="Paste image URL here (e.g., https://i.imgur.com/example.jpg)" 
-                  value={wallImage} 
-                  onChange={e=>setWallImage(e.target.value)}
-                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                />
-                {wallImage && (
-                  <div style={{marginTop:8,border:'1px solid #475569',borderRadius:6,overflow:'hidden',backgroundColor:'#0f172a'}}>
-                    <img 
-                      src={wallImage} 
-                      alt="Wall preview" 
-                      style={{width:'100%',height:'auto',maxHeight:200,objectFit:'contain',display:'block'}}
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.style.display = 'none';
-                        const errorMsg = document.createElement('div');
-                        errorMsg.style.cssText = 'padding:16px;color:#ef4444;text-align:center;font-size:13px';
-                        errorMsg.textContent = '❌ Failed to load image. Check the URL.';
-                        target.parentElement?.appendChild(errorMsg);
-                      }}
-                    />
-                  </div>
-                )}
-                <p style={{fontSize:11,color:'#64748b',marginTop:6,marginBottom:0}}>
-                  💡 Tip: Upload images to <a href="https://imgur.com" target="_blank" style={{color:'#3b82f6'}}>Imgur</a> or use a direct image link
-                </p>
-              </div>
 
               <div style={{marginBottom:16}}>
                 <label style={{display:'block',fontWeight:'500',marginBottom:8}}>🎨 Route Color</label>
@@ -2278,23 +2242,38 @@ export default function App(){
 
               <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:13,border:'1px solid #475569'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
-                {Object.keys(wallTotals).map(section => {
-                  const sectionCounts = wallCounts[section] || emptyWall();
-                  const sectionTotals = wallTotals[section] || {};
-                  const displayName = formatWallSectionName(section);
-                  
-                  return (
-                    <div key={section} style={{marginBottom:8,lineHeight:'1.6'}}>
-                      <strong style={{color:'#94a3b8'}}>{displayName}:</strong>{' '}
-                      <span style={{color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green ?? '?'}</span> green,{' '}
-                      <span style={{color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue ?? '?'}</span> blue,{' '}
-                      <span style={{color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow ?? '?'}</span> yellow,{' '}
-                      <span style={{color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange ?? '?'}</span> orange,{' '}
-                      <span style={{color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red ?? '?'}</span> red,{' '}
-                      <span style={{color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black ?? '?'}</span> black
-                    </div>
-                  );
-                })}
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                  <thead>
+                    <tr style={{borderBottom:'1px solid #475569'}}>
+                      <th style={{textAlign:'left',padding:'8px 4px',color:'#94a3b8',fontWeight:'600'}}>Wall Section</th>
+                      <th style={{textAlign:'center',padding:'8px 4px',color:'#10b981',fontWeight:'600'}}>Green</th>
+                      <th style={{textAlign:'center',padding:'8px 4px',color:'#3b82f6',fontWeight:'600'}}>Blue</th>
+                      <th style={{textAlign:'center',padding:'8px 4px',color:'#eab308',fontWeight:'600'}}>Yellow</th>
+                      <th style={{textAlign:'center',padding:'8px 4px',color:'#f97316',fontWeight:'600'}}>Orange</th>
+                      <th style={{textAlign:'center',padding:'8px 4px',color:'#ef4444',fontWeight:'600'}}>Red</th>
+                      <th style={{textAlign:'center',padding:'8px 4px',color:'#d1d5db',fontWeight:'600'}}>Black</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(wallTotals).map(section => {
+                      const sectionCounts = wallCounts[section] || emptyWall();
+                      const sectionTotals = wallTotals[section] || {};
+                      const displayName = formatWallSectionName(section);
+                      
+                      return (
+                        <tr key={section} style={{borderBottom:'1px solid #334155'}}>
+                          <td style={{padding:'8px 4px',color:'#cbd5e1',fontWeight:'500'}}>{displayName}</td>
+                          <td style={{textAlign:'center',padding:'8px 4px',color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 4px',color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 4px',color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 4px',color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 4px',color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red ?? '?'}</td>
+                          <td style={{textAlign:'center',padding:'8px 4px',color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black ?? '?'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           ) : (
