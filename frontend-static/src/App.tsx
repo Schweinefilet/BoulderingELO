@@ -1275,6 +1275,31 @@ export default function App(){
     }
   }
 
+  function subtractClimb() {
+    const current = wallCounts[dropdownWall]?.[dropdownColor];
+    
+    // Check if wallCounts doesn't have this section
+    if (current === undefined) {
+      const availableSections = Object.keys(wallCounts);
+      if (availableSections.length > 0) {
+        setDropdownWall(availableSections[0]);
+        alert(`Wall section "${dropdownWall}" not found. Switched to "${availableSections[0]}". Please try again.`);
+      }
+      return;
+    }
+    
+    // Can't go below 0
+    if (current <= 0) {
+      alert(`Cannot subtract - ${dropdownColor} count is already 0.`);
+      return;
+    }
+    
+    setWallCounts({
+      ...wallCounts, 
+      [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current - 1}
+    });
+  }
+
   async function submit(){ 
     if(!selectedClimber) return;
     setLoading(true);
@@ -1914,11 +1939,11 @@ export default function App(){
                 </div>
               )}
 
-              <div style={{marginBottom:16}}>
+              <div style={{marginBottom:16,display:'flex',gap:12}}>
                 <button
                   onClick={addClimb}
                   style={{
-                    width:'100%',
+                    flex:1,
                     padding:'12px 16px',
                     backgroundColor:'#3b82f6',
                     color:'white',
@@ -1932,7 +1957,27 @@ export default function App(){
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
                 >
-                  Add Climb
+                  ➕ Add Climb
+                </button>
+                
+                <button
+                  onClick={subtractClimb}
+                  style={{
+                    flex:1,
+                    padding:'12px 16px',
+                    backgroundColor:'#ef4444',
+                    color:'white',
+                    border:'none',
+                    borderRadius:8,
+                    fontSize:16,
+                    fontWeight:'600',
+                    cursor:'pointer',
+                    transition:'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                >
+                  ➖ Subtract Climb
                 </button>
               </div>
 
