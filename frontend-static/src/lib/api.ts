@@ -374,29 +374,3 @@ export async function saveWallSectionImages(wallSectionImages: Record<string, st
   });
   await handleResponse(response);
 }
-
-// Expired sections management
-export async function addExpiredSection(sectionName: string): Promise<void> {
-  const response = await fetch(`${API_URL}/api/admin/expired-sections`, {
-    method: 'POST',
-    headers: getHeaders(true),
-    body: JSON.stringify({ sectionName }),
-  });
-  await handleResponse(response);
-}
-
-export async function getExpiredSections(): Promise<string[]> {
-  const response = await fetch(`${API_URL}/api/admin/expired-sections`);
-  const result = await handleResponse<{ data: { expiredSections: string[] } }>(response);
-  return result.data?.expiredSections || [];
-}
-
-export async function removeExpiredSection(sectionName: string): Promise<void> {
-  const response = await fetch(`${API_URL}/api/admin/expired-sections`, {
-    method: 'DELETE',
-    headers: getHeaders(true),
-    body: JSON.stringify({ sectionName }),
-  });
-  await handleResponse(response);
-}
-
