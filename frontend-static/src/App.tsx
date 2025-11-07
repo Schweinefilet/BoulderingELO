@@ -925,9 +925,12 @@ export default function App(){
     if (sectionsChanged) {
       console.log('Wall sections changed, syncing wallCounts:', { currentSections, newSections });
       // Re-initialize wallCounts with new sections, preserving existing counts where possible
+      // Also filter out expired sections
       const newCounts: any = {};
       newSections.forEach(section => {
-        newCounts[section] = wallCounts[section] || emptyWall();
+        if (!expiredSections.includes(section)) {
+          newCounts[section] = wallCounts[section] || emptyWall();
+        }
       });
       setWallCounts(newCounts);
       
@@ -937,7 +940,7 @@ export default function App(){
         setDropdownWall(newSections[0] || '');
       }
     }
-  }, [wallTotals, wallTotalsLoaded]);
+  }, [wallTotals, wallTotalsLoaded, expiredSections]);
   
   // Ensure dropdownWall is always valid when wallTotals changes
   useEffect(() => {
@@ -1095,10 +1098,17 @@ export default function App(){
         .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
       if (climberSessions.length > 0 && climberSessions[0].wallCounts) {
-        setWallCounts(climberSessions[0].wallCounts);
+        // Filter out expired sections from wallCounts
+        const filteredWallCounts: any = {};
+        Object.keys(climberSessions[0].wallCounts).forEach(section => {
+          if (!expiredSections.includes(section)) {
+            filteredWallCounts[section] = climberSessions[0].wallCounts[section];
+          }
+        });
+        setWallCounts(filteredWallCounts);
       }
     }
-  }, [selectedClimber, sessions]);
+  }, [selectedClimber, sessions, expiredSections]);
 
   function handleLoginSuccess() {
     setIsAuthenticated(true);
@@ -1966,20 +1976,22 @@ export default function App(){
       <GlowingCard>
         <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,marginBottom:20}}>
           <h3 style={{marginTop:0}}>Scoring Formula</h3>
-          <p style={{fontFamily:'monospace',fontSize:14}}>
-            Score = Σ (base_points × (W(cmltve + count) - W(cmltve)))
-          </p>
-          <p style={{fontSize:14,marginBottom:8}}>
-            Where W(n) = (1 - r^n) / (1 - r), r = 0.95
-          </p>
-          <div style={{fontSize:13,color:'#94a3b8'}}>
-            <strong>Base Points:</strong> Black(120), Red(56), Orange(12.5), Yellow(3.5), Blue(0.75), Green(0.25)
-            <br/>
-            <strong>cmltve</strong> = cumulative count of all higher-ranked colors processed so far
-            <br/>
-            Colors are processed in order: Black (≥V9) → Red (V7-V8) → Orange (V5-V6) → Yellow (V3-V4) → Blue (V1-V2) → Green (V0-V1)
+          <div style={{fontSize:15,marginBottom:12,padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6,overflowX:'auto'}}>
+            {'$$\\text{Score} = \\sum_{c \\in \\text{colors}} \\left( b_c \\times \\left[ W(n_{\\text{cum}} + n_c) - W(n_{\\text{cum}}) \\right] \\right)$$'}
           </div>
-                    <p style={{fontSize:14,marginBottom:8}}>
+          <div style={{fontSize:14,marginBottom:8,padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
+            {'where $W(n) = \\frac{1 - r^n}{1 - r}$, with $r = 0.95$'}
+          </div>
+          <div style={{fontSize:13,color:'#94a3b8',lineHeight:1.6}}>
+            <strong>{'Base Points ($b_c$):'}</strong> Black(120), Red(56), Orange(12.5), Yellow(3.5), Blue(0.75), Green(0.25)
+            <br/>
+            <strong>{'$n_{\\text{cum}}$'}</strong> = cumulative count of all higher-ranked colors processed so far
+            <br/>
+            <strong>{'$n_c$'}</strong> = count of climbs for color {'$c$'}
+            <br/>
+            <strong>Processing order:</strong> Black (≥V9) → Red (V7-V8) → Orange (V5-V6) → Yellow (V3-V4) → Blue (V1-V2) → Green (V0-V1)
+          </div>
+          <p style={{fontSize:14,marginBottom:8,marginTop:12}}>
             Basically, climb harder stuff to get more points!
           </p>
         </div>
