@@ -803,6 +803,7 @@ export default function App(){
 
   // Comparison charts state
   const [selectedClimbersForComparison, setSelectedClimbersForComparison] = useState<number[]>([])
+  const [comparisonSearchQuery, setComparisonSearchQuery] = useState('')
   
   // Google link reminder popup
   const [showGoogleLinkReminder, setShowGoogleLinkReminder] = useState(false)
@@ -3069,230 +3070,332 @@ export default function App(){
               <YAxis stroke="#94a3b8" />
               <Tooltip 
                 contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
-                formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                formatter={(value: any, name: string) => {
+                  if (typeof value !== 'number') return value;
+                  // Find the climber's current rank by score
+                  const climberScores = climbers.map((c:any) => {
+                    const latestSession = sessions
+                      .filter((s:any) => s.climberId === c.id)
+                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                    return {name: c.name, score: latestSession?.score || 0};
+                  }).sort((a, b) => b.score - a.score);
+                  
+                  return value.toFixed(2);
+                }}
+                labelFormatter={(label) => `Date: ${label}`}
+                itemSorter={(item: any) => {
+                  // Sort tooltip items by score (descending)
+                  const climberScores = climbers.map((c:any) => {
+                    const latestSession = sessions
+                      .filter((s:any) => s.climberId === c.id)
+                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                    return {name: c.name, score: latestSession?.score || 0};
+                  }).sort((a, b) => b.score - a.score);
+                  
+                  const rank = climberScores.findIndex(cs => cs.name === item.name);
+                  return rank;
+                }}
               />
               <Legend />
-              {climbers.map((c:any,i:number)=>(
-                <Line 
-                  key={c.id} 
-                  type="monotone" 
-                  dataKey={c.name}
-                  name={c.name}
-                  stroke={['#3b82f6','#a855f7','#ec4899','#f59e0b','#10b981'][i%5]}
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls
-                />
-              ))}
+              {(() => {
+                // Get top 10 climbers by current score
+                const top10Climbers = climbers
+                  .map((c:any) => {
+                    const latestSession = sessions
+                      .filter((s:any) => s.climberId === c.id)
+                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                    return {climber: c, score: latestSession?.score || 0};
+                  })
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 10)
+                  .map(item => item.climber);
+                
+                // Distinct colors for up to 10 climbers
+                const colors = [
+                  '#3b82f6', // blue
+                  '#ef4444', // red
+                  '#10b981', // green
+                  '#f59e0b', // amber
+                  '#a855f7', // purple
+                  '#ec4899', // pink
+                  '#14b8a6', // teal
+                  '#f97316', // orange
+                  '#6366f1', // indigo
+                  '#84cc16'  // lime
+                ];
+                
+                return top10Climbers.map((c:any,i:number)=>(
+                  <Line 
+                    key={c.id} 
+                    type="monotone" 
+                    dataKey={c.name}
+                    name={c.name}
+                    stroke={colors[i]}
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                ));
+              })()}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Color Totals */}
-        <div style={{marginTop:24}}>
-          <h3>Sends by Color (Comparison)</h3>
+        {/* Comparison Selector */}
+        <div style={{marginTop:24,marginBottom:24,backgroundColor:'#1e293b',padding:16,borderRadius:8,border:'1px solid #475569'}}>
+          <h3 style={{marginTop:0,marginBottom:12}}>Compare Climbers</h3>
           <div style={{marginBottom:16}}>
             <label style={{display:'block',fontWeight:'500',marginBottom:8,fontSize:14}}>
-              Select 2-5 climbers to compare:
+              Search and select climbers to compare (2-5):
             </label>
-            <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-              {climbers.map((c:any)=>{
-                const isSelected = selectedClimbersForComparison.includes(c.id);
-                const canSelect = selectedClimbersForComparison.length < 5;
-                const canDeselect = selectedClimbersForComparison.length > 0;
-                
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedClimbersForComparison(prev => prev.filter(id => id !== c.id));
-                      } else if (canSelect) {
-                        setSelectedClimbersForComparison(prev => [...prev, c.id]);
-                      }
-                    }}
-                    style={{
-                      padding:'8px 16px',
-                      borderRadius:6,
-                      border: isSelected ? '2px solid #3b82f6' : '1px solid #475569',
-                      backgroundColor: isSelected ? '#1e3a8a' : '#1e293b',
-                      color: isSelected ? '#60a5fa' : '#94a3b8',
-                      cursor: (isSelected && canDeselect) || (!isSelected && canSelect) ? 'pointer' : 'not-allowed',
-                      opacity: (!isSelected && !canSelect) ? 0.5 : 1,
-                      fontWeight: isSelected ? '600' : '400',
-                      fontSize:13
-                    }}
-                    disabled={!isSelected && !canSelect}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedClimbersForComparison.length < 2 && (
-              <p style={{fontSize:12,color:'#94a3b8',marginTop:8,marginBottom:0}}>
-                Select at least 2 climbers to compare
-              </p>
+            <input
+              type="text"
+              value={comparisonSearchQuery}
+              onChange={(e) => setComparisonSearchQuery(e.target.value)}
+              placeholder="Type to search climbers..."
+              style={{
+                width:'100%',
+                padding:'10px 12px',
+                borderRadius:6,
+                border:'1px solid #475569',
+                backgroundColor:'#0f172a',
+                color:'white',
+                fontSize:14,
+                marginBottom:12
+              }}
+            />
+            {selectedClimbersForComparison.length > 0 && (
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:13,color:'#94a3b8',marginBottom:8}}>Selected ({selectedClimbersForComparison.length}):</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  {selectedClimbersForComparison.map(id => {
+                    const climber = climbers.find(c => c.id === id);
+                    if (!climber) return null;
+                    return (
+                      <div 
+                        key={id}
+                        style={{
+                          padding:'4px 10px',
+                          backgroundColor:'#1e3a8a',
+                          color:'#60a5fa',
+                          borderRadius:6,
+                          fontSize:13,
+                          display:'flex',
+                          alignItems:'center',
+                          gap:6
+                        }}
+                      >
+                        {climber.name}
+                        <button
+                          onClick={() => setSelectedClimbersForComparison(prev => prev.filter(cid => cid !== id))}
+                          style={{
+                            background:'none',
+                            border:'none',
+                            color:'#60a5fa',
+                            cursor:'pointer',
+                            padding:0,
+                            fontSize:16,
+                            lineHeight:1
+                          }}
+                        >×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-          </div>
-          
-          {selectedClimbersForComparison.length >= 2 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={climbers
-                .filter((c:any) => selectedClimbersForComparison.includes(c.id))
-                .map((c:any)=>{
-                  const latestSession = sessions
-                    .filter((s:any)=>s.climberId===c.id)
-                    .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                  
-                  if(!latestSession) return {climber: c.name};
-                  
-                  const totals:any = {climber: c.name};
-                  ORDER.forEach((color:any)=>{
-                    totals[color] = latestSession[color]||0;
-                  });
-                  return totals;
-                })}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-                <XAxis dataKey="climber" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip 
-                  contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
-                  formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
-                />
-                <Legend />
-                {ORDER.map((color:any,i:number)=>(
-                  <Bar key={color} dataKey={color} fill={['#3b82f6','#a855f7','#ec4899','#f59e0b','#10b981','#06b6d4'][i%6]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{
-              height:300,
-              display:'flex',
-              alignItems:'center',
-              justifyContent:'center',
-              backgroundColor:'#0f172a',
-              borderRadius:8,
-              border:'1px solid #334155'
-            }}>
-              <p style={{color:'#64748b',fontSize:14}}>Select at least 2 climbers to view comparison</p>
-            </div>
-          )}
-        </div>
-
-        {/* Wall Section Breakdown */}
-        <div style={{marginTop:24}}>
-          <h3>Sends by Wall Section (Comparison)</h3>
-          <div style={{marginBottom:16}}>
-            <label style={{display:'block',fontWeight:'500',marginBottom:8,fontSize:14}}>
-              Select 2-5 climbers to compare:
-            </label>
-            <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-              {climbers.map((c:any)=>{
-                const isSelected = selectedClimbersForComparison.includes(c.id);
-                const canSelect = selectedClimbersForComparison.length < 5;
-                const canDeselect = selectedClimbersForComparison.length > 0;
-                
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedClimbersForComparison(prev => prev.filter(id => id !== c.id));
-                      } else if (canSelect) {
-                        setSelectedClimbersForComparison(prev => [...prev, c.id]);
-                      }
-                    }}
-                    style={{
-                      padding:'8px 16px',
-                      borderRadius:6,
-                      border: isSelected ? '2px solid #3b82f6' : '1px solid #475569',
-                      backgroundColor: isSelected ? '#1e3a8a' : '#1e293b',
-                      color: isSelected ? '#60a5fa' : '#94a3b8',
-                      cursor: (isSelected && canDeselect) || (!isSelected && canSelect) ? 'pointer' : 'not-allowed',
-                      opacity: (!isSelected && !canSelect) ? 0.5 : 1,
-                      fontWeight: isSelected ? '600' : '400',
-                      fontSize:13
-                    }}
-                    disabled={!isSelected && !canSelect}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedClimbersForComparison.length < 2 && (
-              <p style={{fontSize:12,color:'#94a3b8',marginTop:8,marginBottom:0}}>
-                Select at least 2 climbers to compare
-              </p>
-            )}
-          </div>
-          
-          {selectedClimbersForComparison.length >= 2 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={climbers
-                .filter((c:any) => selectedClimbersForComparison.includes(c.id))
-                .map((c:any)=>{
-                  const latestSession = sessions
-                    .filter((s:any)=>s.climberId===c.id)
-                    .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                    
-                  const result:any = {climber: c.name};
-                  
-                  if(latestSession?.wallCounts){
-                    Object.keys(wallTotals).forEach(section => {
-                      result[section] = 0;
-                      ORDER.forEach((color:any)=>{
-                        result[section] += latestSession.wallCounts[section]?.[color] || 0;
-                      });
-                    });
-                  } else {
-                    // Initialize with 0 for all sections
-                    Object.keys(wallTotals).forEach(section => {
-                      result[section] = 0;
-                    });
-                  }
-                  
-                  return result;
-                })}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-                <XAxis dataKey="climber" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip 
-                  contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
-                  formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
-                />
-                <Legend />
-                {Object.keys(wallTotals).map((section, idx) => {
-                  // Generate colors dynamically
-                  const colors = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-                  const displayName = formatWallSectionName(section);
+            <div style={{maxHeight:200,overflowY:'auto',border:'1px solid #475569',borderRadius:6,backgroundColor:'#0f172a'}}>
+              {climbers
+                .filter((c:any) => 
+                  c.name.toLowerCase().includes(comparisonSearchQuery.toLowerCase()) &&
+                  !selectedClimbersForComparison.includes(c.id)
+                )
+                .slice(0, 10) // Show max 10 results
+                .map((c:any) => {
+                  const canSelect = selectedClimbersForComparison.length < 5;
                   return (
-                    <Bar 
-                      key={section} 
-                      dataKey={section} 
-                      name={displayName} 
-                      fill={colors[idx % colors.length]} 
-                    />
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        if (canSelect) {
+                          setSelectedClimbersForComparison(prev => [...prev, c.id]);
+                          setComparisonSearchQuery(''); // Clear search after selection
+                        }
+                      }}
+                      style={{
+                        padding:'10px 12px',
+                        cursor: canSelect ? 'pointer' : 'not-allowed',
+                        opacity: canSelect ? 1 : 0.5,
+                        borderBottom:'1px solid #334155',
+                        transition:'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => canSelect && (e.currentTarget.style.backgroundColor = '#1e293b')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <div style={{fontSize:14,fontWeight:'500'}}>{c.name}</div>
+                    </div>
                   );
                 })}
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{
-              height:300,
-              display:'flex',
-              alignItems:'center',
-              justifyContent:'center',
-              backgroundColor:'#0f172a',
-              borderRadius:8,
-              border:'1px solid #334155'
-            }}>
-              <p style={{color:'#64748b',fontSize:14}}>Select at least 2 climbers to view comparison</p>
+              {comparisonSearchQuery && climbers.filter((c:any) => 
+                  c.name.toLowerCase().includes(comparisonSearchQuery.toLowerCase()) &&
+                  !selectedClimbersForComparison.includes(c.id)
+                ).length === 0 && (
+                <div style={{padding:20,textAlign:'center',color:'#64748b',fontSize:13}}>
+                  No climbers found
+                </div>
+              )}
             </div>
-          )}
+            {selectedClimbersForComparison.length < 2 && (
+              <p style={{fontSize:12,color:'#94a3b8',marginTop:8,marginBottom:0}}>
+                Select at least 2 climbers to view comparison charts
+              </p>
+            )}
+          </div>
         </div>
+
+        {selectedClimbersForComparison.length >= 2 ? (
+          <>
+            {/* Total Score Comparison */}
+            <div style={{marginTop:24}}>
+              <h3>Total Score (Comparison)</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={climbers
+                  .filter((c:any) => selectedClimbersForComparison.includes(c.id))
+                  .map((c:any)=>{
+                    const latestSession = sessions
+                      .filter((s:any)=>s.climberId===c.id)
+                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                    
+                    return {
+                      climber: c.name,
+                      score: latestSession?.score || 0
+                    };
+                  })
+                  .sort((a, b) => b.score - a.score) // Sort by score descending
+                }>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                  <XAxis dataKey="climber" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip 
+                    contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                    formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                  />
+                  <Legend />
+                  <Bar dataKey="score" name="Total Score" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Color Totals */}
+            <div style={{marginTop:24}}>
+              <h3>Sends by Color (Comparison)</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={climbers
+                  .filter((c:any) => selectedClimbersForComparison.includes(c.id))
+                  .map((c:any)=>{
+                    const latestSession = sessions
+                      .filter((s:any)=>s.climberId===c.id)
+                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                    
+                    if(!latestSession) return {climber: c.name};
+                    
+                    const totals:any = {climber: c.name};
+                    ORDER.forEach((color:any)=>{
+                      totals[color] = latestSession[color]||0;
+                    });
+                    return totals;
+                  })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                  <XAxis dataKey="climber" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip 
+                    contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                    formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                  />
+                  <Legend />
+                  {ORDER.map((color:any,i:number)=>{
+                    const colorMap: any = {
+                      green: '#10b981',
+                      blue: '#3b82f6',
+                      yellow: '#eab308',
+                      orange: '#f97316',
+                      red: '#ef4444',
+                      black: '#d1d5db'
+                    };
+                    return <Bar key={color} dataKey={color} fill={colorMap[color]} />;
+                  })}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Wall Section Breakdown */}
+            <div style={{marginTop:24}}>
+              <h3>Sends by Wall Section (Comparison)</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={climbers
+                  .filter((c:any) => selectedClimbersForComparison.includes(c.id))
+                  .map((c:any)=>{
+                    const latestSession = sessions
+                      .filter((s:any)=>s.climberId===c.id)
+                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                      
+                    const result:any = {climber: c.name};
+                    
+                    if(latestSession?.wallCounts){
+                      Object.keys(wallTotals).forEach(section => {
+                        result[section] = 0;
+                        ORDER.forEach((color:any)=>{
+                          result[section] += latestSession.wallCounts[section]?.[color] || 0;
+                        });
+                      });
+                    } else {
+                      // Initialize with 0 for all sections
+                      Object.keys(wallTotals).forEach(section => {
+                        result[section] = 0;
+                      });
+                    }
+                    
+                    return result;
+                  })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                  <XAxis dataKey="climber" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip 
+                    contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                    formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                  />
+                  <Legend />
+                  {Object.keys(wallTotals).map((section, idx) => {
+                    // Generate colors dynamically
+                    const colors = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+                    const displayName = formatWallSectionName(section);
+                    return (
+                      <Bar 
+                        key={section} 
+                        dataKey={section} 
+                        name={displayName} 
+                        fill={colors[idx % colors.length]} 
+                      />
+                    );
+                  })}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        ) : (
+          <div style={{
+            height:300,
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'center',
+            backgroundColor:'#0f172a',
+            borderRadius:8,
+            border:'1px solid #334155',
+            marginTop:24
+          }}>
+            <p style={{color:'#64748b',fontSize:14}}>Select at least 2 climbers to view comparison charts</p>
+          </div>
+        )}
       </section>
 
       <section style={{marginTop:24}}>
