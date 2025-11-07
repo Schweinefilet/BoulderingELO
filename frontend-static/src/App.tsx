@@ -158,6 +158,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [showGoogleNamePrompt, setShowGoogleNamePrompt] = useState(false);
   const [googleCredential, setGoogleCredential] = useState<string | null>(null);
   const [googleName, setGoogleName] = useState('');
+  const [googleUsername, setGoogleUsername] = useState('');
   const [googleEmail, setGoogleEmail] = useState('');
   
   // Check if Google OAuth is configured
@@ -203,6 +204,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         setGoogleCredential(credentialResponse.credential);
         setGoogleName(payload.name || '');
         setGoogleEmail(payload.email || '');
+        // Suggest username from email (part before @)
+        setGoogleUsername(payload.email ? payload.email.split('@')[0] : '');
         setShowGoogleNamePrompt(true);
         setLoading(false);
         return;
@@ -221,14 +224,15 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   }
 
   async function confirmGoogleSignUp() {
-    if (!googleCredential) return;
+    if (!googleCredential || !googleName.trim() || !googleUsername.trim()) return;
     
     setLoading(true);
     setError('');
     
     try {
-      // Send to backend with the confirmed name
-      const result = await api.googleLogin(googleCredential, googleName);
+      // Send to backend with the confirmed name and username
+      const result = await api.googleLogin(googleCredential, googleName, googleUsername);
+      setShowGoogleNamePrompt(false);
       api.setToken(result.token);
       api.setUser(result.user);
       onLogin();
@@ -448,6 +452,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             setShowGoogleNamePrompt(false);
             setGoogleCredential(null);
             setGoogleName('');
+            setGoogleUsername('');
             setGoogleEmail('');
           }}
         >
@@ -455,10 +460,26 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             className="bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold mb-4">Confirm Your Name</h3>
+            <h3 className="text-xl font-bold mb-4">Complete Your Profile</h3>
             <p className="text-gray-300 text-sm mb-4">
               You're signing up with <span className="font-semibold text-white">{googleEmail}</span>
             </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                value={googleUsername}
+                onChange={(e) => setGoogleUsername(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Choose a username"
+                autoFocus
+              />
+              <p className="text-gray-400 text-xs mt-1">
+                Used for login and displayed in URLs
+              </p>
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
                 Full Name
@@ -469,7 +490,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                 onChange={(e) => setGoogleName(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter your full name"
-                autoFocus
               />
               <p className="text-gray-400 text-xs mt-1">
                 This will be displayed on the leaderboard
@@ -478,7 +498,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             <div className="flex gap-3">
               <button
                 onClick={confirmGoogleSignUp}
-                disabled={!googleName.trim()}
+                disabled={!googleName.trim() || !googleUsername.trim()}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition-colors"
               >
                 Create Account
@@ -488,6 +508,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   setShowGoogleNamePrompt(false);
                   setGoogleCredential(null);
                   setGoogleName('');
+                  setGoogleUsername('');
                   setGoogleEmail('');
                 }}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors"

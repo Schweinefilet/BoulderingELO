@@ -52,7 +52,7 @@ export async function login(req: AuthRequest, res: Response) {
  */
 export async function googleAuth(req: AuthRequest, res: Response) {
   try {
-    const { credential, customName } = req.body;
+    const { credential, customName, customUsername } = req.body;
     
     if (!credential) {
       return sendError(res, 'Google credential required', 400);
@@ -76,6 +76,8 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     const email = payload.email;
     // Use customName if provided, otherwise use name from Google, or email prefix as fallback
     const name = customName || payload.name || email.split('@')[0];
+    // Use customUsername if provided, otherwise use email as username
+    const username = customUsername || email.toLowerCase();
     const googleId = payload.sub;
     
     // Check if a user exists with this Google ID
@@ -98,12 +100,12 @@ export async function googleAuth(req: AuthRequest, res: Response) {
       });
     }
     
-    // Check if user exists by email (use email as username)
-    let climber = await db.getClimberByUsername(email.toLowerCase());
+    // Check if user exists by username
+    let climber = await db.getClimberByUsername(username);
     
     if (!climber) {
       // Create new user with Google account
-      climber = await db.addClimber(name, email.toLowerCase(), null, 'user', googleId);
+      climber = await db.addClimber(name, username, null, 'user', googleId);
     } else {
       // Link Google account to existing user
       await db.linkGoogleAccount(climber.id!, googleId);

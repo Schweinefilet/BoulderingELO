@@ -133,11 +133,11 @@ export async function login(username: string, password: string): Promise<{ token
   return handleResponse<{ token: string; user: User }>(response);
 }
 
-export async function googleLogin(credential: string, customName?: string): Promise<{ token: string; user: User }> {
+export async function googleLogin(credential: string, customName?: string, customUsername?: string): Promise<{ token: string; user: User }> {
   const response = await fetchWithTimeout(`${API_URL}/api/auth/google`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ credential, customName })
+    body: JSON.stringify({ credential, customName, customUsername })
   });
   return handleResponse<{ token: string; user: User }>(response);
 }
