@@ -711,7 +711,7 @@ export default function App(){
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false)
   
   // Sessions pagination
-  const [sessionsToShow, setSessionsToShow] = useState(8)
+  const [sessionsToShow, setSessionsToShow] = useState(1)
 
   // Comparison charts state
   const [selectedClimbersForComparison, setSelectedClimbersForComparison] = useState<number[]>([])
@@ -2454,7 +2454,7 @@ export default function App(){
                   {hasMore && (
                     <div style={{textAlign:'center',marginTop:16}}>
                       <button
-                        onClick={() => setSessionsToShow(prev => prev + 8)}
+                        onClick={() => setSessionsToShow(prev => prev + 3)}
                         style={{
                           padding:'10px 32px',
                           backgroundColor:'#3b82f6',
@@ -2469,7 +2469,7 @@ export default function App(){
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
                       >
-                        View More
+                        See More
                       </button>
                     </div>
                   )}
