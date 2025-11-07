@@ -682,21 +682,22 @@ export default function App(){
       });
       setWallCounts(newCounts);
       
-      // Update dropdownWall if current selection no longer exists
+      // Update dropdownWall ONLY if current selection no longer exists in newSections
       if (!newSections.includes(dropdownWall)) {
+        console.log(`Dropdown wall "${dropdownWall}" no longer exists in new sections, switching to "${newSections[0]}"`);
         setDropdownWall(newSections[0] || '');
       }
     }
   }, [wallTotals, wallTotalsLoaded]);
   
-  // Validate dropdownWall whenever wallCounts changes
+  // Ensure dropdownWall is always valid when wallTotals changes
   useEffect(() => {
-    const availableSections = Object.keys(wallCounts);
+    const availableSections = Object.keys(wallTotals);
     if (availableSections.length > 0 && !availableSections.includes(dropdownWall)) {
-      console.log(`dropdownWall "${dropdownWall}" not found in wallCounts, switching to "${availableSections[0]}"`);
+      console.log(`Invalid dropdownWall "${dropdownWall}", resetting to first available: "${availableSections[0]}"`);
       setDropdownWall(availableSections[0]);
     }
-  }, [wallCounts, dropdownWall]);
+  }, [wallTotals]);
   
   // Check for expired sections on mount and daily
   useEffect(() => {
