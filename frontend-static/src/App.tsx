@@ -27,10 +27,17 @@ const CLIMB_CATEGORY_COLUMNS: Array<{ key: keyof Counts; label: string; color: s
 
 const EMPTY_COUNTS: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
 
-const normalizeSessionCounts = (session: any): Counts => {
+const normalizeSessionCounts = (session: any, expiredSections: string[] = []): Counts => {
   if (!session) return { ...EMPTY_COUNTS };
   if (session.wallCounts) {
-    return combineCounts(session.wallCounts as WallCounts);
+    // Filter out expired sections before combining
+    const filteredWallCounts: WallCounts = {};
+    Object.keys(session.wallCounts).forEach(section => {
+      if (!expiredSections.includes(section)) {
+        filteredWallCounts[section] = session.wallCounts[section];
+      }
+    });
+    return combineCounts(filteredWallCounts as WallCounts);
   }
   return {
     green: session.green ?? 0,
@@ -111,14 +118,19 @@ function saveExpiryDates(config: ExpiryConfig) {
 function checkAndResetExpiredSections(
   wallTotals: Record<string, Record<string, number>>,
   expiryDates: ExpiryConfig
-): { updated: boolean; newTotals: Record<string, Record<string, number>>; newExpiry: ExpiryConfig; expiredSections: string[] } {
+): { 
+  updated: boolean; 
+  newTotals: Record<string, Record<string, number>>; 
+  newExpiry: ExpiryConfig; 
+  expiredSections: {section: string, date: string}[] 
+} {
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Start of today
   
   let updated = false;
   const newTotals = { ...wallTotals };
   const newExpiry = { ...expiryDates };
-  const expiredSections: string[] = [];
+  const expiredSections: {section: string, date: string}[] = [];
   
   Object.keys(expiryDates).forEach(section => {
     const expiryDate = new Date(expiryDates[section]);
@@ -135,10 +147,10 @@ function checkAndResetExpiredSections(
         red: null as any,
         black: null as any
       };
+      // Track which section expired with its date
+      expiredSections.push({section, date: expiryDates[section]});
       // Remove the expiry date
       delete newExpiry[section];
-      // Track which section expired
-      expiredSections.push(section);
       updated = true;
     }
   });
@@ -683,6 +695,7 @@ export default function App(){
   const [wallTotalsLoaded, setWallTotalsLoaded] = useState(false)
   const [wallSectionImages, setWallSectionImages] = useState<Record<string, string[]>>({}) // Store array of image URLs for each wall section
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track current image in carousel
+  const [expiredSections, setExpiredSections] = useState<string[]>([]) // Track expired wall sections
   
   // Helper function to format wall section names properly
   const formatWallSectionName = (section: string): string => {
@@ -939,15 +952,42 @@ export default function App(){
         saveExpiryDates(result.newExpiry);
         
         // Notify API about expired sections so scores can be recalculated
-        for (const section of result.expiredSections) {
+        for (const expired of result.expiredSections) {
           try {
-            await api.addExpiredSection(section);
+            await api.addExpiredSection(expired.section);
           } catch (e) {
             console.error('Failed to add expired section to API:', e);
           }
         }
         
-        alert(`Wall sections expired: ${result.expiredSections.join(', ')}. Routes have been reset and scores will be recalculated.`);
+        // Update local expired sections list
+        const updatedExpiredSections = [...expiredSections, ...result.expiredSections.map(e => e.section)];
+        setExpiredSections(updatedExpiredSections);
+        
+        // Show toast notification for each expired section
+        const formatWallSectionName = (section: string): string => {
+          const specialCases: Record<string, string> = {
+            'uMassLogo': 'UMass Logo',
+            'umasslogo': 'UMass Logo',
+            'tVWall': 'TV Wall',
+            'tvwall': 'TV Wall',
+            'tvWall': 'TV Wall',
+            'TVWall': 'TV Wall',
+            'UMassLogo': 'UMass Logo'
+          };
+          if (specialCases[section]) return specialCases[section];
+          return section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1').trim();
+        };
+        
+        const expiryMessages = result.expiredSections.map(exp => 
+          `${formatWallSectionName(exp.section)} expired on ${new Date(exp.date).toLocaleDateString()}`
+        ).join('\n');
+        
+        setToast({
+          message: `⚠️ Wall sections expired:\n${expiryMessages}\nRoutes reset. Scores will be recalculated.`, 
+          type: 'success'
+        });
+        setTimeout(() => setToast(null), 8000); // Show for 8 seconds
       }
     };
     
@@ -1000,19 +1040,22 @@ export default function App(){
     setError(null);
     try {
       console.log('Loading data from API...');
-      const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
+      const [loadedClimbers, loadedSessions, loadedLeaderboard, loadedExpiredSections] = await Promise.all([
         api.getClimbers(),
         api.getSessions(),
-        api.getLeaderboard()
+        api.getLeaderboard(),
+        api.getExpiredSections()
       ]);
       console.log('Data loaded successfully:', { 
         climbers: loadedClimbers.length, 
         sessions: loadedSessions.length, 
-        leaderboard: loadedLeaderboard.length 
+        leaderboard: loadedLeaderboard.length,
+        expiredSections: loadedExpiredSections.length
       });
       setClimbers(loadedClimbers);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard);
+      setExpiredSections(loadedExpiredSections);
       await loadVideos(); // Load videos too
     } catch (err: any) {
       console.error('Failed to load data:', err);
@@ -1959,7 +2002,7 @@ export default function App(){
                 const latestSession = climberSessions.length > 0 
                   ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
                   : null;
-                const latestCounts = normalizeSessionCounts(latestSession);
+                const latestCounts = normalizeSessionCounts(latestSession, expiredSections);
 
                 return (
                     <div 
