@@ -1793,6 +1793,33 @@ export default function App(){
         </div>
       )}
       
+      {/* Expired Sections Banner */}
+      {expiredSections.length > 0 && (
+        <div style={{
+          backgroundColor:'rgba(249, 115, 22, 0.15)',
+          border:'1px solid rgba(249, 115, 22, 0.3)',
+          borderRadius:8,
+          padding:'12px 16px',
+          marginBottom:16,
+          color:'#fdba74'
+        }}>
+          <div style={{fontWeight:'600',marginBottom:4,fontSize:14}}>
+            ⚠️ Wall Sections Replaced
+          </div>
+          <div style={{fontSize:13,lineHeight:1.5}}>
+            The following sections have been replaced with new routes:
+            <ul style={{marginTop:4,marginBottom:4,paddingLeft:20}}>
+              {expiredSections.map((exp, idx) => (
+                <li key={idx}>
+                  <strong>{formatWallSectionName(exp.wall_section)}</strong> - replaced on {new Date(exp.expired_at).toLocaleDateString()}
+                </li>
+              ))}
+            </ul>
+            <em>Your score has been recalculated to reflect only active routes. Previous climbs on these sections no longer count toward your total.</em>
+          </div>
+        </div>
+      )}
+      
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
@@ -2449,7 +2476,9 @@ export default function App(){
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.keys(wallTotals).map(section => {
+                    {Object.keys(wallTotals)
+                      .filter(section => !expiredSections.some(exp => exp.wall_section === section))
+                      .map(section => {
                       const sectionCounts = wallCounts[section] || emptyWall();
                       const sectionTotals = wallTotals[section] || {};
                       const displayName = formatWallSectionName(section);
@@ -3321,7 +3350,7 @@ export default function App(){
           <>
             {/* Total Score Comparison */}
             <div style={{marginTop:24}}>
-              <h3>Total Score (Comparison)</h3>
+              <h3>Total Score Over Time (Comparison)</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={(() => {
                   // Get all sessions for selected climbers in last 30 days
