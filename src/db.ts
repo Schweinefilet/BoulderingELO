@@ -312,10 +312,20 @@ export async function updateSessionWallCounts(sessionId: number, wallCounts: Wal
   try {
     await client.query('BEGIN');
     
+    // Recalculate total counts from wall counts
+    const { combineCounts } = await import('./score');
+    const totalCounts = combineCounts(wallCounts);
+    
     // Update wall counts
     await client.query(
       'UPDATE wall_counts SET counts = $1 WHERE session_id = $2',
       [JSON.stringify(wallCounts), sessionId]
+    );
+    
+    // Update total counts table
+    await client.query(
+      'UPDATE counts SET green = $1, blue = $2, yellow = $3, orange = $4, red = $5, black = $6 WHERE session_id = $7',
+      [totalCounts.green, totalCounts.blue, totalCounts.yellow, totalCounts.orange, totalCounts.red, totalCounts.black, sessionId]
     );
     
     // Update session score
