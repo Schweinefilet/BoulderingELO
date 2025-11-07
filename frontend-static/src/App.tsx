@@ -3203,18 +3203,35 @@ export default function App(){
           .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const profileLeaderboardEntry = leaderboard.find((e:any) => e.climber === profileClimber?.name);
         
-        // Calculate total climbs by color from LATEST session only
-        const latestSession = profileSessions[0];
-        const totalClimbs = {
-          green: latestSession?.green || 0,
-          blue: latestSession?.blue || 0,
-          yellow: latestSession?.yellow || 0,
-          orange: latestSession?.orange || 0,
-          red: latestSession?.red || 0,
-          black: latestSession?.black || 0
-        };
+        // Calculate CUMULATIVE total climbs by tracking increases between sessions
+        // Each session stores current state, so we calculate deltas to get actual climbs completed
+        const sortedSessions = [...profileSessions].reverse(); // Oldest to newest
+        
+        let totalClimbs = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+        let previousCounts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+        
+        sortedSessions.forEach(session => {
+          const currentCounts = {
+            green: session.green || 0,
+            blue: session.blue || 0,
+            yellow: session.yellow || 0,
+            orange: session.orange || 0,
+            red: session.red || 0,
+            black: session.black || 0
+          };
+          
+          // Add the increase (or 0 if it decreased due to replacement)
+          Object.keys(currentCounts).forEach(color => {
+            const key = color as keyof typeof currentCounts;
+            const increase = Math.max(0, currentCounts[key] - previousCounts[key]);
+            totalClimbs[key] += increase;
+          });
+          
+          previousCounts = currentCounts;
+        });
         
         // Calculate current climbs (from most recent session)
+        const latestSession = profileSessions[0];
         const currentClimbs = latestSession ? {
           green: latestSession.green || 0,
           blue: latestSession.blue || 0,
