@@ -307,6 +307,32 @@ export async function addSession(session: Session & { score: number }, counts: C
   }
 }
 
+export async function updateSessionWallCounts(sessionId: number, wallCounts: WallCounts, score: number) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Update wall counts
+    await client.query(
+      'UPDATE wall_counts SET counts = $1 WHERE session_id = $2',
+      [JSON.stringify(wallCounts), sessionId]
+    );
+    
+    // Update session score
+    await client.query(
+      'UPDATE sessions SET score = $1 WHERE id = $2',
+      [score, sessionId]
+    );
+    
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getSessions(filter?: { from?: string; to?: string; climberId?: number }) {
   let query = `
     SELECT s.*, c.green, c.blue, c.yellow, c.orange, c.red, c.black,

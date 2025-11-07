@@ -204,7 +204,7 @@ export async function updateClimberProfile(req: AuthRequest, res: Response) {
 }
 
 /**
- * Add a wall section to the expired sections list
+ * Expire a wall section - WIPE all climb data from this section for ALL users
  */
 export async function addExpiredSection(req: AuthRequest, res: Response) {
   try {
@@ -214,17 +214,37 @@ export async function addExpiredSection(req: AuthRequest, res: Response) {
       return sendError(res, 'sectionName required', 400);
     }
     
-    const expiredSections = (await db.getSetting('expiredSections')) || [];
+    // Get all sessions and remove climbs from this section
+    const allSessions = await db.getSessions({});
+    let updatedCount = 0;
     
-    // Add section if not already in list
+    for (const session of allSessions) {
+      if (session.wallCounts && session.wallCounts[sectionName]) {
+        // Remove this section from wallCounts
+        const updatedWallCounts = { ...session.wallCounts };
+        delete updatedWallCounts[sectionName];
+        
+        // Recalculate score without this section
+        const totalCounts = combineCounts(updatedWallCounts);
+        const newScore = scoreSession(totalCounts);
+        
+        // Update session in database
+        await db.updateSessionWallCounts(session.id, updatedWallCounts, newScore);
+        updatedCount++;
+      }
+    }
+    
+    // Track this section as expired for UI notifications
+    const expiredSections = (await db.getSetting('expiredSections')) || [];
     if (!expiredSections.includes(sectionName)) {
       expiredSections.push(sectionName);
       await db.setSetting('expiredSections', expiredSections);
     }
     
     return sendSuccess(res, { 
-      message: 'Section added to expired list',
-      expiredSections 
+      message: `Section expired: removed ${sectionName} from ${updatedCount} sessions`,
+      expiredSections,
+      updatedCount
     });
   } catch (err: any) {
     return handleControllerError(res, err);

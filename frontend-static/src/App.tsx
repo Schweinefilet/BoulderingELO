@@ -1845,33 +1845,6 @@ export default function App(){
         </div>
       )}
       
-      {/* Expired Sections Banner */}
-      {expiredSections.length > 0 && (
-        <div style={{
-          backgroundColor:'rgba(249, 115, 22, 0.15)',
-          border:'1px solid rgba(249, 115, 22, 0.3)',
-          borderRadius:8,
-          padding:'12px 16px',
-          marginBottom:16,
-          color:'#fdba74'
-        }}>
-          <div style={{fontWeight:'600',marginBottom:4,fontSize:14}}>
-            ⚠️ Wall Sections Replaced
-          </div>
-          <div style={{fontSize:13,lineHeight:1.5}}>
-            The following sections have been replaced with new routes:
-            <ul style={{marginTop:4,marginBottom:4,paddingLeft:20}}>
-              {expiredSections.map((section, idx) => (
-                <li key={idx}>
-                  <strong>{formatWallSectionName(section)}</strong>
-                </li>
-              ))}
-            </ul>
-            <em>Your score has been recalculated to reflect only active routes. Previous climbs on these sections no longer count toward your total.</em>
-          </div>
-        </div>
-      )}
-      
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
@@ -2003,6 +1976,33 @@ export default function App(){
             <p>Track your climbing progress with our weighted scoring system. View stats below or login to add your sessions!</p>
           </div>
         </GlowingCard>
+      )}
+      
+      {/* Expired Sections Banner */}
+      {expiredSections.length > 0 && (
+        <div style={{
+          backgroundColor:'rgba(249, 115, 22, 0.15)',
+          border:'1px solid rgba(249, 115, 22, 0.3)',
+          borderRadius:8,
+          padding:'12px 16px',
+          marginBottom:16,
+          color:'#fdba74'
+        }}>
+          <div style={{fontWeight:'600',marginBottom:4,fontSize:14}}>
+            ⚠️ Wall Sections Replaced
+          </div>
+          <div style={{fontSize:13,lineHeight:1.5}}>
+            The following sections have been replaced with new routes:
+            <ul style={{marginTop:4,marginBottom:4,paddingLeft:20}}>
+              {expiredSections.map((section, idx) => (
+                <li key={idx}>
+                  <strong>{formatWallSectionName(section)}</strong>
+                </li>
+              ))}
+            </ul>
+            <em>Your score has been recalculated to reflect only active routes. Previous climbs on these sections no longer count toward your total.</em>
+          </div>
+        </div>
       )}
       
       <GlowingCard>
