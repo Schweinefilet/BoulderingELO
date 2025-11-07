@@ -174,7 +174,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return handleResponse<{ success: boolean; message: string }>(response);
 }
 
-export async function updateUserSettings(settings: { country?: string; started_bouldering?: string; bio?: string }): Promise<{ success: boolean; user: any }> {
+export async function updateUserSettings(settings: { name?: string; country?: string; started_bouldering?: string; bio?: string }): Promise<{ success: boolean; user: any }> {
   const response = await fetch(`${API_URL}/api/user/settings`, {
     method: 'PUT',
     headers: getHeaders(true),

@@ -354,7 +354,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </button>
         </form>
 
-        {mode === 'login' && isGoogleConfigured && (
+        {isGoogleConfigured && (
           <>
             <div style={{
               margin:'24px 0',
@@ -386,12 +386,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                 <GoogleLogin
                   onSuccess={handleGoogleLogin}
                   onError={() => {
-                    setError('Google login failed. Please try again.');
+                    setError(`Google ${mode === 'login' ? 'login' : 'sign up'} failed. Please try again.`);
                   }}
                   theme="filled_blue"
                   size="large"
                   width="400"
                   shape="pill"
+                  text={mode === 'login' ? 'signin_with' : 'signup_with'}
                 />
               </div>
             </div>
@@ -575,6 +576,7 @@ export default function App(){
   
   // Settings modal state
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsName, setSettingsName] = useState('')
   const [settingsCountry, setSettingsCountry] = useState('')
   const [settingsStarted, setSettingsStarted] = useState('')
   const [settingsBio, setSettingsBio] = useState('')
@@ -1513,6 +1515,7 @@ export default function App(){
                   // Load current settings when opening modal
                   const currentClimber = climbers.find(c => c.id === user?.climberId);
                   if (currentClimber) {
+                    setSettingsName(currentClimber.name || '');
                     setSettingsCountry(currentClimber.country || '');
                     setSettingsStarted(currentClimber.started_bouldering || '');
                     setSettingsBio(currentClimber.bio || '');
@@ -2918,6 +2921,7 @@ export default function App(){
                 
                 try {
                   await api.updateUserSettings({
+                    name: settingsName,
                     country: settingsCountry,
                     started_bouldering: settingsStarted,
                     bio: settingsBio
@@ -2936,6 +2940,32 @@ export default function App(){
                   setSettingsError(err.message || 'Failed to update settings');
                 }
               }}>
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:12,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:12
+                }}>
+                  <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>Full Name</label>
+                  <input
+                    type="text"
+                    value={settingsName}
+                    onChange={e => setSettingsName(e.target.value)}
+                    placeholder="Your full name"
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#1e293b',
+                      color:'white',
+                      fontSize:14,
+                      boxSizing:'border-box'
+                    }}
+                  />
+                </div>
+
                 <div style={{
                   backgroundColor:'#0f172a',
                   padding:12,
@@ -3274,6 +3304,7 @@ export default function App(){
                 <button
                   onClick={() => {
                     setShowSettings(false);
+                    setSettingsName('');
                     setSettingsCountry('');
                     setSettingsStarted('');
                     setSettingsBio('');

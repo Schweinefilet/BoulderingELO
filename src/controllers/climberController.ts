@@ -53,8 +53,9 @@ export async function deleteClimber(req: AuthRequest, res: Response) {
  */
 export async function updateSettings(req: AuthRequest, res: Response) {
   try {
-    const { country, started_bouldering, bio } = req.body;
+    const { name, country, started_bouldering, bio } = req.body;
     const result = await db.updateUserSettings(req.user!.climberId, { 
+      name,
       country, 
       started_bouldering, 
       bio 
