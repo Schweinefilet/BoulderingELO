@@ -959,74 +959,10 @@ export default function App(){
     }
   }, [wallTotals]);
   
-  // Check for expired sections on mount and daily
+  // Auto-expiry feature REMOVED - keeping useEffect stub to prevent issues
   useEffect(() => {
-    const checkExpiry = async () => {
-      const result = checkAndResetExpiredSections(wallTotals, expiryDates);
-      if (result.updated) {
-        setWallTotals(result.newTotals);
-        await saveWallTotalsToAPI(result.newTotals);
-        setExpiryDates(result.newExpiry);
-        saveExpiryDates(result.newExpiry);
-        
-        // Notify API about expired sections so scores can be recalculated
-        for (const expired of result.expiredSections) {
-          try {
-            await api.addExpiredSection(expired.section);
-          } catch (e) {
-            console.error('Failed to add expired section to API:', e);
-          }
-        }
-        
-        // Update local expired sections list
-        const updatedExpiredSections = [...expiredSections, ...result.expiredSections.map(e => e.section)];
-        setExpiredSections(updatedExpiredSections);
-        
-        // Show toast notification for each expired section
-        const formatWallSectionName = (section: string): string => {
-          const specialCases: Record<string, string> = {
-            'uMassLogo': 'UMass Logo',
-            'umasslogo': 'UMass Logo',
-            'tVWall': 'TV Wall',
-            'tvwall': 'TV Wall',
-            'tvWall': 'TV Wall',
-            'TVWall': 'TV Wall',
-            'UMassLogo': 'UMass Logo'
-          };
-          if (specialCases[section]) return specialCases[section];
-          return section.charAt(0).toUpperCase() + section.slice(1).replace(/([A-Z])/g, ' $1').trim();
-        };
-        
-        const expiryMessages = result.expiredSections.map(exp => 
-          `${formatWallSectionName(exp.section)} expired on ${new Date(exp.date).toLocaleDateString()}`
-        ).join('\n');
-        
-        setToast({
-          message: `⚠️ Wall sections expired:\n${expiryMessages}\nRoutes reset. Scores will be recalculated.`, 
-          type: 'success'
-        });
-        setTimeout(() => setToast(null), 8000); // Show for 8 seconds
-      }
-    };
-    
-    checkExpiry();
-    
-    // Check daily at midnight
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    const timeUntilMidnight = tomorrow.getTime() - now.getTime();
-    
-    const timer = setTimeout(() => {
-      checkExpiry();
-      // Set up daily interval
-      const dailyInterval = setInterval(checkExpiry, 24 * 60 * 60 * 1000);
-      return () => clearInterval(dailyInterval);
-    }, timeUntilMidnight);
-    
-    return () => clearTimeout(timer);
-  }, []); // Only run on mount
+    // Feature removed
+  }, []);
   
   // Auto-select climber for non-admin users
   useEffect(() => {
@@ -1058,22 +994,19 @@ export default function App(){
     setError(null);
     try {
       console.log('Loading data from API...');
-      const [loadedClimbers, loadedSessions, loadedLeaderboard, loadedExpiredSections] = await Promise.all([
+      const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
         api.getClimbers(),
         api.getSessions(),
-        api.getLeaderboard(),
-        api.getExpiredSections()
+        api.getLeaderboard()
       ]);
       console.log('Data loaded successfully:', { 
         climbers: loadedClimbers.length, 
         sessions: loadedSessions.length, 
-        leaderboard: loadedLeaderboard.length,
-        expiredSections: loadedExpiredSections.length
+        leaderboard: loadedLeaderboard.length
       });
       setClimbers(loadedClimbers);
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard);
-      setExpiredSections(loadedExpiredSections);
       await loadVideos(); // Load videos too
     } catch (err: any) {
       console.error('Failed to load data:', err);
@@ -1512,79 +1445,10 @@ export default function App(){
     alert(`Pasted data to "${section}"`);
   }
 
-  // Manually expire a section (reset to null/?)
+  // Manually expire a section (FEATURE REMOVED - kept as stub to avoid breaking UI)
   async function manuallyExpireSection(section: string) {
-    const displayName = formatWallSectionName(section);
-    const today = new Date().toLocaleDateString();
-    
-    if (!confirm(`Manually expire "${displayName}"? This will:\n• Reset all route totals to ? (null)\n• Remove all climbs from this section from ALL users\n• Recalculate all scores (removing points from ${displayName})\n• Add persistent notification visible to all users`)) {
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      // 1. Add to expired sections list on backend FIRST
-      await api.addExpiredSection(section);
-      
-      // 2. Get updated expired sections immediately
-      const updatedExpired = await api.getExpiredSections();
-      setExpiredSections(updatedExpired);
-      
-      // 3. Reset all routes to null in wall totals
-      const updatedTotals = {
-        ...wallTotals,
-        [section]: {
-          green: null as any,
-          blue: null as any,
-          yellow: null as any,
-          orange: null as any,
-          red: null as any,
-          black: null as any
-        }
-      };
-      setWallTotals(updatedTotals);
-      await saveWallTotalsToAPI(updatedTotals);
-
-      // 4. Clear expiry date
-      const updatedExpiry = { ...expiryDates };
-      delete updatedExpiry[section];
-      setExpiryDates(updatedExpiry);
-      saveExpiryDates(updatedExpiry);
-      
-      // 5. Reload ALL data with the new expired sections list
-      const [updatedSessions, updatedLeaderboard, updatedClimbers] = await Promise.all([
-        api.getSessions(),
-        api.getLeaderboard(),
-        api.getClimbers()
-      ]);
-      
-      setSessions(updatedSessions);
-      setLeaderboard(updatedLeaderboard);
-      setClimbers(updatedClimbers);
-      
-      // 6. Remove section from wallCounts state for current session
-      const newWallCounts: any = {};
-      Object.keys(wallCounts).forEach(sec => {
-        if (sec !== section) {
-          newWallCounts[sec] = wallCounts[sec];
-        }
-      });
-      setWallCounts(newWallCounts);
-      
-      // 7. Show toast notification
-      setToast({
-        message: `⚠️ "${displayName}" replaced on ${today}. Scores recalculated for all climbers.`,
-        type: 'success'
-      });
-      setTimeout(() => setToast(null), 10000);
-      
-    } catch (err: any) {
-      console.error('Error expiring section:', err);
-      setError(`Failed to expire section: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    alert('The "Expire Now" feature has been removed. Please use the admin panel to manage wall sections.');
+    return;
   }
 
   async function resetToDefaults() {
