@@ -458,7 +458,16 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       {/* Google Name Confirmation Modal */}
       {showGoogleNamePrompt && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
           onClick={() => {
             setShowGoogleNamePrompt(false);
             setGoogleCredential(null);
@@ -468,49 +477,100 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           }}
         >
           <div 
-            className="bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
+            style={{
+              backgroundColor: '#1e293b',
+              padding: 24,
+              borderRadius: 8,
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              maxWidth: '28rem',
+              width: '100%',
+              margin: '0 1rem'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold mb-4">Complete Your Profile</h3>
-            <p className="text-gray-300 text-sm mb-4">
-              You're signing up with <span className="font-semibold text-white">{googleEmail}</span>
+            <h3 style={{fontSize: 20, fontWeight: 'bold', marginBottom: 16, marginTop: 0}}>Complete Your Profile</h3>
+            <p style={{color: '#cbd5e1', fontSize: 14, marginBottom: 16}}>
+              You're signing up with <span style={{fontWeight: 600, color: 'white'}}>{googleEmail}</span>
             </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
+            <div style={{marginBottom: 16}}>
+              <label style={{display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8}}>
                 Username
               </label>
               <input
                 type="text"
                 value={googleUsername}
                 onChange={(e) => setGoogleUsername(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #475569',
+                  borderRadius: 6,
+                  color: 'white',
+                  fontSize: 14,
+                  outline: 'none'
+                }}
                 placeholder="Choose a username"
                 autoFocus
+                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#475569'}
               />
-              <p className="text-gray-400 text-xs mt-1">
+              <p style={{color: '#94a3b8', fontSize: 12, marginTop: 4, marginBottom: 0}}>
                 Used for login and displayed in URLs
               </p>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
+            <div style={{marginBottom: 16}}>
+              <label style={{display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8}}>
                 Full Name
               </label>
               <input
                 type="text"
                 value={googleName}
                 onChange={(e) => setGoogleName(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #475569',
+                  borderRadius: 6,
+                  color: 'white',
+                  fontSize: 14,
+                  outline: 'none'
+                }}
                 placeholder="Enter your full name"
+                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#475569'}
               />
-              <p className="text-gray-400 text-xs mt-1">
+              <p style={{color: '#94a3b8', fontSize: 12, marginTop: 4, marginBottom: 0}}>
                 This will be displayed on the leaderboard
               </p>
             </div>
-            <div className="flex gap-3">
+            <div style={{display: 'flex', gap: 12}}>
               <button
                 onClick={confirmGoogleSignUp}
                 disabled={!googleName.trim() || !googleUsername.trim()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition-colors"
+                style={{
+                  flex: 1,
+                  backgroundColor: !googleName.trim() || !googleUsername.trim() ? '#475569' : '#3b82f6',
+                  color: 'white',
+                  fontWeight: 600,
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: !googleName.trim() || !googleUsername.trim() ? 'not-allowed' : 'pointer',
+                  transition: 'background-color 0.2s',
+                  fontSize: 14
+                }}
+                onMouseEnter={(e) => {
+                  if (googleName.trim() && googleUsername.trim()) {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (googleName.trim() && googleUsername.trim()) {
+                    e.currentTarget.style.backgroundColor = '#3b82f6';
+                  }
+                }}
               >
                 Create Account
               </button>
@@ -522,7 +582,20 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   setGoogleUsername('');
                   setGoogleEmail('');
                 }}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#475569',
+                  color: 'white',
+                  fontWeight: 600,
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  fontSize: 14
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#475569'}
               >
                 Cancel
               </button>
@@ -657,6 +730,9 @@ export default function App(){
   const [pendingVideos, setPendingVideos] = useState<Array<{videoUrl: string, color: string, wall: string}>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
+  
+  // Track last edited cell for highlighting
+  const [lastEditedCell, setLastEditedCell] = useState<{wall: string, color: string} | null>(null)
   
   // Password change state
   const [showPasswordChange, setShowPasswordChange] = useState(false)
@@ -1535,6 +1611,10 @@ export default function App(){
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current + 1}
     });
     
+    // Track last edited cell for highlighting
+    setLastEditedCell({wall: dropdownWall, color: dropdownColor});
+    setTimeout(() => setLastEditedCell(null), 2000); // Clear highlight after 2 seconds
+    
     // Show success toast
     setToast({message: `✅ Added 1 ${dropdownColor} climb to ${formatWallSectionName(dropdownWall)}!`, type: 'success'});
     setTimeout(() => setToast(null), 3000);
@@ -1553,10 +1633,6 @@ export default function App(){
   }
 
   function subtractClimb() {
-    if (!confirm('Are you sure you want to subtract a climb? This will decrease your count for this color.')) {
-      return;
-    }
-    
     const current = wallCounts[dropdownWall]?.[dropdownColor];
     
     // Check if wallCounts doesn't have this section
@@ -1579,6 +1655,14 @@ export default function App(){
       ...wallCounts, 
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current - 1}
     });
+    
+    // Track last edited cell for highlighting
+    setLastEditedCell({wall: dropdownWall, color: dropdownColor});
+    setTimeout(() => setLastEditedCell(null), 2000); // Clear highlight after 2 seconds
+    
+    // Show success toast
+    setToast({message: `➖ Removed 1 ${dropdownColor} climb from ${formatWallSectionName(dropdownWall)}`, type: 'success'});
+    setTimeout(() => setToast(null), 3000);
   }
 
   async function submit(){ 
@@ -2318,16 +2402,55 @@ export default function App(){
                       const sectionCounts = wallCounts[section] || emptyWall();
                       const sectionTotals = wallTotals[section] || {};
                       const displayName = formatWallSectionName(section);
+                      const isSelectedWall = section === dropdownWall;
                       
                       return (
                         <tr key={section} style={{borderBottom:'1px solid #334155'}}>
-                          <td style={{padding:'8px 6px',color:'#cbd5e1',fontWeight:'500'}}>{displayName}</td>
-                          <td style={{textAlign:'center',padding:'8px 6px',color:'#10b981',fontWeight:'600'}}>{sectionCounts.green}/{sectionTotals.green ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 6px',color:'#3b82f6',fontWeight:'600'}}>{sectionCounts.blue}/{sectionTotals.blue ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 6px',color:'#eab308',fontWeight:'600'}}>{sectionCounts.yellow}/{sectionTotals.yellow ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 6px',color:'#f97316',fontWeight:'600'}}>{sectionCounts.orange}/{sectionTotals.orange ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 6px',color:'#ef4444',fontWeight:'600'}}>{sectionCounts.red}/{sectionTotals.red ?? '?'}</td>
-                          <td style={{textAlign:'center',padding:'8px 6px',color:'#d1d5db',fontWeight:'600'}}>{sectionCounts.black}/{sectionTotals.black ?? '?'}</td>
+                          <td style={{
+                            padding:'8px 6px',
+                            color:'#cbd5e1',
+                            fontWeight:'500',
+                            backgroundColor: isSelectedWall ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                            border: isSelectedWall ? '2px solid #3b82f6' : '2px solid transparent',
+                            borderRight: isSelectedWall ? '2px solid #3b82f6' : '2px solid transparent',
+                            transition: 'all 0.2s'
+                          }}>{displayName}</td>
+                          {ORDER.map((color: keyof Counts) => {
+                            const isSelectedColor = color === dropdownColor;
+                            const isEdited = lastEditedCell?.wall === section && lastEditedCell?.color === color;
+                            const isSelectedCell = isSelectedWall && isSelectedColor;
+                            
+                            return (
+                              <td key={color} style={{
+                                textAlign:'center',
+                                padding:'8px 6px',
+                                color: color === 'green' ? '#10b981' : 
+                                       color === 'blue' ? '#3b82f6' :
+                                       color === 'yellow' ? '#eab308' :
+                                       color === 'orange' ? '#f97316' :
+                                       color === 'red' ? '#ef4444' : '#d1d5db',
+                                fontWeight:'600',
+                                backgroundColor: isEdited ? 'rgba(16, 185, 129, 0.25)' : 
+                                               isSelectedCell ? 'rgba(59, 130, 246, 0.2)' :
+                                               isSelectedColor ? 'rgba(59, 130, 246, 0.1)' :
+                                               'transparent',
+                                border: isSelectedColor ? '2px solid #3b82f6' : '2px solid transparent',
+                                transition: 'all 0.3s',
+                                position: 'relative' as const
+                              }}>
+                                {isEdited && (
+                                  <span style={{
+                                    position: 'absolute' as const,
+                                    top: 2,
+                                    right: 2,
+                                    fontSize: 10,
+                                    animation: 'pulse 0.5s ease-in-out'
+                                  }}>✨</span>
+                                )}
+                                {sectionCounts[color]}/{sectionTotals[color] ?? '?'}
+                              </td>
+                            );
+                          })}
                         </tr>
                       );
                     })}
