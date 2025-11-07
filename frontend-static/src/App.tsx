@@ -215,10 +215,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       const result = await api.googleLogin(credentialResponse.credential);
       api.setToken(result.token);
       api.setUser(result.user);
+      setLoading(false);
       onLogin();
     } catch (err: any) {
       setError(err.message || 'Google login failed');
-    } finally {
       setLoading(false);
     }
   }
@@ -232,7 +232,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     try {
       // Send to backend with the confirmed name and username
       const result = await api.googleLogin(googleCredential, googleName, googleUsername);
-      setShowGoogleNamePrompt(false);
+      
+      // Set token and user in localStorage first
       api.setToken(result.token);
       api.setUser(result.user);
       
@@ -241,12 +242,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       setGoogleName('');
       setGoogleUsername('');
       setGoogleEmail('');
+      setShowGoogleNamePrompt(false);
+      setLoading(false);
       
-      // Call the login success handler
+      // Call the login success handler - this will close the login screen
       onLogin();
     } catch (err: any) {
       setError(err.message || 'Google sign-up failed');
-    } finally {
       setLoading(false);
     }
   }
@@ -1529,6 +1531,10 @@ export default function App(){
   }
 
   function subtractClimb() {
+    if (!confirm('Are you sure you want to subtract a climb? This will decrease your count for this color.')) {
+      return;
+    }
+    
     const current = wallCounts[dropdownWall]?.[dropdownColor];
     
     // Check if wallCounts doesn't have this section
@@ -1968,11 +1974,11 @@ export default function App(){
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
-          <div style={{flex:1,minWidth:300}}>
+          <div style={{flex:1,minWidth:Math.min(300, window.innerWidth - 40)}}>
             <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-              <div style={{padding:24}}>
-                <h2 style={{marginTop:0,marginBottom:8,fontSize:24,fontWeight:'600'}}>New Session</h2>
-                <p style={{marginTop:0,marginBottom:20,fontSize:14,color:'#94a3b8'}}>
+              <div style={{padding:'clamp(12px, 4vw, 24px)'}}>
+                <h2 style={{marginTop:0,marginBottom:8,fontSize:'clamp(20px, 5vw, 24px)',fontWeight:'600'}}>New Session</h2>
+                <p style={{marginTop:0,marginBottom:20,fontSize:'clamp(12px, 3vw, 14px)',color:'#94a3b8'}}>
                   Track your climbing progress by adding completed routes
                 </p>
             
@@ -2044,7 +2050,7 @@ export default function App(){
               
               <div style={{marginBottom:16}}>
                 <label style={{display:'block',fontWeight:'500',marginBottom:8}}>📍 Wall Section</label>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',gap:8}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',gap:8}}>
                   {Object.keys(wallTotals).map(section => {
                     const isSelected = dropdownWall === section;
                     const displayName = formatWallSectionName(section);
@@ -2053,17 +2059,18 @@ export default function App(){
                         key={section}
                         onClick={()=>{setDropdownWall(section as any); setCurrentImageIndex(0);}}
                         style={{
-                          padding:'12px',
+                          padding:'10px',
                           border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
                           borderRadius:8,
                           backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
                           color: isSelected ? '#3b82f6' : '#cbd5e1',
                           fontWeight: isSelected ? '700' : '600',
-                          fontSize:13,
+                          fontSize:'clamp(11px, 2.5vw, 13px)',
                           cursor:'pointer',
                           transition:'all 0.2s',
                           boxShadow: isSelected ? '0 0 12px rgba(59, 130, 246, 0.4)' : 'none',
-                          textAlign:'center'
+                          textAlign:'center',
+                          wordBreak:'break-word'
                         }}
                       >
                         {displayName}
@@ -2195,13 +2202,13 @@ export default function App(){
                         key={c}
                         onClick={()=>setDropdownColor(c as any)}
                         style={{
-                          padding:'12px',
+                          padding:'clamp(10px, 2vw, 12px)',
                           border: isSelected ? `2px solid ${colorMap[c]}` : '2px solid transparent',
                           borderRadius:8,
                           backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
                           color: colorMap[c],
                           fontWeight: isSelected ? '700' : '600',
-                          fontSize:14,
+                          fontSize:'clamp(12px, 3vw, 14px)',
                           cursor:'pointer',
                           textTransform:'capitalize',
                           transition:'all 0.2s',
@@ -2233,12 +2240,12 @@ export default function App(){
                   onClick={addClimb}
                   style={{
                     flex:1,
-                    padding:'12px 16px',
+                    padding:'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)',
                     backgroundColor:'#3b82f6',
                     color:'white',
                     border:'none',
                     borderRadius:8,
-                    fontSize:16,
+                    fontSize:'clamp(14px, 3.5vw, 16px)',
                     fontWeight:'600',
                     cursor:'pointer',
                     transition:'background-color 0.2s'
@@ -2253,12 +2260,12 @@ export default function App(){
                   onClick={subtractClimb}
                   style={{
                     flex:1,
-                    padding:'12px 16px',
+                    padding:'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)',
                     backgroundColor:'#ef4444',
                     color:'white',
                     border:'none',
                     borderRadius:8,
-                    fontSize:16,
+                    fontSize:'clamp(14px, 3.5vw, 16px)',
                     fontWeight:'600',
                     cursor:'pointer',
                     transition:'background-color 0.2s'
@@ -2270,7 +2277,7 @@ export default function App(){
                 </button>
               </div>
 
-              <div style={{backgroundColor:'#1e293b',padding:16,borderRadius:8,fontSize:13,border:'1px solid #475569',overflowX:'auto'}}>
+              <div style={{backgroundColor:'#1e293b',padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:'1px solid #475569',overflowX:'auto'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
                 <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
                   <thead>
@@ -2304,6 +2311,25 @@ export default function App(){
                     })}
                   </tbody>
                 </table>
+              </div>
+              
+              {/* Live Preview - moved here for better proximity to Current Progress */}
+              <div style={{marginTop:16,backgroundColor:'#1e293b',padding:16,borderRadius:8,border:'1px solid #475569'}}>
+                <h4 style={{marginTop:0,marginBottom:16,fontSize:16,fontWeight:'600'}}>Live Preview</h4>
+                <div style={{fontSize:36,fontWeight:700,color:'#3b82f6',marginBottom:16,textAlign:'center'}}>
+                  {scoreSession(totalCounts).toFixed(2)}
+                </div>
+                <div>
+                  <h5 style={{marginTop:0,marginBottom:12,fontSize:12,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal Gains</h5>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(2, 1fr)',gap:8}}>
+                    {ORDER.map((color:any)=> (
+                      <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',backgroundColor:'#0f172a',borderRadius:6}}>
+                        <div style={{textTransform:'capitalize',fontSize:13,fontWeight:'500'}}>{color}</div>
+                        <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:13}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -2371,27 +2397,30 @@ export default function App(){
       </GlowBorder>
     </div>
 
-    <div style={{width:350}}>
-      <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-        <div style={{padding:24}}>
-          <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
-          <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',marginBottom:20,textAlign:'center'}}>
-            {scoreSession(totalCounts).toFixed(2)}
-          </div>
-          <div>
-            <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal</h4>
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {ORDER.map((color:any)=> (
-                <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
-                  <div style={{textTransform:'capitalize',fontSize:14,fontWeight:'500'}}>{color}</div>
-                  <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:14}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
-                </div>
-              ))}
+    {/* Live Preview - only show in manual mode since dropdown mode has it integrated */}
+    {manualMode && (
+      <div style={{width:350}}>
+        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+          <div style={{padding:24}}>
+            <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
+            <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',marginBottom:20,textAlign:'center'}}>
+              {scoreSession(totalCounts).toFixed(2)}
+            </div>
+            <div>
+              <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal</h4>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {ORDER.map((color:any)=> (
+                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
+                    <div style={{textTransform:'capitalize',fontSize:14,fontWeight:'500'}}>{color}</div>
+                    <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:14}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </GlowBorder>
-    </div>
+        </GlowBorder>
+      </div>
+    )}
     </section>
       )}
 
@@ -2796,8 +2825,10 @@ export default function App(){
               };
               
               // Get date range (start from 30 days ago or first session, whichever is later)
+              // End date is today to ensure we always show the latest data
               const startDate = new Date(Math.max(oneMonthAgo.getTime(), new Date(sortedSessions[0].date).getTime()));
-              const endDate = new Date(sortedSessions[sortedSessions.length - 1].date);
+              const endDate = new Date(); // Always include today
+              endDate.setHours(0, 0, 0, 0); // Reset to start of day for consistency
               const allDates = getAllDatesBetween(startDate, endDate);
               
               // Track each climber's current total score (from their latest session counts)
