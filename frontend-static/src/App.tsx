@@ -1510,14 +1510,24 @@ export default function App(){
 
   // Manually expire a section (reset to null/?)
   async function manuallyExpireSection(section: string) {
-    if (!confirm(`Manually expire "${section}"? This will:\n• Reset all route totals to ? (null)\n• Remove climbs from this section from all users' CURRENT CLIMBS\n• Recalculate all scores\n• Add to expired sections list`)) {
+    const displayName = formatWallSectionName(section);
+    const today = new Date().toLocaleDateString();
+    
+    if (!confirm(`Manually expire "${displayName}"? This will:\n• Reset all route totals to ? (null)\n• Remove all climbs from this section from ALL users\n• Recalculate all scores (removing points from ${displayName})\n• Add persistent notification visible to all users`)) {
       return;
     }
 
     setLoading(true);
     
     try {
-      // 1. Reset all routes to null
+      // 1. Add to expired sections list on backend FIRST
+      await api.addExpiredSection(section);
+      
+      // 2. Get updated expired sections immediately
+      const updatedExpired = await api.getExpiredSections();
+      setExpiredSections(updatedExpired);
+      
+      // 3. Reset all routes to null in wall totals
       const updatedTotals = {
         ...wallTotals,
         [section]: {
@@ -1532,29 +1542,24 @@ export default function App(){
       setWallTotals(updatedTotals);
       await saveWallTotalsToAPI(updatedTotals);
 
-      // 2. Clear expiry date
+      // 4. Clear expiry date
       const updatedExpiry = { ...expiryDates };
       delete updatedExpiry[section];
       setExpiryDates(updatedExpiry);
       saveExpiryDates(updatedExpiry);
-
-      // 3. Add to expired sections list on backend
-      await api.addExpiredSection(section);
       
-      // 4. Reload ALL data to reflect changes
-      const [updatedExpired, updatedSessions, updatedLeaderboard, updatedClimbers] = await Promise.all([
-        api.getExpiredSections(),
+      // 5. Reload ALL data with the new expired sections list
+      const [updatedSessions, updatedLeaderboard, updatedClimbers] = await Promise.all([
         api.getSessions(),
         api.getLeaderboard(),
         api.getClimbers()
       ]);
       
-      setExpiredSections(updatedExpired);
       setSessions(updatedSessions);
       setLeaderboard(updatedLeaderboard);
       setClimbers(updatedClimbers);
       
-      // 5. Reset wallCounts to exclude the expired section
+      // 6. Remove section from wallCounts state for current session
       const newWallCounts: any = {};
       Object.keys(wallCounts).forEach(sec => {
         if (sec !== section) {
@@ -1563,12 +1568,12 @@ export default function App(){
       });
       setWallCounts(newWallCounts);
       
-      // 6. Show toast notification
+      // 7. Show toast notification
       setToast({
-        message: `⚠️ "${formatWallSectionName(section)}" replaced on ${new Date().toLocaleDateString()}. All scores recalculated.`,
+        message: `⚠️ "${displayName}" replaced on ${today}. Scores recalculated for all climbers.`,
         type: 'success'
       });
-      setTimeout(() => setToast(null), 8000);
+      setTimeout(() => setToast(null), 10000);
       
     } catch (err: any) {
       console.error('Error expiring section:', err);
