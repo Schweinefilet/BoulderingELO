@@ -727,6 +727,9 @@ export default function App(){
 
   // Comparison charts state
   const [selectedClimbersForComparison, setSelectedClimbersForComparison] = useState<number[]>([])
+  
+  // Google link reminder popup
+  const [showGoogleLinkReminder, setShowGoogleLinkReminder] = useState(false)
 
   const totalCounts = combineCounts(wallCounts);
   
@@ -896,6 +899,24 @@ export default function App(){
       setSelectedClimber(user.climberId);
     }
   }, [user, climbers]);
+  
+  // Check if user needs Google link reminder
+  useEffect(() => {
+    if (user && climbers.length > 0 && isGoogleConfigured) {
+      const currentClimber = climbers.find(c => c.id === user.climberId);
+      const hasGoogleLinked = currentClimber?.google_id;
+      
+      // Show reminder if Google is not linked and we haven't shown it this session
+      const reminderShown = sessionStorage.getItem('googleLinkReminderShown');
+      if (!hasGoogleLinked && !reminderShown) {
+        // Delay showing the popup slightly so it doesn't overlap with login transition
+        setTimeout(() => {
+          setShowGoogleLinkReminder(true);
+          sessionStorage.setItem('googleLinkReminderShown', 'true');
+        }, 2000);
+      }
+    }
+  }, [user, climbers, isGoogleConfigured]);
   
   async function loadData() {
     setLoading(true);
@@ -3710,6 +3731,81 @@ export default function App(){
               </div>
             </div>
           </GlowBorder>
+          </div>
+        </div>
+      )}
+
+      {/* Google Link Reminder Popup */}
+      {showGoogleLinkReminder && (
+        <div
+          onClick={() => setShowGoogleLinkReminder(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1001,
+            padding: 20
+          }}
+        >
+          <div style={{ width: 450, maxWidth: '100%' }}>
+            <GlowBorder glowColor="rgba(59, 130, 246, 0.5)" borderRadius={12} backgroundColor="#1e293b">
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  padding: 24
+                }}
+              >
+                <h2 style={{ marginTop: 0, marginBottom: 16, fontSize: 20, color: '#60a5fa' }}>
+                  🔐 Secure Your Account
+                </h2>
+                <p style={{ fontSize: 14, color: '#cbd5e1', marginBottom: 16, lineHeight: 1.6 }}>
+                  Link your Google account for easier sign-in and account recovery. You'll be able to log in with just one click!
+                </p>
+                <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+                  <button
+                    onClick={() => {
+                      setShowGoogleLinkReminder(false);
+                      setShowSettings(true);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px 20px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontSize: 14,
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Link Google Account
+                  </button>
+                  <button
+                    onClick={() => setShowGoogleLinkReminder(false)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 20px',
+                      backgroundColor: '#475569',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontSize: 14,
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </div>
+            </GlowBorder>
           </div>
         </div>
       )}
