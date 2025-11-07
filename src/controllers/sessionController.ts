@@ -26,16 +26,13 @@ export async function addSession(req: AuthRequest, res: Response) {
     let totalCounts: Counts;
     let validatedWalls: WallCounts | undefined;
     
-    // Get expired sections to exclude from scoring
-    const expiredSections = (await db.getSetting('expiredSections')) || [];
-    
     if (wallCounts) {
       // Validate and combine wall counts - support dynamic wall sections
       validatedWalls = {} as WallCounts;
       for (const wallSection of Object.keys(wallCounts)) {
         validatedWalls[wallSection] = validateCounts(wallCounts[wallSection] || {});
       }
-      totalCounts = combineCounts(validatedWalls, expiredSections);
+      totalCounts = combineCounts(validatedWalls);
     } else {
       // Legacy: flat counts
       totalCounts = validateCounts(counts || {});
