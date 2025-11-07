@@ -676,6 +676,9 @@ export default function App(){
   const [editingSession, setEditingSession] = useState<number | null>(null)
   const [editSessionDate, setEditSessionDate] = useState('')
   const [editSessionNotes, setEditSessionNotes] = useState('')
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{message: string; type: 'success' | 'error'} | null>(null)
   const [editSessionWallCounts, setEditSessionWallCounts] = useState<WallCounts>({} as WallCounts)
   
   // Climber profile editing state (admin)
@@ -1495,6 +1498,10 @@ export default function App(){
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current + 1}
     });
     
+    // Show success toast
+    setToast({message: `✅ Added 1 ${dropdownColor} climb to ${formatWallSectionName(dropdownWall)}!`, type: 'success'});
+    setTimeout(() => setToast(null), 3000);
+    
     // Track video for submission after session is created
     if (videoUrl.trim()) {
       setPendingVideos([...pendingVideos, {
@@ -1588,6 +1595,28 @@ export default function App(){
   return (
     <div style={{fontFamily:'Inter, Arial, sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
       {!isMobileDevice() && <BackgroundBeams />}
+      
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position:'fixed',
+          top:20,
+          right:20,
+          backgroundColor: toast.type === 'success' ? '#10b981' : '#ef4444',
+          color:'white',
+          padding:'12px 20px',
+          borderRadius:8,
+          boxShadow:'0 4px 12px rgba(0,0,0,0.3)',
+          zIndex:9999,
+          fontWeight:'600',
+          fontSize:14,
+          maxWidth:'90%',
+          animation:'slideIn 0.3s ease-out'
+        }}>
+          {toast.message}
+        </div>
+      )}
+      
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
@@ -1928,10 +1957,13 @@ export default function App(){
           <div style={{flex:1,minWidth:300}}>
             <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
               <div style={{padding:24}}>
-                <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>New Session</h2>
+                <h2 style={{marginTop:0,marginBottom:8,fontSize:24,fontWeight:'600'}}>New Session</h2>
+                <p style={{marginTop:0,marginBottom:20,fontSize:14,color:'#94a3b8'}}>
+                  Track your climbing progress by adding completed routes
+                </p>
             
             <div style={{marginBottom:16}}>
-              <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Climber</label>
+              <label style={{display:'block',fontWeight:'500',marginBottom:8}}>👤 Climber</label>
               {user?.role === 'admin' ? (
                 <select 
                   value={selectedClimber||''} 
@@ -1992,10 +2024,12 @@ export default function App(){
           {!manualMode ? (
             // Dropdown mode
             <div>
-              <h3 style={{marginBottom:16,fontSize:18,fontWeight:'600'}}>Add Climb</h3>
+              <h3 style={{marginBottom:16,fontSize:18,fontWeight:'600',display:'flex',alignItems:'center',gap:8}}>
+                🧗 Add Climb
+              </h3>
               
               <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Wall Section</label>
+                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>📍 Wall Section</label>
                 <select 
                   value={dropdownWall} 
                   onChange={e=>{setDropdownWall(e.target.value as any); setCurrentImageIndex(0);}} 
@@ -2150,14 +2184,41 @@ export default function App(){
               </div>
 
               <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Color</label>
-                <select 
-                  value={dropdownColor} 
-                  onChange={e=>setDropdownColor(e.target.value as any)} 
-                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
-                >
-                  {ORDER.map((c:any)=><option key={c} value={c}>{c}</option>)}
-                </select>
+                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>🎨 Route Color</label>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3, 1fr)',gap:8}}>
+                  {ORDER.map((c:any)=> {
+                    const colorMap: any = {
+                      green: '#10b981',
+                      blue: '#3b82f6',
+                      yellow: '#eab308',
+                      orange: '#f97316',
+                      red: '#ef4444',
+                      black: '#d1d5db'
+                    };
+                    const isSelected = dropdownColor === c;
+                    return (
+                      <button
+                        key={c}
+                        onClick={()=>setDropdownColor(c as any)}
+                        style={{
+                          padding:'12px',
+                          border: isSelected ? `2px solid ${colorMap[c]}` : '2px solid transparent',
+                          borderRadius:8,
+                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
+                          color: colorMap[c],
+                          fontWeight: isSelected ? '700' : '600',
+                          fontSize:14,
+                          cursor:'pointer',
+                          textTransform:'capitalize',
+                          transition:'all 0.2s',
+                          boxShadow: isSelected ? `0 0 12px ${colorMap[c]}40` : 'none'
+                        }}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {(dropdownColor === 'red' || dropdownColor === 'black') && (

@@ -62,3 +62,15 @@ h1, h2, h3, h4 {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Toast notification animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
