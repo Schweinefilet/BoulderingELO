@@ -156,7 +156,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   
   // Check if Google OAuth is configured
   const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
-  const isGoogleConfigured = googleClientId && googleClientId.length > 0;
+  const isGoogleConfigured = googleClientId && 
+    googleClientId.length > 0 && 
+    !googleClientId.includes('your-google') && // Exclude placeholder values
+    googleClientId.endsWith('.apps.googleusercontent.com');
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -1200,6 +1203,47 @@ export default function App(){
     }
 
     alert(`Pasted data to "${section}"`);
+  }
+
+  // Manually expire a section (reset to null/?)
+  async function manuallyExpireSection(section: string) {
+    if (!confirm(`Manually expire "${section}"? This will reset all route totals to ? (null), allowing unlimited climbs until you update the totals. The section will also be added to the expired sections list.`)) {
+      return;
+    }
+
+    // Reset all routes to null
+    const updatedTotals = {
+      ...wallTotals,
+      [section]: {
+        green: null as any,
+        blue: null as any,
+        yellow: null as any,
+        orange: null as any,
+        red: null as any,
+        black: null as any
+      }
+    };
+    setWallTotals(updatedTotals);
+    await saveWallTotalsToAPI(updatedTotals);
+
+    // Clear expiry date since we're manually expiring now
+    const updatedExpiry = { ...expiryDates };
+    delete updatedExpiry[section];
+    setExpiryDates(updatedExpiry);
+    saveExpiryDates(updatedExpiry);
+
+    // Add to expired sections list
+    try {
+      await api.addExpiredSection(section);
+      alert(`Section "${section}" has been manually expired. Routes reset to ? and scores will be recalculated.`);
+      
+      // Refresh leaderboard to recalculate scores
+      const lb = await api.getLeaderboard();
+      setLeaderboard(lb);
+    } catch (err: any) {
+      console.error('Error adding to expired sections:', err);
+      alert(`Section expired locally, but server update failed: ${err.message}`);
+    }
   }
 
   async function resetToDefaults() {
@@ -4633,6 +4677,23 @@ export default function App(){
                               ? `Routes will reset to ? on ${new Date(expiryDates[section]).toLocaleDateString()}`
                               : 'No expiry set'}
                           </span>
+                          <button
+                            onClick={() => manuallyExpireSection(section)}
+                            style={{
+                              padding:'6px 14px',
+                              backgroundColor:'#f97316',
+                              color:'white',
+                              border:'none',
+                              borderRadius:4,
+                              cursor:'pointer',
+                              fontSize:12,
+                              fontWeight:'600',
+                              marginLeft:'auto'
+                            }}
+                            title="Immediately reset this section to ? (null) and mark as expired"
+                          >
+                            ⚡ Expire Now
+                          </button>
                         </div>
 
                         {/* Wall Section Image Upload */}
