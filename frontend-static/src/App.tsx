@@ -723,6 +723,7 @@ export default function App(){
   
   // Sessions pagination
   const [sessionsToShow, setSessionsToShow] = useState(1)
+  const [expandedSession, setExpandedSession] = useState<number | null>(null)
 
   // Comparison charts state
   const [selectedClimbersForComparison, setSelectedClimbersForComparison] = useState<number[]>([])
@@ -2481,10 +2482,77 @@ export default function App(){
                             color = '#059669';
                           }
                           
+                          const isExpanded = expandedSession === s.id;
+                          
+                          // Calculate what's new in this session
+                          const newClimbs: any = {};
+                          if (prevSession && prevSession.wallCounts && s.wallCounts) {
+                            Object.keys(s.wallCounts).forEach(section => {
+                              const curr = s.wallCounts[section];
+                              const prev = prevSession.wallCounts[section] || {green:0,blue:0,yellow:0,orange:0,red:0,black:0};
+                              const diff: any = {};
+                              let hasNew = false;
+                              ORDER.forEach(color => {
+                                const delta = (curr[color] || 0) - (prev[color] || 0);
+                                if (delta > 0) {
+                                  diff[color] = delta;
+                                  hasNew = true;
+                                }
+                              });
+                              if (hasNew) {
+                                newClimbs[section] = diff;
+                              }
+                            });
+                          }
+                          
                           return (
-                            <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6,border:'1px solid #334155'}}>
-                              <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
-                              <span style={{color,fontWeight:'700',fontSize:18,minWidth:80,textAlign:'right'}}>{displayScore}</span>
+                            <div key={s.id}>
+                              <div 
+                                onClick={() => setExpandedSession(isExpanded ? null : s.id)}
+                                style={{
+                                  display:'flex',
+                                  justifyContent:'space-between',
+                                  alignItems:'center',
+                                  padding:'12px 16px',
+                                  backgroundColor:'#0f172a',
+                                  borderRadius:6,
+                                  border:'1px solid #334155',
+                                  cursor:'pointer',
+                                  transition:'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e293b'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f172a'}
+                              >
+                                <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
+                                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                                  <span style={{color,fontWeight:'700',fontSize:18}}>{displayScore}</span>
+                                  <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▶'}</span>
+                                </div>
+                              </div>
+                              
+                              {isExpanded && Object.keys(newClimbs).length > 0 && (
+                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1e293b',borderRadius:6,border:'1px solid #475569'}}>
+                                  <h5 style={{margin:'0 0 8px 0',fontSize:13,fontWeight:'600',color:'#94a3b8'}}>New Climbs:</h5>
+                                  {Object.entries(newClimbs).map(([section, colors]: [string, any]) => (
+                                    <div key={section} style={{marginBottom:6,fontSize:12}}>
+                                      <span style={{color:'#cbd5e1',fontWeight:'500'}}>{formatWallSectionName(section)}:</span>{' '}
+                                      {ORDER.map(color => {
+                                        if (colors[color]) {
+                                          const colorMap: any = {green:'#10b981',blue:'#3b82f6',yellow:'#eab308',orange:'#f97316',red:'#ef4444',black:'#d1d5db'};
+                                          return <span key={color} style={{color:colorMap[color],marginLeft:8}}>+{colors[color]} {color}</span>;
+                                        }
+                                        return null;
+                                      })}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {isExpanded && Object.keys(newClimbs).length === 0 && (
+                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1e293b',borderRadius:6,border:'1px solid #475569',fontSize:12,color:'#94a3b8'}}>
+                                  First session - no previous data to compare
+                                </div>
+                              )}
                             </div>
                           );
                         })}
