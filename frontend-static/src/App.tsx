@@ -1524,7 +1524,17 @@ export default function App(){
     // Add to expired sections list
     try {
       await api.addExpiredSection(section);
-      alert(`Section "${section}" has been manually expired. Routes reset to ? and scores will be recalculated.`);
+      
+      // Reload expired sections from API
+      const updatedExpired = await api.getExpiredSections();
+      setExpiredSections(updatedExpired);
+      
+      // Show toast notification
+      setToast({
+        message: `⚠️ Wall section "${formatWallSectionName(section)}" has been manually replaced. Routes reset and scores recalculated.`,
+        type: 'success'
+      });
+      setTimeout(() => setToast(null), 8000);
       
       // Refresh leaderboard to recalculate scores
       const lb = await api.getLeaderboard();
@@ -1809,9 +1819,9 @@ export default function App(){
           <div style={{fontSize:13,lineHeight:1.5}}>
             The following sections have been replaced with new routes:
             <ul style={{marginTop:4,marginBottom:4,paddingLeft:20}}>
-              {expiredSections.map((exp, idx) => (
+              {expiredSections.map((section, idx) => (
                 <li key={idx}>
-                  <strong>{formatWallSectionName(exp.wall_section)}</strong> - replaced on {new Date(exp.expired_at).toLocaleDateString()}
+                  <strong>{formatWallSectionName(section)}</strong>
                 </li>
               ))}
             </ul>
@@ -2233,40 +2243,10 @@ export default function App(){
               </h3>
               
               <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>📍 Wall Section</label>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',gap:8}}>
-                  {Object.keys(wallTotals).map(section => {
-                    const isSelected = dropdownWall === section;
-                    const displayName = formatWallSectionName(section);
-                    return (
-                      <button
-                        key={section}
-                        onClick={()=>{setDropdownWall(section as any); setCurrentImageIndex(0);}}
-                        style={{
-                          padding:'10px',
-                          border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
-                          borderRadius:8,
-                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
-                          color: isSelected ? '#3b82f6' : '#cbd5e1',
-                          fontWeight: isSelected ? '700' : '600',
-                          fontSize:'clamp(11px, 2.5vw, 13px)',
-                          cursor:'pointer',
-                          transition:'all 0.2s',
-                          boxShadow: isSelected ? '0 0 12px rgba(59, 130, 246, 0.4)' : 'none',
-                          textAlign:'center',
-                          wordBreak:'break-word'
-                        }}
-                      >
-                        {displayName}
-                      </button>
-                    );
-                  })}
-                </div>
-                
-                {/* Display admin-uploaded wall section reference images */}
+                {/* Display admin-uploaded wall section reference images - moved above buttons */}
                 {wallSectionImages[dropdownWall] && wallSectionImages[dropdownWall].length > 0 && (
                   <div style={{
-                    marginTop:12,
+                    marginBottom:12,
                     border:'2px solid #3b82f6',
                     borderRadius:8,
                     overflow:'hidden',
@@ -2366,6 +2346,36 @@ export default function App(){
                     </div>
                   </div>
                 )}
+                
+                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>📍 Wall Section</label>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',gap:8}}>
+                  {Object.keys(wallTotals).map(section => {
+                    const isSelected = dropdownWall === section;
+                    const displayName = formatWallSectionName(section);
+                    return (
+                      <button
+                        key={section}
+                        onClick={()=>{setDropdownWall(section as any); setCurrentImageIndex(0);}}
+                        style={{
+                          padding:'10px',
+                          border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
+                          borderRadius:8,
+                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
+                          color: isSelected ? '#3b82f6' : '#cbd5e1',
+                          fontWeight: isSelected ? '700' : '600',
+                          fontSize:'clamp(11px, 2.5vw, 13px)',
+                          cursor:'pointer',
+                          transition:'all 0.2s',
+                          boxShadow: isSelected ? '0 0 12px rgba(59, 130, 246, 0.4)' : 'none',
+                          textAlign:'center',
+                          wordBreak:'break-word'
+                        }}
+                      >
+                        {displayName}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div style={{marginBottom:16}}>
@@ -2477,7 +2487,7 @@ export default function App(){
                   </thead>
                   <tbody>
                     {Object.keys(wallTotals)
-                      .filter(section => !expiredSections.some(exp => exp.wall_section === section))
+                      .filter(section => !expiredSections.includes(section))
                       .map(section => {
                       const sectionCounts = wallCounts[section] || emptyWall();
                       const sectionTotals = wallTotals[section] || {};
@@ -2729,15 +2739,15 @@ export default function App(){
                               const curr = s.wallCounts[section];
                               const prev = prevSession.wallCounts[section] || {green:0,blue:0,yellow:0,orange:0,red:0,black:0};
                               const diff: any = {};
-                              let hasNew = false;
+                              let hasChanges = false;
                               ORDER.forEach(color => {
                                 const delta = (curr[color] || 0) - (prev[color] || 0);
-                                if (delta > 0) {
+                                if (delta !== 0) {
                                   diff[color] = delta;
-                                  hasNew = true;
+                                  hasChanges = true;
                                 }
                               });
-                              if (hasNew) {
+                              if (hasChanges) {
                                 newClimbs[section] = diff;
                               }
                             });
@@ -2764,20 +2774,22 @@ export default function App(){
                                 <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
                                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                                   <span style={{color,fontWeight:'700',fontSize:18}}>{displayScore}</span>
-                                  <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▶'}</span>
+                                  <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▸'}</span>
                                 </div>
                               </div>
                               
                               {isExpanded && Object.keys(newClimbs).length > 0 && (
                                 <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1e293b',borderRadius:6,border:'1px solid #475569'}}>
-                                  <h5 style={{margin:'0 0 8px 0',fontSize:13,fontWeight:'600',color:'#94a3b8'}}>New Climbs:</h5>
+                                  <h5 style={{margin:'0 0 8px 0',fontSize:13,fontWeight:'600',color:'#94a3b8'}}>Changes:</h5>
                                   {Object.entries(newClimbs).map(([section, colors]: [string, any]) => (
                                     <div key={section} style={{marginBottom:6,fontSize:12}}>
                                       <span style={{color:'#cbd5e1',fontWeight:'500'}}>{formatWallSectionName(section)}:</span>{' '}
                                       {ORDER.map(color => {
                                         if (colors[color]) {
                                           const colorMap: any = {green:'#10b981',blue:'#3b82f6',yellow:'#eab308',orange:'#f97316',red:'#ef4444',black:'#d1d5db'};
-                                          return <span key={color} style={{color:colorMap[color],marginLeft:8}}>+{colors[color]} {color}</span>;
+                                          const delta = colors[color];
+                                          const sign = delta > 0 ? '+' : '';
+                                          return <span key={color} style={{color:colorMap[color],marginLeft:8}}>{sign}{delta} {color}</span>;
                                         }
                                         return null;
                                       })}
@@ -3353,18 +3365,14 @@ export default function App(){
               <h3>Total Score Over Time (Comparison)</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={(() => {
-                  // Get all sessions for selected climbers in last 30 days
-                  const oneMonthAgo = new Date();
-                  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-                  
+                  // Get ALL sessions for selected climbers to build cumulative scores
                   const relevantSessions = sessions.filter((s: any) => 
-                    selectedClimbersForComparison.includes(s.climberId) &&
-                    new Date(s.date) >= oneMonthAgo
+                    selectedClimbersForComparison.includes(s.climberId)
                   );
                   
                   if (relevantSessions.length === 0) return [];
                   
-                  // Get all dates between start and end
+                  // Get all dates between start and end (last 30 days)
                   const getAllDatesBetween = (start: Date, end: Date): string[] => {
                     const dates: string[] = [];
                     const current = new Date(start);
@@ -3375,14 +3383,12 @@ export default function App(){
                     return dates;
                   };
                   
-                  const startDate = new Date(Math.max(
-                    new Date(relevantSessions[0].date).getTime(),
-                    oneMonthAgo.getTime()
-                  ));
+                  const oneMonthAgo = new Date();
+                  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
                   const endDate = new Date();
-                  const allDates = getAllDatesBetween(startDate, endDate);
+                  const allDates = getAllDatesBetween(oneMonthAgo, endDate);
                   
-                  // Build cumulative score data for each climber
+                  // Build cumulative score data for each climber using ALL sessions
                   const climberScores = new Map<number, Map<string, number>>();
                   
                   selectedClimbersForComparison.forEach((climberId: number) => {
@@ -3391,17 +3397,15 @@ export default function App(){
                       .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
                     
                     const scoreByDate = new Map<string, number>();
-                    let currentScore = 0;
                     
                     climberSessions.forEach((session: any) => {
-                      currentScore = session.score;
-                      scoreByDate.set(session.date.split('T')[0], currentScore);
+                      scoreByDate.set(session.date.split('T')[0], session.score);
                     });
                     
                     climberScores.set(climberId, scoreByDate);
                   });
                   
-                  // Create data points for each date
+                  // Create data points for each date in the last 30 days
                   return allDates.map(date => {
                     const point: any = { date };
                     
