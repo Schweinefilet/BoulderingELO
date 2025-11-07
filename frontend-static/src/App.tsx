@@ -2078,7 +2078,7 @@ export default function App(){
                 e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
               }}
             >
-              {showScoringDetails ? '▼ Show Less' : '▶ Read More'}
+              {showScoringDetails ? '▲ Show Less' : '▶ Read More'}
             </button>
           </div>
         </div>

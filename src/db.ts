@@ -622,12 +622,13 @@ export async function approveVideo(reviewId: number) {
       [JSON.stringify(wallCounts), session_id]
     );
     
-    // Recalculate the session score
+    // Recalculate the session score (excluding expired sections)
     const { scoreSession, combineCounts } = require('./score');
-    const totalCounts = combineCounts(wallCounts);
+    const expiredSections = (await getSetting('expiredSections')) || [];
+    const totalCounts = combineCounts(wallCounts, expiredSections);
     const newScore = scoreSession(totalCounts);
     
-    console.log(`Session ${session_id}: New score: ${newScore}`);
+    console.log(`Session ${session_id}: New score: ${newScore} (excluded sections: ${expiredSections.join(', ')})`);
     console.log('Total counts:', totalCounts);
     
     await client.query(
