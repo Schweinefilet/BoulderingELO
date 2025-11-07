@@ -766,6 +766,7 @@ export default function App(){
   
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
+  const [showScoringDetails, setShowScoringDetails] = useState(false)
   const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes'>('accounts')
   
   const [expiryDates, setExpiryDates] = useState<ExpiryConfig>(getExpiryDates())
@@ -808,6 +809,7 @@ export default function App(){
   
   // Settings modal state
   const [showSettings, setShowSettings] = useState(false)
+  const [showFormulaDetails, setShowFormulaDetails] = useState(false)
   const [settingsUsername, setSettingsUsername] = useState('')
   const [settingsName, setSettingsName] = useState('')
   const [settingsCountry, setSettingsCountry] = useState('')
@@ -1508,52 +1510,71 @@ export default function App(){
 
   // Manually expire a section (reset to null/?)
   async function manuallyExpireSection(section: string) {
-    if (!confirm(`Manually expire "${section}"? This will reset all route totals to ? (null), allowing unlimited climbs until you update the totals. The section will also be added to the expired sections list.`)) {
+    if (!confirm(`Manually expire "${section}"? This will:\n• Reset all route totals to ? (null)\n• Remove climbs from this section from all users' CURRENT CLIMBS\n• Recalculate all scores\n• Add to expired sections list`)) {
       return;
     }
 
-    // Reset all routes to null
-    const updatedTotals = {
-      ...wallTotals,
-      [section]: {
-        green: null as any,
-        blue: null as any,
-        yellow: null as any,
-        orange: null as any,
-        red: null as any,
-        black: null as any
-      }
-    };
-    setWallTotals(updatedTotals);
-    await saveWallTotalsToAPI(updatedTotals);
-
-    // Clear expiry date since we're manually expiring now
-    const updatedExpiry = { ...expiryDates };
-    delete updatedExpiry[section];
-    setExpiryDates(updatedExpiry);
-    saveExpiryDates(updatedExpiry);
-
-    // Add to expired sections list
+    setLoading(true);
+    
     try {
+      // 1. Reset all routes to null
+      const updatedTotals = {
+        ...wallTotals,
+        [section]: {
+          green: null as any,
+          blue: null as any,
+          yellow: null as any,
+          orange: null as any,
+          red: null as any,
+          black: null as any
+        }
+      };
+      setWallTotals(updatedTotals);
+      await saveWallTotalsToAPI(updatedTotals);
+
+      // 2. Clear expiry date
+      const updatedExpiry = { ...expiryDates };
+      delete updatedExpiry[section];
+      setExpiryDates(updatedExpiry);
+      saveExpiryDates(updatedExpiry);
+
+      // 3. Add to expired sections list on backend
       await api.addExpiredSection(section);
       
-      // Reload expired sections from API
-      const updatedExpired = await api.getExpiredSections();
-      setExpiredSections(updatedExpired);
+      // 4. Reload ALL data to reflect changes
+      const [updatedExpired, updatedSessions, updatedLeaderboard, updatedClimbers] = await Promise.all([
+        api.getExpiredSections(),
+        api.getSessions(),
+        api.getLeaderboard(),
+        api.getClimbers()
+      ]);
       
-      // Show toast notification
+      setExpiredSections(updatedExpired);
+      setSessions(updatedSessions);
+      setLeaderboard(updatedLeaderboard);
+      setClimbers(updatedClimbers);
+      
+      // 5. Reset wallCounts to exclude the expired section
+      const newWallCounts: any = {};
+      Object.keys(wallCounts).forEach(sec => {
+        if (sec !== section) {
+          newWallCounts[sec] = wallCounts[sec];
+        }
+      });
+      setWallCounts(newWallCounts);
+      
+      // 6. Show toast notification
       setToast({
-        message: `⚠️ Wall section "${formatWallSectionName(section)}" has been manually replaced. Routes reset and scores recalculated.`,
+        message: `⚠️ "${formatWallSectionName(section)}" replaced on ${new Date().toLocaleDateString()}. All scores recalculated.`,
         type: 'success'
       });
       setTimeout(() => setToast(null), 8000);
       
-      // Refresh leaderboard to recalculate scores
-      const lb = await api.getLeaderboard();
-      setLeaderboard(lb);
     } catch (err: any) {
-      console.error('Error adding to expired sections:', err);
-      alert(`Section expired locally, but server update failed: ${err.message}`);
+      console.error('Error expiring section:', err);
+      setError(`Failed to expire section: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -1980,7 +2001,7 @@ export default function App(){
           <h3 style={{marginTop:0,marginBottom:16}}>Scoring Formula</h3>
           
           <div style={{fontSize:15,marginBottom:16,padding:'16px',backgroundColor:'#0f172a',borderRadius:6,overflowX:'auto',textAlign:'center'}}>
-            <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cum}} + n_c) - W(n_{\text{cum}}) \right] \right)" />
+            <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
           </div>
           
           <div style={{fontSize:14,marginBottom:16,padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6}}>
@@ -1992,33 +2013,64 @@ export default function App(){
             </div>
           </div>
           
-          <div style={{fontSize:14,color:'#cbd5e1',lineHeight:1.8,marginBottom:16}}>
-            <h4 style={{marginTop:0,marginBottom:12,color:'#94a3b8'}}>How it works:</h4>
-            <ol style={{paddingLeft:24,margin:0}}>
-              <li style={{marginBottom:8}}>
-                <strong>Colors are processed from hardest to easiest:</strong> Black → Red → Orange → Yellow → Blue → Green
-              </li>
-              <li style={{marginBottom:8}}>
-                <strong>Each color has a base point value</strong> (<InlineMath math="b_c" />):
-                <div style={{marginTop:6,padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:4,fontSize:13}}>
-                  Black(120) · Red(56) · Orange(12.5) · Yellow(3.5) · Blue(0.75) · Green(0.25)
-                </div>
-              </li>
-              <li style={{marginBottom:8}}>
-                <strong>Diminishing returns apply</strong> - your first climbs are worth more than later ones of the same difficulty
-              </li>
-              <li style={{marginBottom:8}}>
-                <InlineMath math="n_{\text{cum}}" /> = total count of all harder colors already processed<br/>
-                <InlineMath math="n_c" /> = number of climbs for the current color
-              </li>
-              <li style={{marginBottom:8}}>
-                <strong>The marginal gain decreases</strong> as you accumulate more climbs, rewarding diverse progression over repetition
-              </li>
-            </ol>
-          </div>
+          {showScoringDetails && (
+            <>
+              <div style={{fontSize:14,color:'#cbd5e1',lineHeight:1.8,marginBottom:16}}>
+                <h4 style={{marginTop:0,marginBottom:12,color:'#94a3b8'}}>How it works:</h4>
+                <ol style={{paddingLeft:24,margin:0}}>
+                  <li style={{marginBottom:8}}>
+                    <strong>Colors are processed from hardest to easiest:</strong> Black → Red → Orange → Yellow → Blue → Green
+                  </li>
+                  <li style={{marginBottom:8}}>
+                    <strong>Each color has a base point value</strong> (<InlineMath math="b_c" />):
+                    <div style={{marginTop:6,padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:4,fontSize:13}}>
+                      Black(120) · Red(56) · Orange(12.5) · Yellow(3.5) · Blue(0.75) · Green(0.25)
+                    </div>
+                  </li>
+                  <li style={{marginBottom:8}}>
+                    <strong>Diminishing returns apply</strong> - your first climbs are worth more than later ones of the same difficulty
+                  </li>
+                  <li style={{marginBottom:8}}>
+                    <InlineMath math="n_{\text{cmltve}}" /> = total count of all harder colors already processed<br/>
+                    <InlineMath math="n_c" /> = number of climbs for the current color
+                  </li>
+                  <li style={{marginBottom:8}}>
+                    <strong>The marginal gain decreases</strong> as you accumulate more climbs, rewarding diverse progression over repetition
+                  </li>
+                </ol>
+              </div>
+              
+              <div style={{padding:'12px 16px',backgroundColor:'rgba(59, 130, 246, 0.1)',border:'1px solid rgba(59, 130, 246, 0.3)',borderRadius:6,color:'#93c5fd',marginBottom:12}}>
+                <strong>💡 TL;DR:</strong> Climb harder routes (especially Black/Red/Orange) for more points. Your first few climbs of each difficulty are worth the most, so focus on variety and progression!
+              </div>
+            </>
+          )}
           
-          <div style={{padding:'12px 16px',backgroundColor:'rgba(59, 130, 246, 0.1)',border:'1px solid rgba(59, 130, 246, 0.3)',borderRadius:6,color:'#93c5fd'}}>
-            <strong>💡 TL;DR:</strong> Climb harder routes (especially Black/Red/Orange) for more points. Your first few climbs of each difficulty are worth the most, so focus on variety and progression!
+          <div style={{textAlign:'center'}}>
+            <button
+              onClick={() => setShowScoringDetails(!showScoringDetails)}
+              style={{
+                padding:'8px 24px',
+                backgroundColor:'rgba(59, 130, 246, 0.1)',
+                color:'#3b82f6',
+                border:'1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius:6,
+                fontSize:14,
+                fontWeight:'600',
+                cursor:'pointer',
+                transition:'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+              }}
+            >
+              {showScoringDetails ? '▼ Show Less' : '▶ Read More'}
+            </button>
           </div>
         </div>
       </GlowingCard>
