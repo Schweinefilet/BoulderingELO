@@ -417,19 +417,14 @@ export async function getSessionById(id: number) {
 }
 
 export async function leaderboard(from?: string, to?: string, includeHidden: boolean = false) {
-  // Get list of expired sections to exclude from scoring
-  const expiredSections = await getSetting('expiredSections') || [];
-  
   let query = `
     SELECT DISTINCT ON (c.id) 
       c.id as climber_id,
       c.name as climber, 
       s.id as session_id,
-      s.score as original_score,
-      w.counts as wall_counts
+      s.score as total_score
     FROM sessions s
     JOIN climbers c ON s.climber_id = c.id
-    LEFT JOIN wall_counts w ON s.id = w.session_id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -452,25 +447,10 @@ export async function leaderboard(from?: string, to?: string, includeHidden: boo
   
   const result = await pool.query(query, params);
   
-  // Import scoring functions
-  const { combineCounts, scoreSession } = await import('./score');
-  
-  const leaderboard = result.rows.map((row: any) => {
-    let score = parseFloat(row.original_score);
-    
-    // If there are expired sections and this session has wall_counts, recalculate
-    if (expiredSections.length > 0 && row.wall_counts) {
-      const wallCounts = row.wall_counts as WallCounts;
-      // Recalculate score excluding expired sections
-      const activeCounts = combineCounts(wallCounts, expiredSections);
-      score = scoreSession(activeCounts);
-    }
-    
-    return {
-      climber: row.climber,
-      total_score: score
-    };
-  });
+  const leaderboard = result.rows.map((row: any) => ({
+    climber: row.climber,
+    total_score: parseFloat(row.total_score)
+  }));
   
   // Sort by score descending
   leaderboard.sort((a, b) => b.total_score - a.total_score);
@@ -658,21 +638,22 @@ export async function approveVideo(reviewId: number) {
       [JSON.stringify(wallCounts), session_id]
     );
     
-    // Recalculate the session score (excluding expired sections)
+    // Recalculate the session score from wall counts
     const { scoreSession, combineCounts } = require('./score');
-    const expiredSections = (await getSetting('expiredSections')) || [];
-    const totalCounts = combineCounts(wallCounts, expiredSections);
+    const totalCounts = combineCounts(wallCounts);
     const newScore = scoreSession(totalCounts);
     
-    console.log(`Session ${session_id}: New score: ${newScore} (excluded sections: ${expiredSections.join(', ')})`);
-    console.log('Total counts:', totalCounts);
+    // Update counts table
+    await client.query(
+      'UPDATE counts SET green = $1, blue = $2, yellow = $3, orange = $4, red = $5, black = $6 WHERE session_id = $7',
+      [totalCounts.green, totalCounts.blue, totalCounts.yellow, totalCounts.orange, totalCounts.red, totalCounts.black, session_id]
+    );
     
+    // Update session score
     await client.query(
       'UPDATE sessions SET score = $1 WHERE id = $2',
       [newScore, session_id]
     );
-    
-    console.log(`Score updated successfully for session ${session_id}`);
     
     await client.query('COMMIT');
     console.log(`Video ${reviewId} approved successfully`);
