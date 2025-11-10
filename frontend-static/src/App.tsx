@@ -703,7 +703,8 @@ export default function App(){
   const [wallTotals, setWallTotals] = useState<Record<string, Record<string, number>>>(DEFAULT_wallTotals)
   const [wallTotalsLoaded, setWallTotalsLoaded] = useState(false)
   const [wallSectionImages, setWallSectionImages] = useState<Record<string, string[]>>({}) // Store array of image URLs for each wall section
-  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track current image in carousel
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track current image in carousel for dropdown mode
+  const [manualModeImageIndexes, setManualModeImageIndexes] = useState<Record<string, number>>({}); // Track current image index per section in manual mode
   const [expiredSections, setExpiredSections] = useState<string[]>([]) // Track expired wall sections
   
   // Helper function to format wall section names properly
@@ -2563,6 +2564,113 @@ export default function App(){
                 return (
                   <div key={section} style={{marginBottom:20}}>
                     <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>{displayName}</h4>
+                    
+                    {/* Display wall section reference images for this section */}
+                    {wallSectionImages[section] && wallSectionImages[section].length > 0 && (
+                      <div style={{
+                        marginBottom:12,
+                        border:'2px solid #3b82f6',
+                        borderRadius:8,
+                        overflow:'hidden',
+                        backgroundColor:'#000',
+                        position:'relative'
+                      }}>
+                        <div style={{
+                          backgroundColor:'#1e293b',
+                          padding:'8px 12px',
+                          borderBottom:'1px solid #3b82f6',
+                          fontSize:12,
+                          color:'#3b82f6',
+                          fontWeight:'600',
+                          display:'flex',
+                          justifyContent:'space-between',
+                          alignItems:'center'
+                        }}>
+                          <span>📍 Wall Section Reference</span>
+                          {wallSectionImages[section].length > 1 && (
+                            <span style={{fontSize:11,color:'#94a3b8'}}>
+                              {(manualModeImageIndexes[section] || 0) + 1} / {wallSectionImages[section].length}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{position:'relative'}}>
+                          <img 
+                            src={
+                              wallSectionImages[section][manualModeImageIndexes[section] || 0].startsWith('http')
+                                ? wallSectionImages[section][manualModeImageIndexes[section] || 0]
+                                : `${API_URL}${wallSectionImages[section][manualModeImageIndexes[section] || 0]}`
+                            }
+                            alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`} 
+                            loading="lazy"
+                            style={{
+                              width:'100%',
+                              height:'auto',
+                              maxHeight:250,
+                              objectFit:'contain',
+                              display:'block'
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.parentElement!.parentElement!.style.display = 'none';
+                            }}
+                          />
+                          {wallSectionImages[section].length > 1 && (
+                            <>
+                              <button
+                                onClick={() => setManualModeImageIndexes(prev => ({
+                                  ...prev,
+                                  [section]: (prev[section] || 0) === 0 ? wallSectionImages[section].length - 1 : (prev[section] || 0) - 1
+                                }))}
+                                style={{
+                                  position:'absolute',
+                                  left:8,
+                                  top:'50%',
+                                  transform:'translateY(-50%)',
+                                  backgroundColor:'rgba(0,0,0,0.7)',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:'50%',
+                                  width:36,
+                                  height:36,
+                                  fontSize:18,
+                                  cursor:'pointer',
+                                  display:'flex',
+                                  alignItems:'center',
+                                  justifyContent:'center'
+                                }}
+                              >
+                                ‹
+                              </button>
+                              <button
+                                onClick={() => setManualModeImageIndexes(prev => ({
+                                  ...prev,
+                                  [section]: (prev[section] || 0) === wallSectionImages[section].length - 1 ? 0 : (prev[section] || 0) + 1
+                                }))}
+                                style={{
+                                  position:'absolute',
+                                  right:8,
+                                  top:'50%',
+                                  transform:'translateY(-50%)',
+                                  backgroundColor:'rgba(0,0,0,0.7)',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:'50%',
+                                  width:36,
+                                  height:36,
+                                  fontSize:18,
+                                  cursor:'pointer',
+                                  display:'flex',
+                                  alignItems:'center',
+                                  justifyContent:'center'
+                                }}
+                              >
+                                ›
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                       {ORDER.map((color:keyof Counts)=> {
                         const total = sectionTotals[color];
