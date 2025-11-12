@@ -11,34 +11,56 @@
       a{color:#60a5fa}
     </style>
     <script>
-      // If the requested path is a case-insensitive variant of the repo path
+      // If the requested path is a case-insensitive variant or common misspelling
+      // of the repo path, redirect to the canonical /BoulderingELO/ preserving
+      // trailing path, search and hash.
       (function(){
         try {
           var p = window.location.pathname || '/';
-          // Normalize leading slash
-          // Check if path starts with /boulderingelo in any capitalization
-          var m = p.match(/^\/(boulderingelo)(\/.*)?$/i);
-          if (m) {
-            var rest = m[2] || '/';
-            // Preserve hash and search
+          // Remove leading slashes and grab first segment
+          var seg = p.replace(/^\/+/, '').split('/')[0] || '';
+          var normalized = seg.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          // Common variants to catch (normalized):
+          var variants = [
+            'boulderingelo', // canonical without punctuation
+            'boulderingelo', // redundant entry for clarity
+          ];
+
+          // Also accept when users type only the word 'bouldering' or 'boulderingelo' with separators
+          // or when they include a hyphen/underscore/caps. Normalization above removes those differences.
+
+          if (variants.indexOf(normalized) !== -1) {
+            // Reconstruct trailing part after the first segment
+            var rest = p.replace(new RegExp('^/' + seg), '') || '/';
             var search = window.location.search || '';
             var hash = window.location.hash || '';
-            // Redirect to canonical path with same trailing part
             window.location.replace('/BoulderingELO' + rest + search + hash);
             return;
           }
+
+          // Additional fuzzy checks: allow when normalized starts with 'bouldering' and then 'elo'
+          if (/^bouldering/.test(normalized) && normalized.indexOf('elo') !== -1) {
+            var rest2 = p.replace(new RegExp('^/' + seg), '') || '/';
+            var search2 = window.location.search || '';
+            var hash2 = window.location.hash || '';
+            window.location.replace('/BoulderingELO' + rest2 + search2 + hash2);
+            return;
+          }
         } catch (e) {
-          // swallow
+          // swallow errors silently
         }
       })();
     </script>
   </head>
   <body>
-    <div class="box">
-      <h1 style="margin:0 0 8px;font-size:20px;color:#e2e8f0">Page not found</h1>
-      <p style="margin:0 0 12px;color:#94a3b8">If you were trying to reach the app, you'll be redirected to the canonical site shortly.</p>
-      <p style="margin:0 0 12px">Or click here: <a href="/BoulderingELO/">Open BoulderingELO</a></p>
-      <p style="margin:0;color:#64748b;font-size:13px">(If you were looking for something else, this is the repository Pages 404.)</p>
-    </div>
+      <div class="box">
+        <h1 style="margin:0 0 6px;font-size:22px;color:#e2e8f0">BoulderingELO</h1>
+        <div style="margin-bottom:12px;color:#94a3b8;font-weight:600">UMass Ascend</div>
+        <h2 style="margin:0 0 8px;font-size:18px;color:#e2e8f0">Page not found</h2>
+        <p style="margin:0 0 12px;color:#94a3b8">If you were trying to reach the app, you'll be redirected to the canonical site shortly.</p>
+        <p style="margin:0 0 12px">Or click here: <a href="/BoulderingELO/">Open BoulderingELO</a></p>
+        <p style="margin:0;color:#64748b;font-size:13px">(If you were looking for something else, this is the repository Pages 404.)</p>
+      </div>
   </body>
 </html>
