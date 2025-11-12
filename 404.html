@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Page not found</title>
+    <meta http-equiv="refresh" content="5;url=/BoulderingELO/" />
+    <style>
+      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#0f172a;color:#cbd5e1;display:flex;align-items:center;justify-content:center;height:100vh;margin:0 }
+      .box{max-width:720px;padding:28px;border-radius:12px;background:#081026;border:1px solid rgba(148,163,184,0.06);text-align:center}
+      a{color:#60a5fa}
+    </style>
+    <script>
+      // If the requested path is a case-insensitive variant of the repo path
+      (function(){
+        try {
+          var p = window.location.pathname || '/';
+          // Normalize leading slash
+          // Check if path starts with /boulderingelo in any capitalization
+          var m = p.match(/^\/(boulderingelo)(\/.*)?$/i);
+          if (m) {
+            var rest = m[2] || '/';
+            // Preserve hash and search
+            var search = window.location.search || '';
+            var hash = window.location.hash || '';
+            // Redirect to canonical path with same trailing part
+            window.location.replace('/BoulderingELO' + rest + search + hash);
+            return;
+          }
+        } catch (e) {
+          // swallow
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="box">
+      <h1 style="margin:0 0 8px;font-size:20px;color:#e2e8f0">Page not found</h1>
+      <p style="margin:0 0 12px;color:#94a3b8">If you were trying to reach the app, you'll be redirected to the canonical site shortly.</p>
+      <p style="margin:0 0 12px">Or click here: <a href="/BoulderingELO/">Open BoulderingELO</a></p>
+      <p style="margin:0;color:#64748b;font-size:13px">(If you were looking for something else, this is the repository Pages 404.)</p>
+    </div>
+  </body>
+</html>
