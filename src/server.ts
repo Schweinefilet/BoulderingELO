@@ -73,6 +73,23 @@ app.get('/', (req, res) => {
   });
 });
 
+// Health check endpoint used by keep-warm pings and uptime monitors
+app.get('/health', async (req, res) => {
+  try {
+    // Quick DB check
+    const client = await (await import('./db')).getClient();
+    try {
+      await client.query('SELECT 1');
+      res.json({ ok: true, db: 'connected' });
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    console.error('Health check failed:', err.message || err);
+    res.status(500).json({ ok: false, error: err.message || String(err) });
+  }
+});
+
 /**
  * Mount API routes
  */

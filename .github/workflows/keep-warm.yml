@@ -14,6 +14,6 @@ jobs:
         run: |
           set -e
           echo "Pinging BoulderingELO API to keep it warm..."
-          # Ping root (keeps container awake) and a common API endpoint
-          curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/ || true
+          # Ping /health (fast) and a common API endpoint
+          curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/health || true
           curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/api/leaderboard || true
