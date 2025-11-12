@@ -340,6 +340,51 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </button>
         </div>
 
+                              {/* Show admin adjustment badge and notes for proxy sessions */}
+                              {s.status === 'adjustment' && (
+                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1b2430',borderRadius:6,border:'1px solid #334155'}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:12,justifyContent:'space-between'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                                      <span style={{padding:'6px 10px',backgroundColor:'#f97316',color:'white',borderRadius:6,fontWeight:700,fontSize:12}}>WALL RESET</span>
+                                      <div style={{fontSize:13,fontWeight:700,color:'#fbbf24'}}>Admin adjustment</div>
+                                    </div>
+                                    <div>
+                                      {api.isAdmin() && (
+                                        <button
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (!confirm('Undo this wall reset? This will remove the proxy adjustment sessions created by the reset.')) return;
+                                            try {
+                                              setLoading(true);
+                                              // Try to extract wall name from notes: "Admin reset wall 'garage' on ..."
+                                              const noteText = s.notes || '';
+                                              const m = noteText.match(/reset wall '?"?([^'"\s]+)'?"?/i) || noteText.match(/reset wall ['"]?([^'"\s]+)['"]?/i) || noteText.match(/reset wall\s+'?([^']+)'?/i);
+                                              const wallName = m && m[1] ? m[1] : undefined;
+                                              await api.undoResetWallSection(undefined, wallName);
+                                              await loadData();
+                                              setToast({ message: 'Undo completed', type: 'success' });
+                                              setTimeout(() => setToast(null), 3000);
+                                            } catch (err: any) {
+                                              alert('Failed to undo reset: ' + (err.message || err));
+                                            } finally {
+                                              setLoading(false);
+                                            }
+                                          }}
+                                          style={{padding:'6px 10px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}
+                                        >
+                                          Undo
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {s.notes && (
+                                    <div style={{marginTop:10,color:'#cbd5e1',fontSize:13,whiteSpace:'pre-wrap'}}>
+                                      {s.notes}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
         <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
           <div style={{marginBottom:16}}>
             <label style={{display:'block',marginBottom:8,fontSize:14}}>Username</label>
@@ -2036,12 +2081,18 @@ export default function App(){
                 const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
                 // Exclude adjustment (proxy) sessions from play count
                 const playCount = climberSessions.filter((s:any) => s.status !== 'adjustment').length;
-                
-                // Get latest session for climb counts
-                const latestSession = climberSessions.length > 0 
+
+                // Get latest non-adjustment session for climb counts and leaderboard totals
+                const nonAdjSessions = climberSessions.filter((s:any) => s.status !== 'adjustment')
+                  .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const latestNonAdjSession = nonAdjSessions.length > 0 ? nonAdjSessions[0] : null;
+                // Fallback to any latest session if no non-adjustment sessions exist
+                const latestAnySession = climberSessions.length > 0
                   ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
                   : null;
-                const latestCounts = normalizeSessionCounts(latestSession, expiredSections);
+                const latestCounts = normalizeSessionCounts(latestNonAdjSession || latestAnySession, expiredSections);
+                // Use the non-adjustment score for leaderboard totals when available
+                const displayScore = latestNonAdjSession ? latestNonAdjSession.score : (e.total_score || 0);
 
                 return (
                     <div 
@@ -2082,9 +2133,9 @@ export default function App(){
                       <span style={{fontWeight:'600',fontSize:14,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
                     </div>
                     
-                    {/* Ranked Score */}
+                    {/* Ranked Score (use latest non-adjustment session when available) */}
                     <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#3b82f6'}}>
-                      {e.total_score.toFixed(2)}
+                      {typeof displayScore === 'number' ? displayScore.toFixed(2) : (e.total_score || 0).toFixed(2)}
                     </div>
                     
                     {/* Sessions */}
@@ -2845,9 +2896,9 @@ export default function App(){
             {(() => {
               // Group sessions by date
               const sessionsByDate = new Map<string, any[]>();
-              // Exclude proxy adjustment sessions from the Sessions view so they don't count as actual user sessions
+              // Include adjustment (proxy) sessions in the Sessions view so they are visible to users,
+              // but they remain marked as admin adjustments and do not modify past sessions.
               [...sessions]
-                .filter((s:any) => s.status !== 'adjustment')
                 .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .forEach(s => {
                   if (!sessionsByDate.has(s.date)) {
