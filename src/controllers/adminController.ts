@@ -203,3 +203,87 @@ export async function updateClimberProfile(req: AuthRequest, res: Response) {
   }
 }
 
+/**
+ * Reset a wall section across all sessions.
+ * - Removes the wall key from each session's wall_counts JSONB
+ * - Recalculates total counts and session score
+ * - Updates the counts table and sessions.score
+ * - Appends an explanatory note to the session's notes field describing the change
+ */
+export async function resetWallSection(req: AuthRequest, res: Response) {
+  try {
+    const { wall } = req.body;
+    if (!wall) return sendError(res, 'wall required', 400);
+
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+
+      const q = `
+        SELECT s.id, s.climber_id, s.score, s.notes, w.counts
+        FROM sessions s
+        JOIN wall_counts w ON s.id = w.session_id
+        WHERE w.counts ? $1
+      `;
+      const result = await client.query(q, [wall]);
+
+      const changed: Array<any> = [];
+
+      for (const row of result.rows) {
+        const sessionId = row.id;
+        const climberId = row.climber_id;
+        const existingNotes: string | null = row.notes;
+        const wallCounts: any = row.counts || {};
+
+        if (!wallCounts || !Object.prototype.hasOwnProperty.call(wallCounts, wall)) {
+          continue;
+        }
+
+        const removedCounts = wallCounts[wall];
+
+  // Zero out the wall section (do not delete the key) so it can be re-added later
+  wallCounts[wall] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+
+  // Recalculate totals and score
+  const oldTotals = combineCounts({ ...(wallCounts as any), [wall]: removedCounts } as any);
+  const newTotals = combineCounts(wallCounts as any);
+  const oldScore = row.score || scoreSession(oldTotals);
+  const newScore = scoreSession(newTotals);
+
+        // Update wall_counts JSONB
+        await client.query('UPDATE wall_counts SET counts = $1 WHERE session_id = $2', [JSON.stringify(wallCounts), sessionId]);
+
+        // Update counts table
+        await client.query(
+          'UPDATE counts SET green = $1, blue = $2, yellow = $3, orange = $4, red = $5, black = $6 WHERE session_id = $7',
+          [newTotals.green, newTotals.blue, newTotals.yellow, newTotals.orange, newTotals.red, newTotals.black, sessionId]
+        );
+
+        // Append explanatory note to session
+        const timestamp = new Date().toISOString();
+        const noteLine = `Admin reset wall '${wall}' on ${timestamp}: removedCounts=${JSON.stringify(removedCounts)}, score ${oldScore} -> ${newScore}`;
+        const updatedNotes = existingNotes ? `${existingNotes}\n${noteLine}` : noteLine;
+
+        // Update session score and notes
+        await client.query('UPDATE sessions SET score = $1, notes = $2 WHERE id = $3', [newScore, updatedNotes, sessionId]);
+
+        changed.push({ sessionId, climberId, oldScore, newScore, removedCounts });
+      }
+
+      await client.query('COMMIT');
+
+      return sendSuccess(res, {
+        message: `Reset wall '${wall}' for ${changed.length} sessions`,
+        changed
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+

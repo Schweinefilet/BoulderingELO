@@ -1375,6 +1375,29 @@ export default function App(){
     }
   }
 
+  // Reset wall section for all sessions (admin): sets all climbs in the section to 0
+  const [resetResult, setResetResult] = useState<{ message: string; changed: any[] } | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  async function resetWallSectionAdmin(section: string) {
+    if (!confirm(`Reset all climbs in section "${section}" to 0 for all sessions? This will keep the section but set all counts to zero.`)) {
+      return;
+    }
+    try {
+      setResetLoading(true);
+      const result = await api.resetWallSection(section);
+      // result.changed is an array of affected sessions with old/new scores
+      setResetResult({ message: result.message || `Reset ${section}`, changed: result.changed || [] });
+      // Reload sessions and leaderboard to reflect changes
+      await loadData();
+      alert(`${result.changed?.length ?? 0} sessions updated. See details in the admin reset dialog.`);
+    } catch (err: any) {
+      alert('Failed to reset wall section: ' + (err.message || 'Unknown error'));
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   function setExpiryDate(section: string, date: string) {
     if (!date) {
       // Remove expiry date
@@ -5668,6 +5691,25 @@ export default function App(){
                               </>
                             )}
                             <button
+                              onClick={() => resetWallSectionAdmin(section)}
+                              disabled={resetLoading}
+                              title="Set all climbs in this section to 0 for all sessions"
+                              style={{
+                                padding:'6px 12px',
+                                backgroundColor:'#f97316',
+                                color:'white',
+                                border:'none',
+                                borderRadius:6,
+                                cursor:resetLoading ? 'not-allowed' : 'pointer',
+                                fontSize:12,
+                                fontWeight:'600',
+                                marginRight:8
+                              }}
+                            >
+                              {resetLoading ? 'Resetting...' : 'Reset'}
+                            </button>
+
+                            <button
                               onClick={() => deleteWallSection(section)}
                               style={{
                                 padding:'6px 12px',
@@ -6054,6 +6096,63 @@ export default function App(){
               Close
             </button>
             <LoginScreen onLogin={handleLoginSuccess} />
+          </div>
+        </div>
+      )}
+
+      {/* Reset result modal */}
+      {resetResult && (
+        <div
+          onClick={() => setResetResult(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 20
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#0f172a',
+              padding: 20,
+              borderRadius: 8,
+              maxWidth: 900,
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: '1px solid #334155'
+            }}
+          >
+            <h3 style={{marginTop:0}}>Reset Result</h3>
+            <p style={{color:'#94a3b8'}}>{resetResult.message}</p>
+            <div style={{marginTop:12}}>
+              <strong>Affected sessions:</strong> {resetResult.changed.length}
+            </div>
+            <div style={{marginTop:12, fontSize:13}}>
+              {resetResult.changed.length === 0 && <div style={{color:'#94a3b8'}}>No sessions were affected.</div>}
+              {resetResult.changed.length > 0 && (
+                <div>
+                  <div style={{marginBottom:8}}>Showing up to the first 20 changes:</div>
+                  <div style={{backgroundColor:'#071029',padding:12,borderRadius:6,border:'1px solid #223344'}}>
+                    {resetResult.changed.slice(0,20).map((r, idx) => (
+                      <div key={idx} style={{padding:'8px 0',borderBottom: idx < Math.min(resetResult.changed.length,20)-1 ? '1px solid #223344' : 'none'}}>
+                        <div><strong>Session:</strong> {r.sessionId} — <strong>Climber:</strong> {r.climberId}</div>
+                        <div style={{fontSize:13,color:'#9ca3af'}}>Old score: {r.oldScore} → New score: {r.newScore}</div>
+                        <div style={{fontSize:12,color:'#94a3b8',marginTop:6}}>Removed counts: {JSON.stringify(r.removedCounts)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}>
+              <button onClick={() => setResetResult(null)} style={{padding:'8px 12px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6}}>Close</button>
+            </div>
           </div>
         </div>
       )}

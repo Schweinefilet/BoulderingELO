@@ -23,6 +23,7 @@ router.post('/create-account', adminController.createAccount);
 
 // Protected admin endpoints
 router.post('/reset-and-seed', authenticateToken, requireAdmin, adminController.resetAndSeed);
+router.post('/reset-wall', authenticateToken, requireAdmin, adminController.resetWallSection);
 router.post('/merge-duplicates', authenticateToken, requireAdmin, adminController.mergeDuplicateSessions);
 router.put('/climber/:climberId', authenticateToken, requireAdmin, adminController.updateClimberProfile);
 

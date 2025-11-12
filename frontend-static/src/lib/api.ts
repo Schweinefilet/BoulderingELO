@@ -215,6 +215,16 @@ export async function mergeDuplicateSessions(): Promise<{ success: boolean; mess
   return handleResponse<{ success: boolean; message: string; mergedCount: number; deletedCount: number }>(response);
 }
 
+// Reset a wall section (admin only). Returns list of affected sessions and a message.
+export async function resetWallSection(wall: string): Promise<{ changed: Array<any>; message: string }> {
+  const response = await fetch(`${API_URL}/api/admin/reset-wall`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ wall })
+  });
+  return handleResponse<{ changed: Array<any>; message: string }>(response);
+}
+
 export async function updateClimberProfile(climberId: number, updates: {
   name?: string;
   username?: string;
