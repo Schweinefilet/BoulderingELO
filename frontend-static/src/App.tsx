@@ -475,6 +475,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </>
         )}
       </div>
+      {/* UMass Ascend subtitle under the main title */}
+      <div style={{width:'100%',textAlign:'center',marginBottom:16}}>
+        <div style={{fontSize:14,color:'#94a3b8',fontWeight:600}}>UMass Ascend</div>
+      </div>
 
       {/* Google Name Confirmation Modal */}
       {showGoogleNamePrompt && (
