@@ -1,0 +1,19 @@
+name: Keep API Warm
+
+on:
+  schedule:
+    # run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API root and leaderboard to keep Render instance warm
+        run: |
+          set -e
+          echo "Pinging BoulderingELO API to keep it warm..."
+          # Ping root (keeps container awake) and a common API endpoint
+          curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/ || true
+          curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/api/leaderboard || true
