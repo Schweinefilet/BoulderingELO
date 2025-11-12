@@ -219,63 +219,170 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
     try {
       await client.query('BEGIN');
 
-      const q = `
-        SELECT s.id, s.climber_id, s.score, s.notes, w.counts
-        FROM sessions s
-        JOIN wall_counts w ON s.id = w.session_id
-        WHERE w.counts ? $1
-      `;
-      const result = await client.query(q, [wall]);
+      // Find all climbers who have any counts for this wall across any session
+      const climberRes = await client.query(
+        `SELECT DISTINCT s.climber_id FROM sessions s JOIN wall_counts w ON s.id = w.session_id WHERE w.counts ? $1`,
+        [wall]
+      );
 
       const changed: Array<any> = [];
 
-      for (const row of result.rows) {
-        const sessionId = row.id;
+      for (const row of climberRes.rows) {
         const climberId = row.climber_id;
-        const existingNotes: string | null = row.notes;
-        const wallCounts: any = row.counts || {};
 
-        if (!wallCounts || !Object.prototype.hasOwnProperty.call(wallCounts, wall)) {
-          continue;
-        }
-
-        const removedCounts = wallCounts[wall];
-
-  // Zero out the wall section (do not delete the key) so it can be re-added later
-  wallCounts[wall] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
-
-  // Recalculate totals and score
-  const oldTotals = combineCounts({ ...(wallCounts as any), [wall]: removedCounts } as any);
-  const newTotals = combineCounts(wallCounts as any);
-  const oldScore = row.score || scoreSession(oldTotals);
-  const newScore = scoreSession(newTotals);
-
-        // Update wall_counts JSONB
-        await client.query('UPDATE wall_counts SET counts = $1 WHERE session_id = $2', [JSON.stringify(wallCounts), sessionId]);
-
-        // Update counts table
-        await client.query(
-          'UPDATE counts SET green = $1, blue = $2, yellow = $3, orange = $4, red = $5, black = $6 WHERE session_id = $7',
-          [newTotals.green, newTotals.blue, newTotals.yellow, newTotals.orange, newTotals.red, newTotals.black, sessionId]
+        // Fetch all wall_counts for this climber
+        const wcRes = await client.query(
+          'SELECT w.counts FROM sessions s JOIN wall_counts w ON s.id = w.session_id WHERE s.climber_id = $1',
+          [climberId]
         );
 
-        // Append explanatory note to session
+        // Aggregate counts per wall section
+        const aggregated: any = {};
+        for (const r of wcRes.rows) {
+          const countsObj = r.counts || {};
+          for (const section of Object.keys(countsObj)) {
+            if (!aggregated[section]) aggregated[section] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+            const sec = countsObj[section];
+            ['green','blue','yellow','orange','red','black'].forEach((c:any) => {
+              aggregated[section][c] = (aggregated[section][c] || 0) + (sec[c] || 0);
+            });
+          }
+        }
+
+        // removedCounts are the totals on that section
+        const removedCounts = aggregated[wall] || { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
+
+        // Build new total wallCounts excluding the removed wall
+        const newWallCounts: any = {};
+        for (const section of Object.keys(aggregated)) {
+          if (section === wall) {
+            // zero it out
+            newWallCounts[section] = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
+          } else {
+            newWallCounts[section] = aggregated[section];
+          }
+        }
+
+        // Compute totals and new score
+        const totalCounts = combineCounts(newWallCounts as any);
+        const newScore = scoreSession(totalCounts);
+
+        // Determine previous official score (most recent non-adjustment session)
+        const prevRes = await client.query(
+          "SELECT score FROM sessions WHERE climber_id = $1 AND status != 'adjustment' ORDER BY date DESC LIMIT 1",
+          [climberId]
+        );
+        const oldScore = prevRes.rows.length > 0 ? prevRes.rows[0].score : 0;
+
+        // Create a proxy session (status = 'adjustment') dated today to represent the updated totals
+        const today = new Date().toISOString().split('T')[0];
         const timestamp = new Date().toISOString();
         const noteLine = `Admin reset wall '${wall}' on ${timestamp}: removedCounts=${JSON.stringify(removedCounts)}, score ${oldScore} -> ${newScore}`;
-        const updatedNotes = existingNotes ? `${existingNotes}\n${noteLine}` : noteLine;
 
-        // Update session score and notes
-        await client.query('UPDATE sessions SET score = $1, notes = $2 WHERE id = $3', [newScore, updatedNotes, sessionId]);
+        const insertSession = await client.query(
+          'INSERT INTO sessions (climber_id, date, score, notes, status) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [climberId, today, newScore, noteLine, 'adjustment']
+        );
+        const newSessionId = insertSession.rows[0].id;
 
-        changed.push({ sessionId, climberId, oldScore, newScore, removedCounts });
+        // Insert counts row
+        await client.query(
+          'INSERT INTO counts (session_id, green, blue, yellow, orange, red, black) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+          [newSessionId, totalCounts.green, totalCounts.blue, totalCounts.yellow, totalCounts.orange, totalCounts.red, totalCounts.black]
+        );
+
+        // Insert wall_counts JSONB as the aggregated totals with the removed wall zeroed
+        await client.query('INSERT INTO wall_counts (session_id, counts) VALUES ($1, $2)', [newSessionId, JSON.stringify(newWallCounts)]);
+
+        changed.push({ climberId, newSessionId, oldScore, newScore, removedCounts });
       }
 
       await client.query('COMMIT');
 
-      return sendSuccess(res, {
-        message: `Reset wall '${wall}' for ${changed.length} sessions`,
-        changed
+      // Persist audit record
+      try {
+        const audits = (await db.getSetting('reset_audits')) || [];
+        const auditId = new Date().toISOString();
+        const audit = {
+          id: auditId,
+          wall,
+          performedBy: req.user?.climberId || null,
+          performedAt: new Date().toISOString(),
+          changes: changed,
+          undone: false
+        };
+        audits.push(audit);
+        await db.setSetting('reset_audits', audits);
+
+        return sendSuccess(res, {
+          message: `Created ${changed.length} proxy adjustment sessions for wall '${wall}'`,
+          changed,
+          auditId
+        });
+      } catch (auditErr) {
+        return sendSuccess(res, {
+          message: `Created ${changed.length} proxy adjustment sessions for wall '${wall}' (audit save failed)`,
+          changed
+        });
+      }
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Undo a previous reset using auditId. If auditId is not provided, undo the most recent non-undone reset for the given wall.
+ */
+export async function undoResetWallSection(req: AuthRequest, res: Response) {
+  try {
+    const { auditId, wall } = req.body;
+    const audits: any[] = (await db.getSetting('reset_audits')) || [];
+
+    let audit: any;
+    if (auditId) {
+      audit = audits.find(a => a.id === auditId);
+    } else if (wall) {
+      // pick most recent non-undone audit for this wall
+      audit = [...audits].reverse().find(a => a.wall === wall && !a.undone);
+    } else {
+      // pick most recent non-undone audit overall
+      audit = [...audits].reverse().find(a => !a.undone);
+    }
+
+    if (!audit) return sendError(res, 'Audit record not found', 404);
+    if (audit.undone) return sendError(res, 'This reset has already been undone', 400);
+
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+
+      // For proxy adjustment sessions we created, undo should delete those adjustment sessions and restore nothing in original historical sessions
+      for (const change of audit.changes) {
+        const newSessionId = change.newSessionId || change.newSession || change.sessionId;
+        if (!newSessionId) continue;
+
+        // Delete counts and wall_counts rows (CASCADE on sessions should handle this, but be explicit)
+        await client.query('DELETE FROM counts WHERE session_id = $1', [newSessionId]).catch(() => {});
+        await client.query('DELETE FROM wall_counts WHERE session_id = $1', [newSessionId]).catch(() => {});
+        await client.query('DELETE FROM sessions WHERE id = $1', [newSessionId]).catch(() => {});
+      }
+
+      await client.query('COMMIT');
+
+      // Mark audit as undone
+      const updatedAudits = audits.map(a => {
+        if (a.id === audit.id) return { ...a, undone: true, undoneAt: new Date().toISOString(), undoneBy: req.user?.climberId || null };
+        return a;
       });
+      await db.setSetting('reset_audits', updatedAudits);
+
+      return sendSuccess(res, { message: `Undo of reset '${audit.id}' completed`, auditId: audit.id });
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

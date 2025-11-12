@@ -225,6 +225,15 @@ export async function resetWallSection(wall: string): Promise<{ changed: Array<a
   return handleResponse<{ changed: Array<any>; message: string }>(response);
 }
 
+export async function undoResetWallSection(auditId?: string, wall?: string): Promise<{ message: string; auditId?: string }> {
+  const response = await fetch(`${API_URL}/api/admin/reset-wall/undo`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ auditId, wall })
+  });
+  return handleResponse<{ message: string; auditId?: string }>(response);
+}
+
 export async function updateClimberProfile(climberId: number, updates: {
   name?: string;
   username?: string;

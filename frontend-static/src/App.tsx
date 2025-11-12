@@ -1376,7 +1376,7 @@ export default function App(){
   }
 
   // Reset wall section for all sessions (admin): sets all climbs in the section to 0
-  const [resetResult, setResetResult] = useState<{ message: string; changed: any[] } | null>(null);
+  const [resetResult, setResetResult] = useState<{ message: string; changed: any[]; auditId?: string } | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
 
   async function resetWallSectionAdmin(section: string) {
@@ -1385,9 +1385,9 @@ export default function App(){
     }
     try {
       setResetLoading(true);
-      const result = await api.resetWallSection(section);
-      // result.changed is an array of affected sessions with old/new scores
-      setResetResult({ message: result.message || `Reset ${section}`, changed: result.changed || [] });
+  const result = await api.resetWallSection(section);
+  // result.changed is an array of affected sessions with old/new scores; result.auditId may be present
+  setResetResult({ message: result.message || `Reset ${section}`, changed: result.changed || [], auditId: (result as any).auditId });
       // Reload sessions and leaderboard to reflect changes
       await loadData();
       alert(`${result.changed?.length ?? 0} sessions updated. See details in the admin reset dialog.`);
@@ -1739,7 +1739,10 @@ export default function App(){
       
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
-          <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
+          <div style={{display:'flex',flexDirection:'column'}}>
+            <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
+            <div style={{fontSize:12,color:'#94a3b8',fontWeight:600,marginTop:4}}>UMass Ascend</div>
+          </div>
           <a 
             href="https://github.com/Schweinefilet/BoulderingELO" 
             target="_blank" 
@@ -2028,10 +2031,11 @@ export default function App(){
               </div>
               
               {/* Rows */}
-              {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 10)).map((e:any,i:number)=> {
+                {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 10)).map((e:any,i:number)=> {
                 const climber = climbers.find((c:any) => c.name === e.climber);
                 const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
-                const playCount = climberSessions.length;
+                // Exclude adjustment (proxy) sessions from play count
+                const playCount = climberSessions.filter((s:any) => s.status !== 'adjustment').length;
                 
                 // Get latest session for climb counts
                 const latestSession = climberSessions.length > 0 
@@ -2841,7 +2845,9 @@ export default function App(){
             {(() => {
               // Group sessions by date
               const sessionsByDate = new Map<string, any[]>();
+              // Exclude proxy adjustment sessions from the Sessions view so they don't count as actual user sessions
               [...sessions]
+                .filter((s:any) => s.status !== 'adjustment')
                 .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .forEach(s => {
                   if (!sessionsByDate.has(s.date)) {
@@ -2863,13 +2869,20 @@ export default function App(){
                         {dateSessions.map(s => {
                           const climber = climbers.find(c=>c.id===s.climberId);
                           
-                          // Find previous session for this climber
+                          // Find previous non-adjustment session for this climber (so adjustments don't count as previous)
                           const climberSessions = sessions
                             .filter((sess:any) => sess.climberId === s.climberId)
                             .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                          
+
                           const sessionIndex = climberSessions.findIndex((sess:any) => sess.id === s.id);
-                          const prevSession = sessionIndex > 0 ? climberSessions[sessionIndex - 1] : null;
+                          let prevSession = null as any;
+                          for (let idx = sessionIndex - 1; idx >= 0; idx--) {
+                            const candidate = climberSessions[idx];
+                            if (candidate && candidate.status !== 'adjustment') {
+                              prevSession = candidate;
+                              break;
+                            }
+                          }
                           
                           const scoreDiff = prevSession ? s.score - prevSession.score : s.score;
                           const displayScore = scoreDiff >= 0 ? `+${scoreDiff.toFixed(2)}` : scoreDiff.toFixed(2);
@@ -6150,7 +6163,30 @@ export default function App(){
                 </div>
               )}
             </div>
-            <div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}>
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:16,alignItems:'center',gap:8}}>
+              {resetResult.auditId && (
+                <button
+                  onClick={async () => {
+                    if (!confirm('Undo this reset? This will restore sessions to their previous values.')) return;
+                    try {
+                      setResetLoading(true);
+                      await api.undoResetWallSection(resetResult.auditId);
+                      // Reload data
+                      await loadData();
+                      // Update modal to show undone state
+                      setResetResult(prev => prev ? { ...prev, message: (prev.message || '') + ' (undone)' , changed: [] } : null);
+                      alert('Reset undone successfully');
+                    } catch (err: any) {
+                      alert('Failed to undo reset: ' + (err.message || 'Unknown error'));
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}
+                  style={{padding:'8px 12px',backgroundColor:'#10b981',color:'white',border:'none',borderRadius:6}}
+                >
+                  Undo
+                </button>
+              )}
               <button onClick={() => setResetResult(null)} style={{padding:'8px 12px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6}}>Close</button>
             </div>
           </div>

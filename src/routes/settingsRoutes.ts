@@ -17,7 +17,7 @@ const router = Router();
 
 // Configure multer storage - use Cloudinary if configured, otherwise local disk
 const localStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: any, file: any, cb: any) => {
     const uploadDir = path.join(__dirname, '../../uploads/wall-sections');
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
@@ -25,7 +25,7 @@ const localStorage = multer.diskStorage({
     }
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
+  filename: (req: any, file: any, cb: any) => {
     // Generate unique filename with timestamp
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
@@ -38,7 +38,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: any, file: any, cb: any) => {
     // Accept images only
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Only image files are allowed'));
