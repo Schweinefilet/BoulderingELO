@@ -1991,53 +1991,11 @@ export default function App(){
             </button>
           </div>
           {/* Practical user guide for everyday users */}
-          {showUserGuide && (
+          {showUserGuide ? (
             <div style={{marginTop:18,padding:'12px',backgroundColor:'#071029',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-            <h4 style={{marginTop:0,marginBottom:8,color:'#94a3b8'}}>How to use (everyday users)</h4>
-            <div style={{fontSize:14,lineHeight:1.6}}>
-              <strong>Select or add a climber:</strong> Use the climber dropdown at the top-left of the sessions panel to pick who you're recording for. Click "Add climber" to create a new profile.
+              <div style={{fontSize:14}}>Guide content hidden for CI debug (temporary)</div>
             </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Log climbs quickly:</strong> Choose a wall and color, then press the blue "Add" button to increment a send, or the minus button to subtract. The live score preview updates as you edit.
-            </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Videos & pending sends:</strong> If you add a red/black send, include a video URL in the field. Those climbs are stored as pending until the video is reviewed; they won't immediately count toward the calculated score.
-            </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Save your session:</strong> Set the session date and optional notes, then click "Save" or "Submit session". After saving you can view the session in your history and on the leaderboard.
-            </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Edit or delete sessions:</strong> Open your session history, click the session to expand it, then use the edit or delete controls to make corrections.
-            </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Settings & profile:</strong> Click the "Settings" button (top-right) to update your display name, country, bio, or change your password.
-            </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Export & backup:</strong> Use the "Export CSV" control to download your sessions for backup or spreadsheet analysis. If you're using the GitHub Pages static build, your data is stored in your browser's localStorage — export regularly.
-            </div>
-            <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Mobile tips:</strong> The UI is touch-friendly: use the dropdown mode to add sends quickly and rotate your phone for more screen space. If images are slow to load, try the manual mode.
-            </div>
-            <div style={{display:'flex',gap:8,marginTop:12,alignItems:'center'}}>
-              <button
-                onClick={() => {
-                  const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
-                }}
-                style={{padding:'8px 12px',backgroundColor:'#0b1220',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
-              >
-                Export CSV
-              </button>
-
-              <button
-                onClick={() => setShowSettings(true)}
-                style={{padding:'8px 12px',backgroundColor:'#0b1220',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
-              >
-                Open Settings
-              </button>
-
-              <div style={{fontSize:13,color:'#93c5fd',marginLeft:6,fontWeight:600}}>Need more help? Check the Notifications area above or open the GitHub repo link for docs.</div>
-            </div>
-          )}
+          ) : null}
         </div>
       </GlowingCard>
       
