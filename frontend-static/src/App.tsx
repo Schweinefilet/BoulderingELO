@@ -1995,13 +1995,13 @@ export default function App(){
             <div style={{marginTop:18,padding:'12px',backgroundColor:'#071029',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
             <h4 style={{marginTop:0,marginBottom:8,color:'#94a3b8'}}>How to use (everyday users)</h4>
             <div style={{fontSize:14,lineHeight:1.6}}>
-              <strong>Select or add a climber:</strong> Use the climber dropdown at the top-left of the sessions panel to pick who youre recording for. Click "Add climber" to create a new profile.
+              <strong>Select or add a climber:</strong> Use the climber dropdown at the top-left of the sessions panel to pick who you're recording for. Click "Add climber" to create a new profile.
             </div>
             <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
               <strong>Log climbs quickly:</strong> Choose a wall and color, then press the blue "Add" button to increment a send, or the minus button to subtract. The live score preview updates as you edit.
             </div>
             <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Videos & pending sends:</strong> If you add a red/black send, include a video URL in the field. Those climbs are stored as pending until the video is reviewed; they wont immediately count toward the calculated score.
+              <strong>Videos & pending sends:</strong> If you add a red/black send, include a video URL in the field. Those climbs are stored as pending until the video is reviewed; they won't immediately count toward the calculated score.
             </div>
             <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
               <strong>Save your session:</strong> Set the session date and optional notes, then click "Save" or "Submit session". After saving you can view the session in your history and on the leaderboard.
@@ -2013,7 +2013,7 @@ export default function App(){
               <strong>Settings & profile:</strong> Click the "Settings" button (top-right) to update your display name, country, bio, or change your password.
             </div>
             <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-              <strong>Export & backup:</strong> Use the "Export CSV" control to download your sessions for backup or spreadsheet analysis. If youre using the GitHub Pages static build, your data is stored in your browsers localStorage — export regularly.
+              <strong>Export & backup:</strong> Use the "Export CSV" control to download your sessions for backup or spreadsheet analysis. If you're using the GitHub Pages static build, your data is stored in your browser's localStorage — export regularly.
             </div>
             <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
               <strong>Mobile tips:</strong> The UI is touch-friendly: use the dropdown mode to add sends quickly and rotate your phone for more screen space. If images are slow to load, try the manual mode.
@@ -2335,25 +2335,43 @@ export default function App(){
                       )}
                     </div>
                     <div style={{position:'relative'}}>
-                      <img 
-                        src={
-                          wallSectionImages[dropdownWall][currentImageIndex].startsWith('http')
-                            ? wallSectionImages[dropdownWall][currentImageIndex]
-                            : `${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`
-                        }
-                        alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`} 
-                        loading="lazy"
-                        style={{
-                          width:'100%',
-                          height:'auto',
-                          maxHeight:250,
-                          objectFit:'contain',
-                          display:'block'
-                        }}
-                        onError={(e) => {
-                          e.currentTarget.parentElement!.parentElement!.style.display = 'none';
-                        }}
-                      />
+                        <img 
+                          src={
+                            wallSectionImages[dropdownWall][currentImageIndex].startsWith('http')
+                              ? wallSectionImages[dropdownWall][currentImageIndex]
+                              : `${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`
+                          }
+                          alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`} 
+                          loading="lazy"
+                          style={{
+                            width:'100%',
+                            height:'auto',
+                            maxHeight:250,
+                            objectFit:'contain',
+                            display:'block'
+                          }}
+                          onError={(e) => {
+                            try {
+                              const img = e.currentTarget;
+                              img.style.display = 'none';
+                              const src = img.src;
+                              const container = img.parentElement;
+                              if (container) {
+                                const link = document.createElement('a');
+                                link.href = src;
+                                link.target = '_blank';
+                                link.rel = 'noopener noreferrer';
+                                link.textContent = 'Open image in new tab';
+                                link.style.display = 'block';
+                                link.style.padding = '12px';
+                                link.style.color = '#93c5fd';
+                                container.appendChild(link);
+                              }
+                            } catch (err) {
+                              // ignore
+                            }
+                          }}
+                        />
                       {wallSectionImages[dropdownWall].length > 1 && (
                         <>
                           <button
@@ -2709,7 +2727,23 @@ export default function App(){
                               display:'block'
                             }}
                             onError={(e) => {
-                              e.currentTarget.parentElement!.parentElement!.style.display = 'none';
+                              try {
+                                const img = e.currentTarget;
+                                img.style.display = 'none';
+                                const src = img.src;
+                                const container = img.parentElement;
+                                if (container) {
+                                  const link = document.createElement('a');
+                                  link.href = src;
+                                  link.target = '_blank';
+                                  link.rel = 'noopener noreferrer';
+                                  link.textContent = 'Open image in new tab';
+                                  link.style.display = 'block';
+                                  link.style.padding = '12px';
+                                  link.style.color = '#93c5fd';
+                                  container.appendChild(link);
+                                }
+                              } catch (err) { }
                             }}
                           />
                           {wallSectionImages[section].length > 1 && (
