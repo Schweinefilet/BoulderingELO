@@ -91,74 +91,7 @@ async function saveWallSectionImagesToAPI(images: Record<string, string[]>) {
   }
 }
 
-// Expiry date management
-interface ExpiryConfig {
-  [section: string]: string; // section name -> ISO date string
-}
-
-function getExpiryDates(): ExpiryConfig {
-  try {
-    const stored = localStorage.getItem('wallExpiryDates');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error('Error loading expiry dates:', e);
-  }
-  return {};
-}
-
-function saveExpiryDates(config: ExpiryConfig) {
-  try {
-    localStorage.setItem('wallExpiryDates', JSON.stringify(config));
-  } catch (e) {
-    console.error('Error saving expiry dates:', e);
-  }
-}
-
-// Check and reset expired sections
-function checkAndResetExpiredSections(
-  wallTotals: Record<string, Record<string, number>>,
-  expiryDates: ExpiryConfig
-): { 
-  updated: boolean; 
-  newTotals: Record<string, Record<string, number>>; 
-  newExpiry: ExpiryConfig; 
-  expiredSections: {section: string, date: string}[] 
-} {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0); // Start of today
-  
-  let updated = false;
-  const newTotals = { ...wallTotals };
-  const newExpiry = { ...expiryDates };
-  const expiredSections: {section: string, date: string}[] = [];
-  
-  Object.keys(expiryDates).forEach(section => {
-    const expiryDate = new Date(expiryDates[section]);
-    expiryDate.setHours(0, 0, 0, 0);
-    
-    if (now >= expiryDate && newTotals[section]) {
-      // Reset all routes to null (displays as "?") instead of 0
-      // This allows climbers to still add climbs while admin updates totals
-      newTotals[section] = {
-        green: null as any,
-        blue: null as any,
-        yellow: null as any,
-        orange: null as any,
-        red: null as any,
-        black: null as any
-      };
-      // Track which section expired with its date
-      expiredSections.push({section, date: expiryDates[section]});
-      // Remove the expiry date
-      delete newExpiry[section];
-      updated = true;
-    }
-  });
-  
-  return { updated, newTotals, newExpiry, expiredSections };
-}
+// Expiry feature removed: expiry dates and auto-reset logic intentionally deleted.
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -820,8 +753,12 @@ export default function App(){
   const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes' | 'audits'>('accounts')
   const [adminAudits, setAdminAudits] = useState<any[]>([])
   const [auditsLoading, setAuditsLoading] = useState(false)
+  // Admin notifications (latest first)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [newNotificationText, setNewNotificationText] = useState('')
   
-  const [expiryDates, setExpiryDates] = useState<ExpiryConfig>(getExpiryDates())
+  // expiry dates feature removed; no state required
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [renamingSection, setRenamingSection] = useState<string | null>(null)
   const [newSectionName, setNewSectionName] = useState('')
@@ -830,7 +767,6 @@ export default function App(){
   // Copy/Paste section data state
   const [copiedSectionData, setCopiedSectionData] = useState<{
     totals: Record<string, number>;
-    expiryDate?: string;
     images?: string[];
   } | null>(null)
   
@@ -1060,6 +996,18 @@ export default function App(){
       setSessions(loadedSessions);
       setLeaderboard(loadedLeaderboard);
       await loadVideos(); // Load videos too
+      // Load admin notifications (non-blocking)
+      (async () => {
+        try {
+          setNotifLoading(true);
+          const noteRes = await api.getAdminNotifications();
+          setNotifications(noteRes.notifications || []);
+        } catch (e) {
+          console.warn('Failed to load admin notifications', e);
+        } finally {
+          setNotifLoading(false);
+        }
+      })();
     } catch (err: any) {
       console.error('Failed to load data:', err);
       setError(err.message || 'Failed to load data. Check if API is online at https://bouldering-elo-api.onrender.com');
@@ -1313,14 +1261,7 @@ export default function App(){
       await saveWallSectionImagesToAPI(updatedImages);
     }
     
-    // Update expiry date if exists
-    if (expiryDates[oldName]) {
-      const updatedExpiry = { ...expiryDates };
-      updatedExpiry[newName] = updatedExpiry[oldName];
-      delete updatedExpiry[oldName];
-      setExpiryDates(updatedExpiry);
-      saveExpiryDates(updatedExpiry);
-    }
+    // Expiry dates feature removed; nothing to migrate here
     
     // Migrate session data: update all sessions that have the old wall name
     migrateSectionDataInSessions(oldName, newName);
@@ -1413,13 +1354,7 @@ export default function App(){
       await saveWallSectionImagesToAPI(updatedImages);
     }
     
-    // Remove expiry date if exists
-    if (expiryDates[section]) {
-      const updatedExpiry = { ...expiryDates };
-      delete updatedExpiry[section];
-      setExpiryDates(updatedExpiry);
-      saveExpiryDates(updatedExpiry);
-    }
+    // Expiry dates feature removed; nothing to do here
   }
 
   // Reset wall section for all sessions (admin): sets all climbs in the section to 0
@@ -1445,28 +1380,12 @@ export default function App(){
     }
   }
 
-  function setExpiryDate(section: string, date: string) {
-    if (!date) {
-      // Remove expiry date
-      const updated = { ...expiryDates };
-      delete updated[section];
-      setExpiryDates(updated);
-      saveExpiryDates(updated);
-    } else {
-      const updated = {
-        ...expiryDates,
-        [section]: date
-      };
-      setExpiryDates(updated);
-      saveExpiryDates(updated);
-    }
-  }
+  // setExpiryDate removed along with expiry feature
 
-  // Copy section data (totals, expiry, images)
+  // Copy section data (totals, images)
   function copySectionData(section: string) {
     setCopiedSectionData({
       totals: { ...wallTotals[section] },
-      expiryDate: expiryDates[section],
       images: wallSectionImages[section] ? [...wallSectionImages[section]] : undefined
     });
     alert(`Copied data from "${section}"`);
@@ -1479,7 +1398,7 @@ export default function App(){
       return;
     }
 
-    if (!confirm(`Paste copied data to "${section}"? This will overwrite current totals, expiry date, and images.`)) {
+    if (!confirm(`Paste copied data to "${section}"? This will overwrite current totals and images.`)) {
       return;
     }
 
@@ -1491,21 +1410,7 @@ export default function App(){
     setWallTotals(updatedTotals);
     await saveWallTotalsToAPI(updatedTotals);
 
-    // Update expiry date
-    if (copiedSectionData.expiryDate) {
-      const updatedExpiry = {
-        ...expiryDates,
-        [section]: copiedSectionData.expiryDate
-      };
-      setExpiryDates(updatedExpiry);
-      saveExpiryDates(updatedExpiry);
-    } else {
-      // Clear expiry if source section had none
-      const updatedExpiry = { ...expiryDates };
-      delete updatedExpiry[section];
-      setExpiryDates(updatedExpiry);
-      saveExpiryDates(updatedExpiry);
-    }
+    // Expiry dates feature removed; nothing to copy for expiry
 
     // Update images
     if (copiedSectionData.images && copiedSectionData.images.length > 0) {
@@ -1520,11 +1425,7 @@ export default function App(){
     alert(`Pasted data to "${section}"`);
   }
 
-  // Manually expire a section (FEATURE REMOVED - kept as stub to avoid breaking UI)
-  async function manuallyExpireSection(section: string) {
-    alert('The "Expire Now" feature has been removed. Please use the admin panel to manage wall sections.');
-    return;
-  }
+  // manuallyExpireSection removed along with expiry feature
 
   async function resetToDefaults() {
     if (!confirm('Reset all route totals to defaults? This cannot be undone!')) {
@@ -1532,8 +1433,7 @@ export default function App(){
     }
     setWallTotals(DEFAULT_wallTotals);
     await saveWallTotalsToAPI(DEFAULT_wallTotals);
-    setExpiryDates({});
-    saveExpiryDates({});
+    // expiryDates removed; no-op
   }
 
   // Climber profile editing functions (admin)
@@ -1949,7 +1849,51 @@ export default function App(){
       
       <GlowingCard>
         <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20}}>
-          <h3 style={{marginTop:0,marginBottom:16}}>Scoring Formula</h3>
+          {/* Notification center (admin can post messages) */}
+          <div style={{marginBottom:16}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <div style={{fontSize:16,fontWeight:700,color:'#fbbf24'}}>Notifications</div>
+              {api.isAdmin() && (
+                <div style={{fontSize:12,color:'#94a3b8'}}>Admin editable</div>
+              )}
+            </div>
+            <div style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #334155'}}>
+              {notifLoading ? (
+                <div style={{color:'#94a3b8'}}>Loading notifications...</div>
+              ) : (
+                <div>
+                  {notifications.length === 0 ? (
+                    <div style={{color:'#94a3b8'}}>No notifications</div>
+                  ) : (
+                    <div style={{color:'#cbd5e1',whiteSpace:'pre-wrap'}}>{notifications[0].message}</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {api.isAdmin() && (
+              <div style={{marginTop:8,display:'flex',gap:8}}>
+                <textarea value={newNotificationText} onChange={e => setNewNotificationText(e.target.value)} placeholder="Type notification message..." style={{flex:1,minHeight:48,padding:8,backgroundColor:'#091427',color:'white',border:'1px solid #334155',borderRadius:6}} />
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  <button onClick={async () => {
+                    if (!newNotificationText.trim()) return alert('Enter a message');
+                    try {
+                      setNotifLoading(true);
+                      await api.setAdminNotification(newNotificationText.trim());
+                      const res = await api.getAdminNotifications();
+                      setNotifications(res.notifications || []);
+                      setNewNotificationText('');
+                    } catch (err: any) {
+                      alert('Failed to save notification: ' + (err.message || err));
+                    } finally { setNotifLoading(false); }
+                  }} style={{padding:'8px 12px',backgroundColor:'#3b82f6',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}>Save</button>
+                  <button onClick={() => setNewNotificationText('')} style={{padding:'8px 12px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}>Clear</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <h3 style={{marginTop:0,marginBottom:16}}>Guide</h3>
           
           <div style={{fontSize:15,marginBottom:16,padding:'16px',backgroundColor:'#0f172a',borderRadius:6,overflowX:'auto',textAlign:'center'}}>
             <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
@@ -5867,72 +5811,7 @@ export default function App(){
                           </div>
                         </div>
 
-                        {/* Expiry Date Setting */}
-                        <div style={{
-                          backgroundColor:'#0f172a',
-                          padding:12,
-                          borderRadius:6,
-                          marginBottom:16,
-                          display:'flex',
-                          alignItems:'center',
-                          gap:12
-                        }}>
-                          <label style={{fontSize:13,color:'#94a3b8',minWidth:100}}>
-                            Expiry Date:
-                          </label>
-                          <input
-                            type="date"
-                            value={expiryDates[section] || ''}
-                            onChange={(e) => setExpiryDate(section, e.target.value)}
-                            style={{
-                              padding:'6px 10px',
-                              backgroundColor:'#1e293b',
-                              border:'1px solid #475569',
-                              borderRadius:4,
-                              color:'white',
-                              fontSize:13
-                            }}
-                          />
-                          {expiryDates[section] && (
-                            <button
-                              onClick={() => setExpiryDate(section, '')}
-                              style={{
-                                padding:'4px 10px',
-                                backgroundColor:'#475569',
-                                color:'white',
-                                border:'none',
-                                borderRadius:4,
-                                cursor:'pointer',
-                                fontSize:11,
-                                fontWeight:'600'
-                              }}
-                            >
-                              Clear
-                            </button>
-                          )}
-                          <span style={{fontSize:12,color:'#64748b',fontStyle:'italic'}}>
-                            {expiryDates[section] 
-                              ? `Routes will reset to ? on ${new Date(expiryDates[section]).toLocaleDateString()}`
-                              : 'No expiry set'}
-                          </span>
-                          <button
-                            onClick={() => manuallyExpireSection(section)}
-                            style={{
-                              padding:'6px 14px',
-                              backgroundColor:'#f97316',
-                              color:'white',
-                              border:'none',
-                              borderRadius:4,
-                              cursor:'pointer',
-                              fontSize:12,
-                              fontWeight:'600',
-                              marginLeft:'auto'
-                            }}
-                            title="Immediately reset this section to ? (null) and mark as expired"
-                          >
-                            ⚡ Expire Now
-                          </button>
-                        </div>
+                        
 
                         {/* Wall Section Image Upload */}
                         <div style={{

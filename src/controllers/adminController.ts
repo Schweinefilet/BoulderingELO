@@ -245,6 +245,13 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
         // removedCounts are the totals on that section in the latest session
         const removedCounts = latestCountsObj[wall] || { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
 
+        // If there are no climbs to remove for this climber on that wall, skip creating a proxy session
+        const removedSum = Object.values(removedCounts).reduce((s:any, v:any) => s + (v || 0), 0);
+        if (removedSum === 0) {
+          // nothing to remove for this climber
+          continue;
+        }
+
         // Build new total wallCounts by copying latest counts but zeroing the removed wall
         const newWallCounts: any = { ...(latestCountsObj || {}) };
         newWallCounts[wall] = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
@@ -388,6 +395,45 @@ export async function listResetAudits(req: AuthRequest, res: Response) {
   try {
     const audits: any[] = (await db.getSetting('reset_audits')) || [];
     return sendSuccess(res, { audits });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Public: Get admin-published notifications (latest first)
+ */
+export async function getAdminNotifications(req: AuthRequest, res: Response) {
+  try {
+    const notes: any[] = (await db.getSetting('admin_notifications')) || [];
+    return sendSuccess(res, { notifications: notes });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Admin: publish a notification message
+ */
+export async function setAdminNotification(req: AuthRequest, res: Response) {
+  try {
+    const { message } = req.body;
+    if (!message || typeof message !== 'string') return sendError(res, 'message required', 400);
+
+    const notifications = (await db.getSetting('admin_notifications')) || [];
+    const note = {
+      id: new Date().toISOString(),
+      message,
+      createdBy: req.user?.climberId || null,
+      createdAt: new Date().toISOString()
+    };
+    // prepend so latest is first
+    notifications.unshift(note);
+    // keep latest 50 only
+    const truncated = notifications.slice(0, 50);
+    await db.setSetting('admin_notifications', truncated);
+
+    return sendSuccess(res, { notification: note });
   } catch (err: any) {
     return handleControllerError(res, err);
   }

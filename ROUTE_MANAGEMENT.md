@@ -1,3 +1,63 @@
+```markdown
+# Route Management Guide
+
+## Overview
+Administrators can configure wall sections and per-color route totals. This document covers how to manage sections and route counts; the previous automatic expiry/auto-reset feature has been removed from the application.
+
+## Features
+
+- Dynamic wall sections: add, rename, and delete sections as needed
+- Per-color route totals: set the number of routes for each color in a section
+- Persistent storage: totals are saved in localStorage and persisted server-side for the app
+
+## How to Use
+
+### Accessing Route Management
+1. Log in as an admin user
+2. Click **Admin Panel** in the navigation
+3. Select the **Routes** tab
+
+### Adding a New Wall Section
+1. Enter a section name (e.g., "section4", "westWall")
+2. Click **Add Section**
+3. The new section appears with all colors set to 0 routes
+
+### Renaming a Wall Section
+1. Find the section to rename
+2. Click **Rename** next to the section name
+3. Enter the new name and confirm
+4. Session data is migrated to the new section name where applicable
+
+### Editing Route Totals
+1. For each section, update the number of routes per color
+2. Changes are saved to the backend and reflected in session inputs and analytics
+
+### Deleting a Wall Section
+1. Click **Delete** for the target section
+2. Confirm the deletion (irreversible)
+
+### Resetting to Defaults
+1. Click **Reset to Defaults** in the Routes tab
+2. Confirm to revert to the default route totals
+
+## Technical Details
+
+### Data Structure
+Wall totals are stored as a JSON object mapping section names to color totals.
+
+### Storage Location
+- **Wall Totals Key**: `wallTotals` (saved in backend and mirrored in localStorage)
+
+## Best Practices
+
+- Use clear, consistent section names
+- Update route totals when rotating routes manually
+- Back up important configuration externally if needed
+
+## Notes
+- The automatic expiry/reset functionality that previously allowed scheduling resets by date has been removed. Admins should use manual reset operations when rotating routes.
+
+```
 # Route Management Guide
 
 ## Overview
@@ -21,14 +81,11 @@ For each wall section, you can set the number of routes for:
 - Black
 
 ### 3. Automatic Expiry & Reset
-- **Set Expiry Dates**: Configure when routes should automatically reset to 0
-- **Automatic Checks**: System checks daily at midnight for expired sections
-- **Manual Reset**: Clear expiry dates or reset sections manually
-- **Perfect for Rotation**: Align with your gym's weekly/bi-weekly route setting schedule
+NOTE: The automatic expiry/auto-reset feature has been removed from the application. Any instructions below that reference setting expiry dates, automatic checks, or auto-resets are obsolete. Admins should manage route rotations manually using the route totals and reset functions in the Admin Panel.
 
 ### 4. Persistent Storage
 - All route totals are saved in browser localStorage
-- Expiry dates are also persisted locally
+ 
 - Changes persist across sessions
 - Each user's browser maintains its own configuration
 
@@ -59,67 +116,65 @@ For each wall section, you can set the number of routes for:
 4. You'll see a message: "Routes will reset to 0 on [date]"
 5. On the expiry date, all routes in that section automatically reset to 0
 
-**Use Case Example:**
-- Set routes on Monday for section1
-- Set expiry date to next Monday
-- System automatically resets section1 to 0 on the expiry date
-- Perfect for weekly rotation schedules!
+# Route Management Guide
 
-### Clearing an Expiry Date
-1. Find the section with an expiry date
-2. Click the **Clear** button next to the date
-3. The expiry date is removed and routes will not auto-reset
+## Overview
+Administrators can configure wall sections and per-color route totals. This document covers how to manage sections and route counts; the automatic expiry/auto-reset feature has been removed from the application.
+
+## Features
+
+- Dynamic wall sections: add, rename, and delete sections as needed
+- Per-color route totals: set the number of routes for each color in a section
+- Persistent storage: totals are saved in localStorage and persisted server-side for the app
+
+## How to Use
+
+### Accessing Route Management
+1. Log in as an admin user
+2. Click **Admin Panel** in the navigation
+3. Select the **Routes** tab
+
+### Adding a New Wall Section
+1. Enter a section name (e.g., "section4", "westWall")
+2. Click **Add Section**
+3. The new section appears with all colors set to 0 routes
+
+### Renaming a Wall Section
+1. Find the section to rename
+2. Click **Rename** next to the section name
+3. Enter the new name and confirm
+4. Session data is migrated to the new section name where applicable
 
 ### Editing Route Totals
-1. Find the wall section you want to edit
-2. For each color, enter the total number of routes available
-3. Changes are saved automatically as you type
-4. The totals will be reflected in:
-   - Session input (maximum values)
-   - Profile "Current Climbs" section
-   - Analytics displays
+1. For each section, update the number of routes per color
+2. Changes are saved to the backend and reflected in session inputs and analytics
 
 ### Deleting a Wall Section
-1. Find the section you want to remove
-2. Click **Delete** (now changed from "Delete Section")
-3. Confirm the deletion
-4. ⚠️ **Warning**: This cannot be undone!
-5. Both route totals and expiry dates are removed
+1. Click **Delete** for the target section
+2. Confirm the deletion (irreversible)
 
 ### Resetting to Defaults
-1. Click **Reset to Defaults** button (top right of Routes tab)
-2. Confirm the reset
-3. All sections will revert to:
-   - overhang: yellow(7), orange(5), others(0)
-   - midWall: yellow(20), orange(13), others(0)
-   - sideWall: yellow(11), orange(8), others(0)
-4. All expiry dates are cleared
+1. Click **Reset to Defaults** in the Routes tab
+2. Confirm to revert to the default route totals
 
-## Use Case: Weekly Rotation (7 Sections)
+## Technical Details
 
-### Setup
-If your gym rotates routes weekly across 7 different sections:
+### Data Structure
+Wall totals are stored as a JSON object mapping section names to color totals.
 
-1. Add sections: section1, section2, section3, section4, section5, section6, section7
-2. For each section, set the route totals based on what's currently on the wall
-3. Set expiry dates for sections that will be reset next week
+### Storage Location
+- **Wall Totals Key**: `wallTotals` (saved in backend and mirrored in localStorage)
 
-### Weekly Workflow
-**Monday (Route Setting Day):**
-1. Routes in section1 are being reset today
-2. Set expiry date for section1 to next Monday
-3. Update route totals for section1 with new counts
-4. Section7 (set last Monday) will auto-expire next Monday
+## Best Practices
 
-**Throughout the Week:**
-- Climbers log sessions normally
-- System tracks progress against current route totals
-- No manual intervention needed
+- Use clear, consistent section names
+- Update route totals when rotating routes manually
+- Back up important configuration externally if needed
 
-**Next Monday:**
-- System automatically resets section7 to 0 (expired)
-- You set new routes in section7 and update totals
-- Set expiry for section7 to the following Monday
+## Notes
+
+- The automatic expiry/reset functionality that previously allowed scheduling resets by date has been removed. Admins should use manual reset operations when rotating routes.
+
 - Cycle continues!
 
 ## Automatic Expiry System
@@ -166,7 +221,6 @@ If your gym rotates routes weekly across 7 different sections:
 
 ### Storage Location
 - **Wall Totals Key**: `wallTotals` in localStorage
-- **Expiry Dates Key**: `wallExpiryDates` in localStorage
 - **Format**: JSON strings
 - **Scope**: Per-browser (not synchronized across devices/users)
 

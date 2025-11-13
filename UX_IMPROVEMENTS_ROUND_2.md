@@ -130,56 +130,17 @@ All 9 requested improvements have been successfully implemented, tested, and dep
 
 ---
 
-### 8. Added Expiry Notifications with Dates
-**Issue**: Wall section expiry used generic `alert()` without showing expiry dates.
+### 8. Expiry-related items (deprecated)
+Note: The expiry/auto-reset feature has been removed from the application. Any UX improvements or behavior described previously around expiry notifications or automatic filtering are now deprecated.
 
-**Solution**:
-- Changed from `alert()` to toast notification
-- Shows each expired section with its expiry date
-- Format: `⚠️ Wall sections expired: {Section} expired on {MM/DD/YYYY}`
-- Displays for 8 seconds (longer than normal toast for important info)
-- Updated `checkAndResetExpiredSections` to return expiry dates
-- Properly formats wall section names (e.g., "UMass Logo", "TV Wall")
-
-**Example Notification**:
-```
-⚠️ Wall sections expired:
-Overhang expired on 11/07/2025
-Mid Wall expired on 11/07/2025
-Routes reset. Scores will be recalculated.
-```
-
-**Files Modified**: `frontend-static/src/App.tsx` (lines 111-147, 949-976)
-**Commit**: fe208bd9
+If you need expiry-style behavior again, please open an issue describing the desired experience and scheduling semantics so we can consider a reimplementation with clear backend support.
 
 ---
 
-### 9. Fixed Climb Counts on Expiry in Leaderboard/Profile
-**Issue**: When wall sections expired, old climb counts from those sections still appeared in leaderboard and profile views.
+### 9. Expired-sections counting (deprecated)
+Note: The previous mechanism to mark sections as "expired" and exclude them from counts is no longer part of the application. Historical notes about expired-section handling are retained for context only.
 
-**Solution**:
-- Added `expiredSections` state to track expired wall sections
-- Load expired sections from API on mount
-- Update expired sections list when sections expire
-- Modified `normalizeSessionCounts()` to accept `expiredSections` parameter
-- Filter out expired sections before combining counts
-- Leaderboard and profile views now pass `expiredSections` to normalization
-
-**How It Works**:
-1. Load expired sections from API (`getExpiredSections()`)
-2. When displaying session counts, filter wallCounts to exclude expired sections
-3. Only non-expired sections contribute to displayed totals
-4. Users see accurate current counts reflecting only active wall sections
-
-**Technical Details**:
-- Expired sections stored in backend settings table
-- Frontend syncs on load and when sections expire
-- Normalization function filters before combining
-- Backward compatible with old session format
-
-**Files Modified**: 
-- `frontend-static/src/App.tsx` (lines 30-49, 691, 1042, 956, 2006)
-**Commit**: fe208bd9
+For current behavior, the app ignores expiry dates. Admins should manually update route totals or use the admin reset functions when rotating routes.
 
 ---
 
@@ -209,8 +170,8 @@ Routes reset. Scores will be recalculated.
 - Tooltip ordered alphabetically (unintuitive)
 - No Total Score comparison
 - Button grid selector didn't scale
-- Generic alert for expiry without dates
-- Expired section counts still showed in leaderboard
+   - Generic alert for section updates without detailed info
+   - Section counts were sometimes inconsistent in the leaderboard
 
 ### After
 - Google profile modal properly visible and accessible
@@ -220,16 +181,16 @@ Routes reset. Scores will be recalculated.
 - Score-ordered tooltip (top to bottom)
 - Complete comparison suite with Total Score
 - Scalable search bar for climber selection
-- Informative toast with expiry dates
-- Accurate counts excluding expired sections
+   - Informative toast for section updates
+   - Accurate counts reflecting active sections
 
 ---
 
 ## Technical Highlights
 
-1. **State Management**: Proper use of React hooks for tracking edits, expired sections, and search
+1. **State Management**: Proper use of React hooks for tracking edits and search
 2. **Visual Feedback**: Timed highlights with smooth transitions
-3. **Data Filtering**: Smart filtering of expired sections from display
+3. **Data Filtering**: Smart filtering of inactive/replaced sections from display
 4. **Scalability**: Search-based UI handles hundreds of users
 5. **Color Palette**: Carefully chosen distinct colors for clarity
 6. **Responsive Design**: All new features work on mobile
@@ -263,11 +224,11 @@ Routes reset. Scores will be recalculated.
    - Test 5-climber limit
    - Verify dropdown scrolling with many users
 
-5. **Expired Sections**:
-   - Trigger section expiry
-   - Verify toast notification with date
-   - Check leaderboard counts update
-   - Verify profile counts exclude expired
+5. **Section Rotation Checks**:
+   - Trigger a section rotation or reset
+   - Verify toast/notification behavior for admins
+   - Check leaderboard counts update accordingly
+   - Verify profile counts reflect active sections
 
 ---
 
@@ -286,9 +247,9 @@ Routes reset. Scores will be recalculated.
 
 ## Future Enhancements (Optional)
 
-- Persistent notification history for expired sections
-- Admin dashboard for managing expired sections
-- Bulk section expiry operations
+- Persistent notification history for section updates
+- Admin dashboard for managing section lifecycle
+- Bulk section reset/rotation operations
 - Animated transitions for chart updates
 - Export comparison data to CSV
 - Save/load comparison presets

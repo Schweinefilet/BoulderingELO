@@ -242,6 +242,20 @@ export async function getResetAudits(): Promise<{ audits: Array<any> }> {
   return handleResponse<{ audits: Array<any> }>(response);
 }
 
+export async function getAdminNotifications(): Promise<{ notifications: Array<any> }> {
+  const response = await fetch(`${API_URL}/api/admin/notifications`);
+  return handleResponse<{ notifications: Array<any> }>(response);
+}
+
+export async function setAdminNotification(message: string): Promise<{ notification: any }> {
+  const response = await fetch(`${API_URL}/api/admin/notifications`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ message })
+  });
+  return handleResponse<{ notification: any }>(response);
+}
+
 export async function updateClimberProfile(climberId: number, updates: {
   name?: string;
   username?: string;
