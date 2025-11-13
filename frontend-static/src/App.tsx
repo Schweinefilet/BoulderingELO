@@ -84,7 +84,28 @@ async function saveWallTotalsToAPI(totals: Record<string, Record<string, number>
 // Save wall section images to database via API
 async function saveWallSectionImagesToAPI(images: Record<string, string[]>) {
   try {
-    await api.saveWallSectionImages(images);
+    // Ensure Dropbox share links are converted to direct/raw links before saving
+    const convertDropbox = (u: string) => {
+      try {
+        if (!u) return u;
+        if (u.includes('dropbox.com')) {
+          let out = u.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+          out = out.replace('?dl=0', '');
+          out = out.replace('?dl=1', '');
+          return out;
+        }
+        return u;
+      } catch (e) {
+        return u;
+      }
+    };
+
+    const sanitized: Record<string, string[]> = {};
+    Object.entries(images).forEach(([k, arr]) => {
+      sanitized[k] = (arr || []).map(v => typeof v === 'string' ? convertDropbox(v) : v).filter(Boolean as any);
+    });
+
+    await api.saveWallSectionImages(sanitized);
   } catch (e) {
     console.error('Error saving wall section images:', e);
     alert('Failed to save wall section images. Please try again.');
@@ -273,50 +294,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </button>
         </div>
 
-                              {/* Show admin adjustment badge and notes for proxy sessions */}
-                              {s.status === 'adjustment' && (
-                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1b2430',borderRadius:6,border:'1px solid #334155'}}>
-                                  <div style={{display:'flex',alignItems:'center',gap:12,justifyContent:'space-between'}}>
-                                    <div style={{display:'flex',alignItems:'center',gap:12}}>
-                                      <span style={{padding:'6px 10px',backgroundColor:'#f97316',color:'white',borderRadius:6,fontWeight:700,fontSize:12}}>WALL RESET</span>
-                                      <div style={{fontSize:13,fontWeight:700,color:'#fbbf24'}}>Admin adjustment</div>
-                                    </div>
-                                    <div>
-                                      {api.isAdmin() && (
-                                        <button
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            if (!confirm('Undo this wall reset? This will remove the proxy adjustment sessions created by the reset.')) return;
-                                            try {
-                                              setLoading(true);
-                                              // Try to extract wall name from notes: "Admin reset wall 'garage' on ..."
-                                              const noteText = s.notes || '';
-                                              const m = noteText.match(/reset wall '?"?([^'"\s]+)'?"?/i) || noteText.match(/reset wall ['"]?([^'"\s]+)['"]?/i) || noteText.match(/reset wall\s+'?([^']+)'?/i);
-                                              const wallName = m && m[1] ? m[1] : undefined;
-                                              await api.undoResetWallSection(undefined, wallName);
-                                              await loadData();
-                                              setToast({ message: 'Undo completed', type: 'success' });
-                                              setTimeout(() => setToast(null), 3000);
-                                            } catch (err: any) {
-                                              alert('Failed to undo reset: ' + (err.message || err));
-                                            } finally {
-                                              setLoading(false);
-                                            }
-                                          }}
-                                          style={{padding:'6px 10px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}
-                                        >
-                                          Undo
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {s.notes && (
-                                    <div style={{marginTop:10,color:'#cbd5e1',fontSize:13,whiteSpace:'pre-wrap'}}>
-                                      {s.notes}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                              {/* (removed stray admin adjustment block that caused runtime error in Login modal) */}
 
         <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
           <div style={{marginBottom:16}}>
@@ -871,11 +849,29 @@ export default function App(){
         const images = await api.getWallSectionImages();
         // Convert old single-string format to array format for backwards compatibility
         const imagesArray: Record<string, string[]> = {};
+        const convertDropbox = (u: string) => {
+          try {
+            if (!u) return u;
+            if (u.includes('dropbox.com')) {
+              // Convert common Dropbox preview/share URLs to raw content URL
+              // Examples:
+              // https://www.dropbox.com/s/<id>/file.jpg?dl=0  -> https://dl.dropboxusercontent.com/s/<id>/file.jpg
+              let out = u.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+              out = out.replace('?dl=0', '');
+              out = out.replace('?dl=1', '');
+              return out;
+            }
+            return u;
+          } catch (e) {
+            return u;
+          }
+        };
+
         for (const [section, value] of Object.entries(images)) {
           if (Array.isArray(value)) {
-            imagesArray[section] = value;
+            imagesArray[section] = value.map(v => typeof v === 'string' ? convertDropbox(v) : '').filter(Boolean);
           } else if (typeof value === 'string') {
-            imagesArray[section] = [value];
+            imagesArray[section] = [convertDropbox(value)];
           } else {
             imagesArray[section] = [];
           }
@@ -1993,7 +1989,53 @@ export default function App(){
           {/* Practical user guide for everyday users */}
           {showUserGuide ? (
             <div style={{marginTop:18,padding:'12px',backgroundColor:'#071029',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-              <div style={{fontSize:14}}>Guide content hidden for CI debug (temporary)</div>
+              <h4 style={{marginTop:0,marginBottom:8,color:'#94a3b8'}}>How to use (everyday users)</h4>
+              <div style={{fontSize:14,lineHeight:1.6}}>
+                <strong>Select or add a climber:</strong> Use the climber dropdown in the New Session area to choose who you're recording for. Click "Add climber" to create a new profile.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Log climbs quickly:</strong> Pick a wall section and a color, then press the blue "Add" button to increment a send. Use the minus button to remove a send. The live score preview updates as you edit.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Video evidence:</strong> Red and black sends require a video URL. Add the URL in the video field — those sends are stored as pending until reviewed and will not count toward the displayed score until confirmed.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Save your session:</strong> Set the date and optional notes, then click "Save" or "Submit session". After saving, the session appears in your history and on the leaderboard.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Edit or delete sessions:</strong> Open your session history, expand a session, and use the edit or delete controls to correct mistakes.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Settings:</strong> Click the "Settings" button (top-right) to update your display name, country, bio, or change your password.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Export & backup:</strong> Use the "Export CSV" control to download your sessions. If you're on the static GitHub Pages build, data is saved in your browser's localStorage — export regularly to avoid data loss.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Wall section images:</strong> Admins can attach reference images for each wall section. If the image doesn't embed (Dropbox preview URLs may not hotlink), a link will appear so you can open the image in a new tab.
+              </div>
+              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
+                <strong>Mobile tips:</strong> Use dropdown/manual mode for faster input on touch devices and rotate your phone for more space.
+              </div>
+              <div style={{display:'flex',gap:8,marginTop:12,alignItems:'center'}}>
+                <button
+                  onClick={() => {
+                    const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
+                  }}
+                  style={{padding:'8px 12px',backgroundColor:'#0b1220',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                >
+                  Export CSV
+                </button>
+
+                <button
+                  onClick={() => setShowSettings(true)}
+                  style={{padding:'8px 12px',backgroundColor:'#0b1220',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                >
+                  Open Settings
+                </button>
+
+                <div style={{fontSize:13,color:'#93c5fd',marginLeft:6,fontWeight:600}}>Need more help? Check Notifications or the GitHub repo link.</div>
+              </div>
             </div>
           ) : null}
         </div>
