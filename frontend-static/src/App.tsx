@@ -2002,21 +2002,6 @@ export default function App(){
               <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
                 <strong>Save your session:</strong> Set the date and optional notes, then click "Save" or "Submit session". After saving, the session appears in your history and on the leaderboard.
               </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Edit or delete sessions:</strong> Open your session history, expand a session, and use the edit or delete controls to correct mistakes.
-              </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Settings:</strong> Click the "Settings" button (top-right) to update your display name, country, bio, or change your password.
-              </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Export & backup:</strong> Use the "Export CSV" control to download your sessions. If you're on the static GitHub Pages build, data is saved in your browser's localStorage — export regularly to avoid data loss.
-              </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Wall section images:</strong> Admins can attach reference images for each wall section. If the image doesn't embed (Dropbox preview URLs may not hotlink), a link will appear so you can open the image in a new tab.
-              </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Mobile tips:</strong> Use dropdown/manual mode for faster input on touch devices and rotate your phone for more space.
-              </div>
               <div style={{display:'flex',gap:8,marginTop:12,alignItems:'center'}}>
                 <button
                   onClick={() => {
@@ -2352,9 +2337,28 @@ export default function App(){
                           }}
                           onError={(e) => {
                             try {
-                              const img = e.currentTarget;
+                              const img = e.currentTarget as HTMLImageElement;
+                              const src = img.src || '';
+                              // Prevent infinite retry loop
+                              if (!img.dataset.retried) {
+                                img.dataset.retried = '1';
+                                // Generate candidate repair URLs (Dropbox common fixes)
+                                const candidates: string[] = [];
+                                if (src.includes('dropbox.com') && !src.includes('dl.dropboxusercontent.com')) {
+                                  candidates.push(src.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', ''));
+                                  if (!src.includes('?raw=1')) candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
+                                }
+                                if (src.includes('dropboxusercontent.com') && !src.includes('?raw=1')) {
+                                  candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
+                                }
+                                // Try first candidate if available
+                                if (candidates.length > 0) {
+                                  img.src = candidates[0];
+                                  return;
+                                }
+                              }
+                              // If we've already retried or no candidates, show fallback link
                               img.style.display = 'none';
-                              const src = img.src;
                               const container = img.parentElement;
                               if (container) {
                                 const link = document.createElement('a');
@@ -2728,9 +2732,24 @@ export default function App(){
                             }}
                             onError={(e) => {
                               try {
-                                const img = e.currentTarget;
+                                const img = e.currentTarget as HTMLImageElement;
+                                const src = img.src || '';
+                                if (!img.dataset.retried) {
+                                  img.dataset.retried = '1';
+                                  const candidates: string[] = [];
+                                  if (src.includes('dropbox.com') && !src.includes('dl.dropboxusercontent.com')) {
+                                    candidates.push(src.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', ''));
+                                    if (!src.includes('?raw=1')) candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
+                                  }
+                                  if (src.includes('dropboxusercontent.com') && !src.includes('?raw=1')) {
+                                    candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
+                                  }
+                                  if (candidates.length > 0) {
+                                    img.src = candidates[0];
+                                    return;
+                                  }
+                                }
                                 img.style.display = 'none';
-                                const src = img.src;
                                 const container = img.parentElement;
                                 if (container) {
                                   const link = document.createElement('a');
