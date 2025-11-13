@@ -79,6 +79,46 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions to Rende
 - **Analytics** - Score trends, sends by color, and wall section breakdowns
 - **Shared Data** - All users see the same sessions and leaderboard
 
+## Guide
+
+This guide walks a typical user through the site: how to add climbers and sessions, what each UI element means, and useful tips for interpreting scores and managing data.
+
+- **Overview:** The app tracks bouldering sessions (counts by color and wall section) and computes a single session score using diminishing returns so that harder problems contribute more but repeated sends give diminishing gains.
+
+- **Typical session workflow (UI):**
+   - **Add / select a climber:** Use the "Add climber" button or the climber dropdown to create or select the person you're recording for.
+   - **Create a new session:** Click "New session" (or similar). Set the session date/time and optional `notes`.
+   - **Record climbs by color & section:** For each color grade (green → black) enter the number of successful sends. You can break the counts down by wall sections (overhang / midWall / sideWall) if you want more detail — these are combined into the session total for scoring.
+   - **Attach video evidence (when required):** For the higher grades (red/black) the app may require video; use the upload control inside the session form to attach short clips. The frontend validates file size and type before upload.
+   - **Live preview:** While you edit counts the score preview updates in real-time so you can see how each additional send affects the total.
+   - **Save session:** Click "Save" (or "Submit session"). The session is stored in the backend and will appear on the leaderboard and in your session history.
+
+- **Reading the session form fields:**
+   - **Counts by color:** Enter integer sends for each color. Leave zero for colors not climbed.
+   - **Wall sections:** Optional breakdown that helps analytics but gets merged into the counts for scoring.
+   - **Notes:** Any free-form text you want to keep with the session.
+   - **Video upload:** Required by default for the hardest grades; optional otherwise.
+
+- **Leaderboards & analytics:**
+   - **Leaderboard:** Shows recent sessions (or aggregated top sessions) sorted by score. Use the date filters to restrict to a specific range.
+   - **Session history:** Click a climber and view their past sessions, trend charts, and sends-by-color breakdown.
+   - **Interpreting scores:** Higher score = stronger session. Because of diminishing returns the first hard problems give large jumps; repeated easier sends add less.
+
+- **Exporting & backup:**
+   - **Export CSV:** Use the Export button on the sessions page to download session data as CSV for backup or spreadsheet analysis.
+   - **Static / client-side mode:** When using the `frontend-static/` GitHub Pages version, data is stored in your browser's localStorage — export regularly to avoid data loss when clearing cache or switching devices.
+
+- **Admin tips:**
+   - **Expire wall sections:** Admins can permanently delete wall-section data via the admin panel. This is a destructive operation (data is removed, not filtered) — see `src/controllers/adminController.ts` for the implementation.
+   - **Adjust scoring parameters:** The decay (`r`) and base point values are currently constants in `src/score.ts`. Admins and maintainers can change these values and redeploy the backend to affect all users.
+
+- **Troubleshooting common user issues:**
+   - **Uploads failing:** Check file size and format. If the frontend shows CORS or network errors, ensure the backend is running and that `VITE_API_URL` or `DATABASE_URL` are correctly set.
+   - **No live preview / errors loading data:** Backend may be offline (see Troubleshooting section below). Use `./dev-start.sh` locally to start both services.
+
+- **Privacy & data notes:**
+   - Sessions and leaderboards are shared across users by design. If you prefer private tracking, run the `frontend-static/` build locally and use the browser-only mode (data is stored locally only).
+
 ### Scoring Model
 
 - Decay per placement: r = 0.95
