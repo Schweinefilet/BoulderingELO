@@ -25,6 +25,7 @@ router.post('/create-account', adminController.createAccount);
 router.post('/reset-and-seed', authenticateToken, requireAdmin, adminController.resetAndSeed);
 router.post('/reset-wall', authenticateToken, requireAdmin, adminController.resetWallSection);
 router.post('/reset-wall/undo', authenticateToken, requireAdmin, adminController.undoResetWallSection);
+router.get('/reset-audits', authenticateToken, requireAdmin, adminController.listResetAudits);
 router.post('/merge-duplicates', authenticateToken, requireAdmin, adminController.mergeDuplicateSessions);
 router.put('/climber/:climberId', authenticateToken, requireAdmin, adminController.updateClimberProfile);
 

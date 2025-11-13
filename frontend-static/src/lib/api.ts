@@ -222,7 +222,7 @@ export async function resetWallSection(wall: string): Promise<{ changed: Array<a
     headers: getHeaders(true),
     body: JSON.stringify({ wall })
   });
-  return handleResponse<{ changed: Array<any>; message: string }>(response);
+  return handleResponse<{ changed: Array<any>; message: string; auditId?: string }>(response);
 }
 
 export async function undoResetWallSection(auditId?: string, wall?: string): Promise<{ message: string; auditId?: string }> {
@@ -232,6 +232,14 @@ export async function undoResetWallSection(auditId?: string, wall?: string): Pro
     body: JSON.stringify({ auditId, wall })
   });
   return handleResponse<{ message: string; auditId?: string }>(response);
+}
+
+export async function getResetAudits(): Promise<{ audits: Array<any> }> {
+  const response = await fetch(`${API_URL}/api/admin/reset-audits`, {
+    method: 'GET',
+    headers: getHeaders(true)
+  });
+  return handleResponse<{ audits: Array<any> }>(response);
 }
 
 export async function updateClimberProfile(climberId: number, updates: {

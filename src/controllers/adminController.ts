@@ -227,41 +227,27 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
 
       const changed: Array<any> = [];
 
+      // Pre-generate auditId that we'll persist on created adjustment sessions
+      const auditId = new Date().toISOString();
+
       for (const row of climberRes.rows) {
         const climberId = row.climber_id;
 
-        // Fetch all wall_counts for this climber
+        // Use the climber's latest non-adjustment session's wall_counts as the baseline
+        // (summing across all sessions caused duplicated totals)
         const wcRes = await client.query(
-          'SELECT w.counts FROM sessions s JOIN wall_counts w ON s.id = w.session_id WHERE s.climber_id = $1',
+          "SELECT w.counts FROM sessions s JOIN wall_counts w ON s.id = w.session_id WHERE s.climber_id = $1 AND s.status != 'adjustment' ORDER BY s.date DESC LIMIT 1",
           [climberId]
         );
 
-        // Aggregate counts per wall section
-        const aggregated: any = {};
-        for (const r of wcRes.rows) {
-          const countsObj = r.counts || {};
-          for (const section of Object.keys(countsObj)) {
-            if (!aggregated[section]) aggregated[section] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
-            const sec = countsObj[section];
-            ['green','blue','yellow','orange','red','black'].forEach((c:any) => {
-              aggregated[section][c] = (aggregated[section][c] || 0) + (sec[c] || 0);
-            });
-          }
-        }
+        const latestCountsObj: any = (wcRes.rows.length > 0 && wcRes.rows[0].counts) ? wcRes.rows[0].counts : {};
 
-        // removedCounts are the totals on that section
-        const removedCounts = aggregated[wall] || { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
+        // removedCounts are the totals on that section in the latest session
+        const removedCounts = latestCountsObj[wall] || { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
 
-        // Build new total wallCounts excluding the removed wall
-        const newWallCounts: any = {};
-        for (const section of Object.keys(aggregated)) {
-          if (section === wall) {
-            // zero it out
-            newWallCounts[section] = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
-          } else {
-            newWallCounts[section] = aggregated[section];
-          }
-        }
+        // Build new total wallCounts by copying latest counts but zeroing the removed wall
+        const newWallCounts: any = { ...(latestCountsObj || {}) };
+        newWallCounts[wall] = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
 
         // Compute totals and new score
         const totalCounts = combineCounts(newWallCounts as any);
@@ -277,11 +263,12 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
         // Create a proxy session (status = 'adjustment') dated today to represent the updated totals
         const today = new Date().toISOString().split('T')[0];
         const timestamp = new Date().toISOString();
-        const noteLine = `Admin reset wall '${wall}' on ${timestamp}: removedCounts=${JSON.stringify(removedCounts)}, score ${oldScore} -> ${newScore}`;
+        const noteLine = `Admin reset wall '${wall}' on ${timestamp}: removedCounts=${JSON.stringify(removedCounts)}, score ${oldScore} -> ${newScore} (audit:${auditId})`;
 
+        // Insert session and persist the auditId on the session row (if column exists)
         const insertSession = await client.query(
-          'INSERT INTO sessions (climber_id, date, score, notes, status) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [climberId, today, newScore, noteLine, 'adjustment']
+          'INSERT INTO sessions (climber_id, date, score, notes, status, reset_audit_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+          [climberId, today, newScore, noteLine, 'adjustment', auditId]
         );
         const newSessionId = insertSession.rows[0].id;
 
@@ -389,6 +376,18 @@ export async function undoResetWallSection(req: AuthRequest, res: Response) {
     } finally {
       client.release();
     }
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * List reset audits
+ */
+export async function listResetAudits(req: AuthRequest, res: Response) {
+  try {
+    const audits: any[] = (await db.getSetting('reset_audits')) || [];
+    return sendSuccess(res, { audits });
   } catch (err: any) {
     return handleControllerError(res, err);
   }

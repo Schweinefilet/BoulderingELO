@@ -817,7 +817,9 @@ export default function App(){
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [showScoringDetails, setShowScoringDetails] = useState(false)
-  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes'>('accounts')
+  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes' | 'audits'>('accounts')
+  const [adminAudits, setAdminAudits] = useState<any[]>([])
+  const [auditsLoading, setAuditsLoading] = useState(false)
   
   const [expiryDates, setExpiryDates] = useState<ExpiryConfig>(getExpiryDates())
   const [editingSection, setEditingSection] = useState<string | null>(null)
@@ -5059,7 +5061,7 @@ export default function App(){
               borderBottom:'1px solid #475569',
               backgroundColor:'#1e293b'
             }}>
-              {(['accounts', 'sessions', 'routes'] as const).map(tab => (
+              {(['accounts', 'sessions', 'routes', 'audits'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setAdminTab(tab)}
@@ -5554,6 +5556,80 @@ export default function App(){
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {adminTab === 'audits' && (
+                <div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                    <h3 style={{margin:0,fontSize:18,fontWeight:'600'}}>Reset Audit History</h3>
+                    <div style={{display:'flex',gap:8}}>
+                      <button
+                        onClick={async () => {
+                          try {
+                            setAuditsLoading(true);
+                            const res = await api.getResetAudits();
+                            setAdminAudits(res.audits || []);
+                          } catch (err: any) {
+                            alert('Failed to load audits: ' + (err.message || err));
+                          } finally {
+                            setAuditsLoading(false);
+                          }
+                        }}
+                        style={{padding:'8px 16px',backgroundColor:'#3b82f6',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600}}
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+
+                  {auditsLoading ? (
+                    <div>Loading audits...</div>
+                  ) : (
+                    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                      {adminAudits.length === 0 && <div style={{color:'#94a3b8'}}>No audits found.</div>}
+                      {adminAudits.map(a => (
+                        <div key={a.id} style={{backgroundColor:'#1e293b',padding:12,borderRadius:8,border:'1px solid #475569'}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                            <div>
+                              <div style={{fontWeight:700,color:'white'}}>{a.wall} — {a.id}</div>
+                              <div style={{color:'#94a3b8',fontSize:13}}>Performed: {new Date(a.performedAt).toLocaleString()} by {a.performedBy || 'system'}</div>
+                              <div style={{color:'#94a3b8',fontSize:13}}>Affected: {a.changes?.length || 0} sessions</div>
+                              {a.undone && <div style={{color:'#f97316',fontSize:13}}>Undone at {a.undoneAt}</div>}
+                            </div>
+                            <div style={{display:'flex',gap:8}}>
+                              {!a.undone && (
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`Undo reset ${a.id}? This will remove the ${a.changes?.length||0} proxy sessions.`)) return;
+                                    try {
+                                      setAuditsLoading(true);
+                                      await api.undoResetWallSection(a.id);
+                                      // Refresh audits
+                                      const res = await api.getResetAudits();
+                                      setAdminAudits(res.audits || []);
+                                      await loadData();
+                                      alert('Undo completed');
+                                    } catch (err: any) {
+                                      alert('Undo failed: ' + (err.message || err));
+                                    } finally {
+                                      setAuditsLoading(false);
+                                    }
+                                  }}
+                                  style={{padding:'8px 12px',backgroundColor:'#ef4444',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600}}
+                                >
+                                  Undo
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{marginTop:8,color:'#cbd5e1',fontSize:13,whiteSpace:'pre-wrap'}}>
+                            {JSON.stringify(a.changes?.slice(0,10) || [], null, 2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

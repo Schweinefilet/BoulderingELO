@@ -229,6 +229,9 @@ export async function initDB() {
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='status') THEN
         ALTER TABLE sessions ADD COLUMN status TEXT DEFAULT 'approved';
       END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='reset_audit_id') THEN
+        ALTER TABLE sessions ADD COLUMN reset_audit_id TEXT;
+      END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='country') THEN
         ALTER TABLE climbers ADD COLUMN country TEXT;
       END IF;

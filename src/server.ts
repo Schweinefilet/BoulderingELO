@@ -114,17 +114,30 @@ app.use((err: any, req: any, res: any, next: any) => {
  * Initialize database and start server
  */
 if (require.main === module) {
-  db.initDB()
-    .then(() => {
-      app.listen(PORT, () => {
-        console.log(`🚀 BoulderingELO API v2.0 running on http://localhost:${PORT}`);
-        console.log(`📚 API documentation available at http://localhost:${PORT}/`);
-      });
-    })
-    .catch((err) => {
-      console.error('❌ Failed to initialize database:', err);
-      process.exit(1);
+  // Allow skipping DB init in lightweight dev environments
+  const skipDb = process.env.SKIP_DB_INIT === 'true';
+  if (skipDb) {
+    console.warn('SKIP_DB_INIT is set - skipping database initialization. Some endpoints will be unavailable.');
+    app.listen(PORT, () => {
+      console.log(`🚀 BoulderingELO API (no DB) running on http://localhost:${PORT}`);
+      console.log(`📚 API documentation available at http://localhost:${PORT}/`);
     });
+  } else {
+    db.initDB()
+      .then(() => {
+        app.listen(PORT, () => {
+          console.log(`🚀 BoulderingELO API v2.0 running on http://localhost:${PORT}`);
+          console.log(`📚 API documentation available at http://localhost:${PORT}/`);
+        });
+      })
+      .catch((err) => {
+        console.error('❌ Failed to initialize database:', err);
+        console.warn('Starting server anyway in degraded mode. Set SKIP_DB_INIT=true to silence this message.');
+        app.listen(PORT, () => {
+          console.log(`⚠️ BoulderingELO API running in degraded mode on http://localhost:${PORT}`);
+        });
+      });
+  }
 }
 
 export default app;
