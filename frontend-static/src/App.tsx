@@ -1931,7 +1931,7 @@ export default function App(){
               <div style={{flex:'1 1 260px',minWidth:220}}>
                 <h4 style={{margin:'0 0 6px',color:'#bfdbfe',fontSize:16}}>Scoring at a glance</h4>
                 <div style={{fontSize:14,lineHeight:1.6,color:'#cbd5e1'}}>
-                  <strong>Climb harder routes first.</strong> Early sends at each difficulty are worth the most, so mix in a range of colors to keep your score climbing.
+                  <strong>Climb harder routes to get more points.</strong>
                 </div>
               </div>
               <button
@@ -2007,27 +2007,23 @@ export default function App(){
 
           {showUserGuide ? (
             <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
-              <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
-                <strong>Everyday flow:</strong> Pick a climber, record the sends, attach videos for Black/Red, then submit the session to lock in the score.
-              </div>
-
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
                 <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
                   <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>1. Select or add a climber</h5>
                   <div style={{fontSize:14,lineHeight:1.6}}>Use the dropdown in <strong>New Session</strong> to pick who you're logging for, or choose <em>Add climber</em> to create a new profile.</div>
                 </div>
                 <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>2. Log climbs quickly</h5>
-                  <div style={{fontSize:14,lineHeight:1.6}}>Pick a wall section and color, then use the blue <strong>Add</strong> button to increment sends. Adjust mistakes with the minus button while the live score updates.</div>
+                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>2. Log climbs and videos</h5>
+                  <div style={{fontSize:14,lineHeight:1.6}}>Pick a wall section and color, then use the blue <strong>Add</strong> button to increment sends. Adjust mistakes with the minus button and add video links for Black/Red climbs.</div>
                 </div>
                 <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>3. Add video for hard sends</h5>
-                  <div style={{fontSize:14,lineHeight:1.6}}>Black and Red climbs need a video URL. Pending sends wait for review and stay off the leaderboard until confirmed.</div>
+                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>3. Wrap up the session</h5>
+                  <div style={{fontSize:14,lineHeight:1.6}}>Set the date and hit <strong>Add Session</strong> once you’re done. Your session should show up in the <strong>Sessions</strong> section below.</div>
                 </div>
-                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>4. Save the session</h5>
-                  <div style={{fontSize:14,lineHeight:1.6}}>Set the date, add optional notes, and hit <strong>Save</strong> or <strong>Submit session</strong>. The climb appears in history and on the leaderboard once approved.</div>
-                </div>
+              </div>
+
+              <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
+                Black and Red climbs wait for review before they count toward the leaderboard.
               </div>
 
               <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:'#0b1220',border:'1px solid #122235',borderRadius:8,padding:'12px 16px'}}>
@@ -2047,7 +2043,10 @@ export default function App(){
                   Open Settings
                 </button>
 
-                <div style={{fontSize:13,color:'#93c5fd',fontWeight:600}}>Need more help? Check Notifications or the GitHub repo link.</div>
+                <div style={{fontSize:13,color:'#93c5fd',fontWeight:600,display:'flex',flexDirection:'column',gap:4}}>
+                  <span>Need more help? Check Notifications or the GitHub repo link.</span>
+                  <span>Feel free to check out analytics at the bottom of the page.</span>
+                </div>
               </div>
             </div>
           ) : null}
