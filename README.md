@@ -163,13 +163,19 @@ npm run dev
 # Open http://localhost:5173
 ```
 
+The development server now uses `/` as the base path automatically, so assets and routes work without additional configuration when testing locally.
+
 ### Deploy to GitHub Pages
 
-1. **Set the base path** (replace `BoulderingELO` with your repo name):
+1. **Set the base path** (replace `BoulderingELO` with your repo name). This value is read from the `VITE_BASE` environment variable during the build:
 ```bash
 cd frontend-static
 VITE_BASE=/BoulderingELO/ npm run build
 ```
+
+If the bundler dependencies are unavailable (for example, when registry access is blocked),
+`npm run build` will reuse the prebuilt `dist/` assets that are checked into the repository and
+emit a warning. Install the frontend dependencies and rerun the command to produce a fresh build.
 
 2. **Deploy** (pushes `dist/` to `gh-pages` branch):
 ```bash
