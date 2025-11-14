@@ -1914,115 +1914,144 @@ export default function App(){
             </div>
           </div>
           
-          <div style={{fontSize:15,marginBottom:16,padding:'16px',backgroundColor:'#0f172a',borderRadius:6,overflowX:'auto',textAlign:'center'}}>
-            <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
-          </div>
-          
-          <div style={{fontSize:14,marginBottom:16,padding:'12px 16px',backgroundColor:'#0f172a',borderRadius:6}}>
-            <div style={{marginBottom:8}}>where the weighting function is:</div>
-            <div style={{textAlign:'center'}}>
-              <InlineMath math="W(n) = \frac{1 - r^n}{1 - r}" />
-              {' with '}
-              <InlineMath math="r = 0.95" />
+
+          <div
+            style={{
+              marginBottom:16,
+              padding:'16px',
+              backgroundColor:'#071029',
+              borderRadius:8,
+              border:'1px solid #122235',
+              display:'flex',
+              flexDirection:'column',
+              gap:16
+            }}
+          >
+            <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start',justifyContent:'space-between'}}>
+              <div style={{flex:'1 1 260px',minWidth:220}}>
+                <h4 style={{margin:'0 0 6px',color:'#bfdbfe',fontSize:16}}>Scoring at a glance</h4>
+                <div style={{fontSize:14,lineHeight:1.6,color:'#cbd5e1'}}>
+                  <strong>Climb harder routes first.</strong> Early sends at each difficulty are worth the most, so mix in a range of colors to keep your score climbing.
+                </div>
+              </div>
+              <button
+                onClick={() => setShowScoringDetails(!showScoringDetails)}
+                style={{
+                  padding:'8px 16px',
+                  backgroundColor:'rgba(59, 130, 246, 0.12)',
+                  color:'#3b82f6',
+                  border:'1px solid rgba(59, 130, 246, 0.4)',
+                  borderRadius:6,
+                  fontSize:13,
+                  fontWeight:600,
+                  cursor:'pointer',
+                  transition:'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                }}
+              >
+                {showScoringDetails ? '▲ Hide scoring math' : '▶ View scoring math'}
+              </button>
             </div>
-          </div>
-          
-          {showScoringDetails && (
-            <>
-              <div style={{fontSize:14,color:'#cbd5e1',lineHeight:1.8,marginBottom:16}}>
-                <h4 style={{marginTop:0,marginBottom:12,color:'#94a3b8'}}>How it works:</h4>
-                <ol style={{paddingLeft:24,margin:0}}>
-                  <li style={{marginBottom:8}}>
-                    <strong>Colors are processed from hardest to easiest:</strong> Black → Red → Orange → Yellow → Blue → Green
-                  </li>
-                  <li style={{marginBottom:8}}>
-                    <strong>Each color has a base point value</strong> (<InlineMath math="b_c" />):
-                    <div style={{marginTop:6,padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:4,fontSize:13}}>
-                      Black(120) · Red(56) · Orange(12.5) · Yellow(3.5) · Blue(0.75) · Green(0.25)
-                    </div>
-                  </li>
-                  <li style={{marginBottom:8}}>
-                    <strong>Diminishing returns apply</strong> - your first climbs are worth more than later ones of the same difficulty
-                  </li>
-                  <li style={{marginBottom:8}}>
-                    <InlineMath math="n_{\text{cmltve}}" /> = total count of all harder colors already processed<br/>
-                    <InlineMath math="n_c" /> = number of climbs for the current color
-                  </li>
-                  <li style={{marginBottom:8}}>
-                    <strong>The marginal gain decreases</strong> as you accumulate more climbs, rewarding diverse progression over repetition
-                  </li>
-                </ol>
+
+            {showScoringDetails && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:16,color:'#cbd5e1'}}>
+                <div style={{backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
+                  <div style={{fontSize:15,marginBottom:12,overflowX:'auto',textAlign:'center'}}>
+                    <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
+                  </div>
+                  <div style={{fontSize:14,lineHeight:1.6,textAlign:'center'}}>
+                    <div style={{marginBottom:6}}>Weighting function:</div>
+                    <InlineMath math="W(n) = \frac{1 - r^n}{1 - r}" />
+                    {' with '}
+                    <InlineMath math="r = 0.95" />
+                  </div>
+                </div>
+
+                <div style={{display:'flex',flexDirection:'column',gap:12,backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
+                  <div style={{padding:'10px 12px',backgroundColor:'rgba(59, 130, 246, 0.12)',borderRadius:6,color:'#93c5fd',fontSize:14,lineHeight:1.6}}>
+                    <strong>💡 TL;DR:</strong> Prioritize Black, Red, and Orange climbs. Diversify your sends to avoid diminishing returns and keep the points flowing.
+                  </div>
+                  <div style={{fontSize:14,lineHeight:1.7}}>
+                    <h5 style={{margin:'0 0 8px',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Scoring flow</h5>
+                    <ol style={{paddingLeft:20,margin:0}}>
+                      <li style={{marginBottom:6}}>
+                        <strong>Color order:</strong> Black → Red → Orange → Yellow → Blue → Green.
+                      </li>
+                      <li style={{marginBottom:6}}>
+                        <strong>Base values (<InlineMath math="b_c" />):</strong> Black(120) · Red(56) · Orange(12.5) · Yellow(3.5) · Blue(0.75) · Green(0.25).
+                      </li>
+                      <li style={{marginBottom:6}}>
+                        <strong>Diminishing returns:</strong> Early climbs for each color earn more than later repeats.
+                      </li>
+                      <li style={{marginBottom:6}}>
+                        <InlineMath math="n_{\text{cmltve}}" /> counts all harder colors already processed; <InlineMath math="n_c" /> counts climbs of the current color.
+                      </li>
+                      <li>
+                        <strong>Marginal gains shrink</strong> as totals increase, encouraging steady progression across colors.
+                      </li>
+                    </ol>
+                  </div>
+                </div>
               </div>
-              
-              <div style={{padding:'12px 16px',backgroundColor:'rgba(59, 130, 246, 0.1)',border:'1px solid rgba(59, 130, 246, 0.3)',borderRadius:6,color:'#93c5fd',marginBottom:12}}>
-                <strong>💡 TL;DR:</strong> Climb harder routes (especially Black/Red/Orange) for more points. Your first few climbs of each difficulty are worth the most, so focus on variety and progression!
-              </div>
-            </>
-          )}
-          
-          <div style={{textAlign:'center'}}>
-            <button
-              onClick={() => setShowScoringDetails(!showScoringDetails)}
-              style={{
-                padding:'8px 24px',
-                backgroundColor:'rgba(59, 130, 246, 0.1)',
-                color:'#3b82f6',
-                border:'1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius:6,
-                fontSize:14,
-                fontWeight:'600',
-                cursor:'pointer',
-                transition:'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-              }}
-            >
-              {showScoringDetails ? '▲ Show Less' : '▶ Read More'}
-            </button>
+            )}
           </div>
+
           {/* Practical user guide for everyday users */}
+
           {showUserGuide ? (
-            <div style={{marginTop:18,padding:'12px',backgroundColor:'#071029',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-              <h4 style={{marginTop:0,marginBottom:8,color:'#94a3b8'}}>How to use (everyday users)</h4>
-              <div style={{fontSize:14,lineHeight:1.6}}>
-                <strong>Select or add a climber:</strong> Use the climber dropdown in the New Session area to choose who you're recording for. Click "Add climber" to create a new profile.
+            <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
+              <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
+                <strong>Everyday flow:</strong> Pick a climber, record the sends, attach videos for Black/Red, then submit the session to lock in the score.
               </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Log climbs quickly:</strong> Pick a wall section and a color, then press the blue "Add" button to increment a send. Use the minus button to remove a send. The live score preview updates as you edit.
+
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
+                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>1. Select or add a climber</h5>
+                  <div style={{fontSize:14,lineHeight:1.6}}>Use the dropdown in <strong>New Session</strong> to pick who you're logging for, or choose <em>Add climber</em> to create a new profile.</div>
+                </div>
+                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>2. Log climbs quickly</h5>
+                  <div style={{fontSize:14,lineHeight:1.6}}>Pick a wall section and color, then use the blue <strong>Add</strong> button to increment sends. Adjust mistakes with the minus button while the live score updates.</div>
+                </div>
+                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>3. Add video for hard sends</h5>
+                  <div style={{fontSize:14,lineHeight:1.6}}>Black and Red climbs need a video URL. Pending sends wait for review and stay off the leaderboard until confirmed.</div>
+                </div>
+                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>4. Save the session</h5>
+                  <div style={{fontSize:14,lineHeight:1.6}}>Set the date, add optional notes, and hit <strong>Save</strong> or <strong>Submit session</strong>. The climb appears in history and on the leaderboard once approved.</div>
+                </div>
               </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Video evidence:</strong> Red and black sends require a video URL. Add the URL in the video field — those sends are stored as pending until reviewed and will not count toward the displayed score until confirmed.
-              </div>
-              <div style={{fontSize:14,lineHeight:1.6,marginTop:8}}>
-                <strong>Save your session:</strong> Set the date and optional notes, then click "Save" or "Submit session". After saving, the session appears in your history and on the leaderboard.
-              </div>
-              <div style={{display:'flex',gap:8,marginTop:12,alignItems:'center'}}>
+
+              <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:'#0b1220',border:'1px solid #122235',borderRadius:8,padding:'12px 16px'}}>
                 <button
                   onClick={() => {
                     const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
                   }}
-                  style={{padding:'8px 12px',backgroundColor:'#0b1220',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                  style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
                 >
                   Export CSV
                 </button>
 
                 <button
                   onClick={() => setShowSettings(true)}
-                  style={{padding:'8px 12px',backgroundColor:'#0b1220',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                  style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
                 >
                   Open Settings
                 </button>
 
-                <div style={{fontSize:13,color:'#93c5fd',marginLeft:6,fontWeight:600}}>Need more help? Check Notifications or the GitHub repo link.</div>
+                <div style={{fontSize:13,color:'#93c5fd',fontWeight:600}}>Need more help? Check Notifications or the GitHub repo link.</div>
               </div>
             </div>
           ) : null}
+
         </div>
       </GlowingCard>
       
