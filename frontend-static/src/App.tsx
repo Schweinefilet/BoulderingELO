@@ -629,10 +629,122 @@ function VideoPlayer({ url }: { url: string }) {
   );
 }
 
+function normalizeWallSectionImageUrl(input: string): string {
+  if (!input) return '';
+  let url = input.trim();
+  if (!url) return '';
+
+  if (url.startsWith('/') || url.startsWith('blob:')) {
+    return url;
+  }
+
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url.replace(/^\/+/, '')}`;
+  }
+
+  try {
+    const parsed = new URL(url);
+    parsed.protocol = 'https:';
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname === 'www.dropbox.com' || hostname === 'dropbox.com') {
+      parsed.hostname = 'dl.dropboxusercontent.com';
+      parsed.searchParams.delete('dl');
+      parsed.searchParams.set('raw', '1');
+    } else if (hostname === 'dl.dropboxusercontent.com') {
+      if (!parsed.searchParams.has('raw') && !parsed.searchParams.has('dl')) {
+        parsed.searchParams.set('raw', '1');
+      }
+    }
+
+    parsed.pathname = parsed.pathname
+      .split('/')
+      .map(segment => encodeURIComponent(decodeURIComponent(segment)))
+      .join('/');
+
+    return parsed.toString();
+  } catch (err) {
+    try {
+      return encodeURI(url);
+    } catch (e) {
+      return url;
+    }
+  }
+}
+
+function normalizeWallSectionImages(images: Record<string, string | string[]>): Record<string, string[]> {
+  const normalized: Record<string, string[]> = {};
+
+  for (const [section, value] of Object.entries(images || {})) {
+    if (Array.isArray(value)) {
+      normalized[section] = value
+        .map(item => typeof item === 'string' ? normalizeWallSectionImageUrl(item) : '')
+        .filter(Boolean);
+    } else if (typeof value === 'string') {
+      const normalizedUrl = normalizeWallSectionImageUrl(value);
+      normalized[section] = normalizedUrl ? [normalizedUrl] : [];
+    } else {
+      normalized[section] = [];
+    }
+  }
+
+  return normalized;
+}
+
+function createWallImageErrorHandler(label: string) {
+  return (e: React.SyntheticEvent<HTMLImageElement>) => {
+    try {
+      const img = e.currentTarget;
+      const src = img.src || '';
+
+      if (!img.dataset.retrySanitize) {
+        img.dataset.retrySanitize = '1';
+        const normalized = normalizeWallSectionImageUrl(src);
+        if (normalized && normalized !== src) {
+          img.src = normalized;
+          return;
+        }
+      }
+
+      if (!img.dataset.retryRaw && src.includes('dropboxusercontent.com') && !src.includes('raw=1')) {
+        img.dataset.retryRaw = '1';
+        img.src = src + (src.includes('?') ? '&raw=1' : '?raw=1');
+        return;
+      }
+
+      if (!img.dataset.retryHttps && src.startsWith('http://')) {
+        img.dataset.retryHttps = '1';
+        img.src = src.replace('http://', 'https://');
+        return;
+      }
+
+      img.style.display = 'none';
+      const container = img.parentElement;
+      if (container && !container.querySelector(`a[data-fallback-link="${label}"]`)) {
+        const link = document.createElement('a');
+        link.href = src;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Open image in new tab';
+        link.style.display = 'block';
+        link.style.padding = '12px';
+        link.style.color = '#93c5fd';
+        link.dataset.fallbackLink = label;
+        container.appendChild(link);
+      }
+    } catch (err) {
+      // swallow error - backup link already created
+    }
+  };
+}
+
 export default function App(){
   // Check if Google OAuth is configured
   const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
   const isGoogleConfigured = googleClientId && googleClientId.length > 0 && !googleClientId.includes('your-google');
+
+  const referenceImageErrorHandler = useMemo(() => createWallImageErrorHandler('wall-section-reference'), []);
+  const adminReferenceImageErrorHandler = useMemo(() => createWallImageErrorHandler('admin-wall-section-reference'), []);
   
   // Validate localStorage on mount - clear if user object is malformed
   const validateAuth = () => {
@@ -847,36 +959,8 @@ export default function App(){
     const loadWallSectionImages = async () => {
       try {
         const images = await api.getWallSectionImages();
-        // Convert old single-string format to array format for backwards compatibility
-        const imagesArray: Record<string, string[]> = {};
-        const convertDropbox = (u: string) => {
-          try {
-            if (!u) return u;
-            if (u.includes('dropbox.com')) {
-              // Convert common Dropbox preview/share URLs to raw content URL
-              // Examples:
-              // https://www.dropbox.com/s/<id>/file.jpg?dl=0  -> https://dl.dropboxusercontent.com/s/<id>/file.jpg
-              let out = u.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-              out = out.replace('?dl=0', '');
-              out = out.replace('?dl=1', '');
-              return out;
-            }
-            return u;
-          } catch (e) {
-            return u;
-          }
-        };
-
-        for (const [section, value] of Object.entries(images)) {
-          if (Array.isArray(value)) {
-            imagesArray[section] = value.map(v => typeof v === 'string' ? convertDropbox(v) : '').filter(Boolean);
-          } else if (typeof value === 'string') {
-            imagesArray[section] = [convertDropbox(value)];
-          } else {
-            imagesArray[section] = [];
-          }
-        }
-        setWallSectionImages(imagesArray);
+        const normalized = normalizeWallSectionImages(images);
+        setWallSectionImages(normalized);
       } catch (err) {
         console.error('Failed to load wall section images:', err);
         // Use empty object if API fails
@@ -2347,14 +2431,15 @@ export default function App(){
                       )}
                     </div>
                     <div style={{position:'relative'}}>
-                        <img 
+                        <img
                           src={
                             wallSectionImages[dropdownWall][currentImageIndex].startsWith('http')
                               ? wallSectionImages[dropdownWall][currentImageIndex]
                               : `${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`
                           }
-                          alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`} 
+                          alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`}
                           loading="lazy"
+                          referrerPolicy="no-referrer"
                           style={{
                             width:'100%',
                             height:'auto',
@@ -2362,46 +2447,7 @@ export default function App(){
                             objectFit:'contain',
                             display:'block'
                           }}
-                          onError={(e) => {
-                            try {
-                              const img = e.currentTarget as HTMLImageElement;
-                              const src = img.src || '';
-                              // Prevent infinite retry loop
-                              if (!img.dataset.retried) {
-                                img.dataset.retried = '1';
-                                // Generate candidate repair URLs (Dropbox common fixes)
-                                const candidates: string[] = [];
-                                if (src.includes('dropbox.com') && !src.includes('dl.dropboxusercontent.com')) {
-                                  candidates.push(src.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', ''));
-                                  if (!src.includes('?raw=1')) candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
-                                }
-                                if (src.includes('dropboxusercontent.com') && !src.includes('?raw=1')) {
-                                  candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
-                                }
-                                // Try first candidate if available
-                                if (candidates.length > 0) {
-                                  img.src = candidates[0];
-                                  return;
-                                }
-                              }
-                              // If we've already retried or no candidates, show fallback link
-                              img.style.display = 'none';
-                              const container = img.parentElement;
-                              if (container) {
-                                const link = document.createElement('a');
-                                link.href = src;
-                                link.target = '_blank';
-                                link.rel = 'noopener noreferrer';
-                                link.textContent = 'Open image in new tab';
-                                link.style.display = 'block';
-                                link.style.padding = '12px';
-                                link.style.color = '#93c5fd';
-                                container.appendChild(link);
-                              }
-                            } catch (err) {
-                              // ignore
-                            }
-                          }}
+                          onError={referenceImageErrorHandler}
                         />
                       {wallSectionImages[dropdownWall].length > 1 && (
                         <>
@@ -2742,14 +2788,15 @@ export default function App(){
                           )}
                         </div>
                         <div style={{position:'relative'}}>
-                          <img 
+                          <img
                             src={
                               wallSectionImages[section][manualModeImageIndexes[section] || 0].startsWith('http')
                                 ? wallSectionImages[section][manualModeImageIndexes[section] || 0]
                                 : `${API_URL}${wallSectionImages[section][manualModeImageIndexes[section] || 0]}`
                             }
-                            alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`} 
+                            alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`}
                             loading="lazy"
+                            referrerPolicy="no-referrer"
                             style={{
                               width:'100%',
                               height:'auto',
@@ -2757,40 +2804,7 @@ export default function App(){
                               objectFit:'contain',
                               display:'block'
                             }}
-                            onError={(e) => {
-                              try {
-                                const img = e.currentTarget as HTMLImageElement;
-                                const src = img.src || '';
-                                if (!img.dataset.retried) {
-                                  img.dataset.retried = '1';
-                                  const candidates: string[] = [];
-                                  if (src.includes('dropbox.com') && !src.includes('dl.dropboxusercontent.com')) {
-                                    candidates.push(src.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', ''));
-                                    if (!src.includes('?raw=1')) candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
-                                  }
-                                  if (src.includes('dropboxusercontent.com') && !src.includes('?raw=1')) {
-                                    candidates.push(src + (src.includes('?') ? '&raw=1' : '?raw=1'));
-                                  }
-                                  if (candidates.length > 0) {
-                                    img.src = candidates[0];
-                                    return;
-                                  }
-                                }
-                                img.style.display = 'none';
-                                const container = img.parentElement;
-                                if (container) {
-                                  const link = document.createElement('a');
-                                  link.href = src;
-                                  link.target = '_blank';
-                                  link.rel = 'noopener noreferrer';
-                                  link.textContent = 'Open image in new tab';
-                                  link.style.display = 'block';
-                                  link.style.padding = '12px';
-                                  link.style.color = '#93c5fd';
-                                  container.appendChild(link);
-                                }
-                              } catch (err) { }
-                            }}
+                            onError={referenceImageErrorHandler}
                           />
                           {wallSectionImages[section].length > 1 && (
                             <>
@@ -5999,11 +6013,13 @@ export default function App(){
                                         : `${API_URL}${imagePath}`
                                     }
                                     alt={`${section} reference ${idx + 1}`}
+                                    referrerPolicy="no-referrer"
                                     style={{
                                       width:'100%',
                                       height:'100%',
                                       objectFit:'cover'
                                     }}
+                                    onError={adminReferenceImageErrorHandler}
                                   />
                                   <button
                                     onClick={async () => {
@@ -6128,17 +6144,13 @@ export default function App(){
                                 onKeyDown={async (e) => {
                                   if (e.key === 'Enter') {
                                     const input = e.currentTarget;
-                                    let url = input.value.trim();
-                                    if (!url) return;
-                                    
+                                    const rawUrl = input.value.trim();
+                                    if (!rawUrl) return;
+
                                     try {
-                                      // Convert Dropbox URL to direct link
-                                      if (url.includes('dropbox.com')) {
-                                        url = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-                                        url = url.replace('?dl=0', '');
-                                        url = url.replace('?dl=1', '');
-                                      }
-                                      
+                                      const url = normalizeWallSectionImageUrl(rawUrl);
+                                      if (!url) return;
+
                                       // Add to existing images array
                                       const updated = {
                                         ...wallSectionImages,
