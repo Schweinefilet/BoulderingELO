@@ -29,6 +29,7 @@ router.get('/reset-audits', authenticateToken, requireAdmin, adminController.lis
 router.get('/notifications', adminController.getAdminNotifications);
 router.post('/notifications', authenticateToken, requireAdmin, adminController.setAdminNotification);
 router.post('/merge-duplicates', authenticateToken, requireAdmin, adminController.mergeDuplicateSessions);
+router.post('/recalculate-scores', authenticateToken, requireAdmin, adminController.recalculateAllScores);
 router.put('/climber/:climberId', authenticateToken, requireAdmin, adminController.updateClimberProfile);
 
 export default router;

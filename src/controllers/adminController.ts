@@ -180,6 +180,106 @@ export async function mergeDuplicateSessions(req: AuthRequest, res: Response) {
 }
 
 /**
+ * Recalculate every stored session score using the latest scoring function.
+ * Ensures consistency after changing BASE values, grade thresholds, or weighting.
+ */
+export async function recalculateAllScores(req: AuthRequest, res: Response) {
+  try {
+    const sessions = await db.getSessions({});
+    if (sessions.length === 0) {
+      return sendSuccess(res, {
+        message: 'No sessions to recalculate',
+        sessionsProcessed: 0,
+        scoresChanged: 0,
+        changedSessions: []
+      });
+    }
+
+    const client = await db.getClient();
+    const changedSessions: Array<{ sessionId: number; climberId: number; oldScore: number; newScore: number }> = [];
+    let processed = 0;
+
+    const toNumber = (value: any) => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    try {
+      await client.query('BEGIN');
+
+      for (const session of sessions) {
+        if (!session?.id) continue;
+
+        const totals: Counts = session.wallCounts
+          ? combineCounts(session.wallCounts as WallCounts)
+          : {
+              green: toNumber(session.green),
+              blue: toNumber(session.blue),
+              yellow: toNumber(session.yellow),
+              orange: toNumber(session.orange),
+              red: toNumber(session.red),
+              black: toNumber(session.black)
+            };
+
+        const newScore = computeWeeklyScore(totals);
+        const oldScore = toNumber(session.score);
+
+        await client.query(
+          `INSERT INTO counts (session_id, green, blue, yellow, orange, red, black)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (session_id)
+           DO UPDATE SET
+             green = EXCLUDED.green,
+             blue = EXCLUDED.blue,
+             yellow = EXCLUDED.yellow,
+             orange = EXCLUDED.orange,
+             red = EXCLUDED.red,
+             black = EXCLUDED.black`,
+          [
+            session.id,
+            totals.green,
+            totals.blue,
+            totals.yellow,
+            totals.orange,
+            totals.red,
+            totals.black
+          ]
+        );
+
+        await client.query('UPDATE sessions SET score = $1 WHERE id = $2', [newScore, session.id]);
+
+        processed += 1;
+        if (Math.abs(newScore - oldScore) > 1e-6) {
+          changedSessions.push({
+            sessionId: session.id,
+            climberId: session.climberId,
+            oldScore,
+            newScore
+          });
+        }
+      }
+
+      await client.query('COMMIT');
+
+      return sendSuccess(res, {
+        message: `Recalculated ${processed} sessions using the current scoring system`,
+        sessionsProcessed: processed,
+        scoresChanged: changedSessions.length,
+        changedSessions
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
  * Update climber profile (admin only - can edit all fields)
  */
 export async function updateClimberProfile(req: AuthRequest, res: Response) {
