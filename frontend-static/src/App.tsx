@@ -902,6 +902,7 @@ export default function App(){
       return true;
     }
   })
+  const [showGradeBands, setShowGradeBands] = useState(false)
   const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes' | 'audits'>('accounts')
   const [adminAudits, setAdminAudits] = useState<any[]>([])
   const [auditsLoading, setAuditsLoading] = useState(false)
@@ -1945,7 +1946,7 @@ export default function App(){
           borderRadius:8,
           border:'1px solid #3b82f6'
         }}>
-          <div style={{marginBottom:8}}>Loading data from API...</div>
+          <div style={{marginBottom:8}}>Please wait up to 50 seconds, API loading.</div>
           <div style={{fontSize:12,color:'#94a3b8',marginBottom:8}}>
             ⏰ <strong>First time loading?</strong> The free tier API may be sleeping.
           </div>
@@ -2152,24 +2153,36 @@ export default function App(){
               borderRadius:8,
               border:'1px solid #122235'
             }}>
-              <h4 style={{margin:'0 0 8px',color:'#bfdbfe',fontSize:15}}>Weekly grade bands</h4>
-              <p style={{margin:'0 0 16px',fontSize:13,color:'#94a3b8'}}>
-                Each weekly score S maps to a V-grade using the exact ranges below. Colors match the badges on the leaderboard and profile pages.
-              </p>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
-                {GRADE_BOUNDS.map(bound => {
-                  const colors = getGradeColor(bound.grade);
-                  return (
-                    <div key={bound.grade} style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #1e293b'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-                        <span style={{width:18,height:18,borderRadius:4,backgroundColor:colors.backgroundColor,border:'1px solid rgba(0,0,0,0.2)'}}></span>
-                        <span style={{fontWeight:700,color:'#e2e8f0'}}>{bound.grade}</span>
-                      </div>
-                      <div style={{fontSize:13,color:'#94a3b8'}}>{formatGradeRangeLabel(bound.min, bound.max)}</div>
-                    </div>
-                  );
-                })}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+                <h4 style={{margin:'0 0 8px',color:'#bfdbfe',fontSize:15,flex:1}}>Weekly grade bands</h4>
+                <button
+                  onClick={() => setShowGradeBands(prev => !prev)}
+                  style={{padding:'6px 10px',backgroundColor:'#0b1220',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                >
+                  {showGradeBands ? 'Hide' : 'Show'}
+                </button>
               </div>
+              {showGradeBands && (
+                <>
+                  <p style={{margin:'0 0 16px',fontSize:13,color:'#94a3b8'}}>
+                    Each weekly score S maps to a V-grade using the exact ranges below. Colors match the badges on the leaderboard and profile pages.
+                  </p>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
+                    {GRADE_BOUNDS.map(bound => {
+                      const colors = getGradeColor(bound.grade);
+                      return (
+                        <div key={bound.grade} style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #1e293b'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                            <span style={{width:18,height:18,borderRadius:4,backgroundColor:colors.backgroundColor,border:'1px solid rgba(0,0,0,0.2)'}}></span>
+                            <span style={{fontWeight:700,color:'#e2e8f0'}}>{bound.grade}</span>
+                          </div>
+                          <div style={{fontSize:13,color:'#94a3b8'}}>{formatGradeRangeLabel(bound.min, bound.max)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
