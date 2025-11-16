@@ -2008,18 +2008,17 @@ export default function App(){
           {showUserGuide ? (
             <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
-                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>1. Select or add a climber</h5>
-                  <div style={{fontSize:14,lineHeight:1.6}}>Use the dropdown in <strong>New Session</strong> to pick who you're logging for, or choose <em>Add climber</em> to create a new profile.</div>
-                </div>
-                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>2. Log climbs and videos</h5>
-                  <div style={{fontSize:14,lineHeight:1.6}}>Pick a wall section and color, then use the blue <strong>Add</strong> button to increment sends. Adjust mistakes with the minus button and add video links for Black/Red climbs.</div>
-                </div>
-                <div style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                  <h5 style={{margin:'0 0 8px',fontSize:15,color:'#93c5fd'}}>3. Wrap up the session</h5>
-                  <div style={{fontSize:14,lineHeight:1.6}}>Set the date and hit <strong>Add Session</strong> once you’re done. Your session should show up in the <strong>Sessions</strong> section below.</div>
-                </div>
+                {[
+                  '1. Navigate to New Session.',
+                  '2. Select wall section (reference available).',
+                  '3. Select route color.',
+                  '4. Add or subtract route.',
+                  '5. Add session once done.'
+                ].map((step) => (
+                  <div key={step} style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                    <h5 style={{margin:0,fontSize:15,color:'#93c5fd'}}>{step}</h5>
+                  </div>
+                ))}
               </div>
 
               <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
