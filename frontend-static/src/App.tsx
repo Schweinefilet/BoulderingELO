@@ -72,6 +72,40 @@ const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'm
   );
 };
 
+const guideSectionCardStyle: React.CSSProperties = {
+  marginTop: 16,
+  padding: '16px',
+  backgroundColor: '#071029',
+  borderRadius: 8,
+  border: '1px solid #122235'
+};
+
+const guideToggleButtonStyle = (isActive: boolean): React.CSSProperties => ({
+  padding: '8px 16px',
+  borderRadius: 999,
+  fontSize: 13,
+  fontWeight: 600,
+  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.18)' : 'rgba(15, 23, 42, 0.9)',
+  color: '#bfdbfe',
+  border: `1px solid ${isActive ? 'rgba(59, 130, 246, 0.55)' : '#1e3a5f'}`,
+  cursor: 'pointer',
+  transition: 'background-color 0.2s ease, border-color 0.2s ease'
+});
+
+const GuideToggleButton = ({
+  label,
+  isOpen,
+  onToggle
+}: {
+  label: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) => (
+  <button onClick={onToggle} style={guideToggleButtonStyle(isOpen)}>
+    {isOpen ? `Hide ${label}` : `Show ${label}`}
+  </button>
+);
+
 const renderGradeReferenceLines = () => GRADE_REFERENCE_LINES.map(({ grade, value }) => {
   const colors = getGradeColor(grade);
   return (
@@ -903,17 +937,17 @@ export default function App(){
   
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [showScoringDetails, setShowScoringDetails] = useState(false)
+  const [showScoringFormula, setShowScoringFormula] = useState(false)
   const [showUserGuide, setShowUserGuide] = useState<boolean>(() => {
     try {
       const v = localStorage.getItem('showUserGuide');
-      if (v === null) return true;
+      if (v === null) return false;
       return v === '1' || v === 'true';
     } catch (e) {
-      return true;
+      return false;
     }
   })
-  const [showGradeBands, setShowGradeBands] = useState(false)
+  const [showGradeBoundaries, setShowGradeBoundaries] = useState(false)
   const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes' | 'audits'>('accounts')
   const [adminAudits, setAdminAudits] = useState<any[]>([])
   const [auditsLoading, setAuditsLoading] = useState(false)
@@ -2052,224 +2086,167 @@ export default function App(){
 
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <h3 style={{marginTop:0,marginBottom:16}}>Guide</h3>
-            <div>
-              <button
-                onClick={() => {
+          </div>
+          
+
+          <div style={{...guideSectionCardStyle, marginTop: 0}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+              <h4 style={{margin:0,color:'#bfdbfe',fontSize:16}}>Quick start guide</h4>
+              <GuideToggleButton
+                label="guide"
+                isOpen={showUserGuide}
+                onToggle={() => {
                   const next = !showUserGuide;
                   setShowUserGuide(next);
                   try { localStorage.setItem('showUserGuide', next ? '1' : '0'); } catch (e) { /* ignore */ }
                 }}
-                style={{padding:'6px 10px',backgroundColor:'#0b1220',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
-              >
-                {showUserGuide ? 'Hide Guide' : 'Show Guide'}
-              </button>
+              />
             </div>
-          </div>
-          
-
-          <div
-            style={{
-              marginBottom:16,
-              padding:'16px',
-              backgroundColor:'#071029',
-              borderRadius:8,
-              border:'1px solid #122235',
-              display:'flex',
-              flexDirection:'column',
-              gap:16
-            }}
-          >
-            <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start',justifyContent:'space-between'}}>
-              <div style={{flex:'1 1 260px',minWidth:220}}>
-                <h4 style={{margin:'0 0 6px',color:'#bfdbfe',fontSize:16}}>Scoring at a glance</h4>
-                <div style={{fontSize:14,lineHeight:1.6,color:'#cbd5e1'}}>
-                  <strong>Weekly scores add up every climb you log, color by color.</strong> We read the week from hardest to easiest (Black → Green), apply each color's base value, and multiply by a diminishing returns curve (r = 0.95) so the first few sends hit harder than late repeats.
-                  The final number always maps cleanly to a V0 → V9+ grade band for easy comparisons across climbers and weeks.
-                </div>
-              </div>
-              <button
-                onClick={() => setShowScoringDetails(!showScoringDetails)}
-                style={{
-                  padding:'8px 16px',
-                  backgroundColor:'rgba(59, 130, 246, 0.12)',
-                  color:'#3b82f6',
-                  border:'1px solid rgba(59, 130, 246, 0.4)',
-                  borderRadius:6,
-                  fontSize:13,
-                  fontWeight:600,
-                  cursor:'pointer',
-                  transition:'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
-                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-                }}
-              >
-                {showScoringDetails ? '▲ Hide scoring math' : '▶ View scoring math'}
-              </button>
-            </div>
-
-            {showScoringDetails && (
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:16,color:'#cbd5e1'}}>
-                <div style={{backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
-                  <div style={{fontSize:15,marginBottom:12,overflowX:'auto',textAlign:'center'}}>
-                    <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
-                  </div>
-                  <div style={{fontSize:14,lineHeight:1.6,textAlign:'center'}}>
-                    <div style={{marginBottom:6}}>Weighting function:</div>
-                    <InlineMath math="W(n) = \frac{1 - r^n}{1 - r}" />
-                    {' with '}
-                    <InlineMath math="r = 0.95" />
-                  </div>
+            {showUserGuide && (
+              <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
+                  {[
+                    '1. Navigate to New Session.',
+                    '2. Select wall section (reference available).',
+                    '3. Select route color.',
+                    '4. Add or subtract route.',
+                    '5. Add session once done.'
+                  ].map((step) => (
+                    <div key={step} style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                      <h5 style={{margin:0,fontSize:15,color:'#93c5fd'}}>{step}</h5>
+                    </div>
+                  ))}
                 </div>
 
-                <div style={{display:'flex',flexDirection:'column',gap:12,backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
-                  <div style={{padding:'10px 12px',backgroundColor:'rgba(59, 130, 246, 0.12)',borderRadius:6,color:'#93c5fd',fontSize:14,lineHeight:1.6}}>
-                    <strong>💡 TL;DR:</strong> Log every send, push harder colors first, and mix things up so you never stall out on diminishing returns.
-                  </div>
-                  <div style={{fontSize:14,lineHeight:1.7}}>
-                    <h5 style={{margin:'0 0 8px',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Scoring is based on</h5>
-                    <ul style={{paddingLeft:20,margin:0,display:'flex',flexDirection:'column',gap:6}}>
-                      <li>The number of climbs you record for each color every week.</li>
-                      <li>Per-color base values (table below) that weight Green at 0.5 all the way up to Black at 108.</li>
-                      <li>The diminishing returns factor <InlineMath math="r = 0.95" /> applied through <InlineMath math="W(n) = \frac{1 - r^n}{1 - r}" />.</li>
-                      <li>Processing order from hardest to easiest (Black → Green) so a black boulder always beats the same volume of blues.</li>
-                    </ul>
-                  </div>
-                  <div style={{fontSize:13}}>
-                    <h5 style={{margin:'0 0 8px',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Base values by color</h5>
-                    <table style={{width:'100%',borderCollapse:'collapse'}}>
-                      <tbody>
-                        {ORDER.map(color => (
-                          <tr key={color} style={{borderTop:'1px solid #1e293b'}}>
-                            <td style={{padding:'6px 4px'}}>
-                              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                <span style={{width:12,height:12,borderRadius:999,backgroundColor:COLOR_SWATCHES[color],display:'inline-block'}}></span>
-                                <span style={{fontWeight:600,color:'#e2e8f0'}}>{color.toUpperCase()}</span>
-                              </div>
-                            </td>
-                            <td style={{padding:'6px 4px',textAlign:'right',color:'#cbd5e1'}}>{formatBaseValue(BASE[color])} pts</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{fontSize:14,lineHeight:1.7}}>
-                    <h5 style={{margin:'8px 0',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Conceptually</h5>
-                    <ul style={{paddingLeft:20,margin:0,display:'flex',flexDirection:'column',gap:6}}>
-                      <li>Early sends in a color give noticeably more score than late repeats.</li>
-                      <li>Harder colors are worth a lot more, so a Red/Black session can eclipse tons of easy volume.</li>
-                      <li>Your total instantly translates to a V0 → V9+ grade band so you can benchmark weeks at a glance.</li>
-                    </ul>
+                <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
+                  Black and Red climbs wait for review before they count toward the leaderboard.
+                </div>
+
+                <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:'#0b1220',border:'1px solid #122235',borderRadius:8,padding:'12px 16px'}}>
+                  <button
+                    onClick={() => {
+                      const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
+                    }}
+                    style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                  >
+                    Export CSV
+                  </button>
+
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                  >
+                    Open Settings
+                  </button>
+
+                  <div style={{fontSize:13,color:'#93c5fd',fontWeight:600,display:'flex',flexDirection:'column',gap:4}}>
+                    <span>Need more help? Check Notifications or the GitHub repo link.</span>
+                    <span>Feel free to check out analytics at the bottom of the page.</span>
                   </div>
                 </div>
               </div>
             )}
-
-            <div style={{
-              marginTop:16,
-              padding:'16px',
-              backgroundColor:'#071029',
-              borderRadius:8,
-              border:'1px solid #122235'
-            }}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
-                <h4 style={{margin:'0 0 8px',color:'#bfdbfe',fontSize:15,flex:1}}>Weekly grade bands</h4>
-                <button
-                  onClick={() => setShowGradeBands(prev => !prev)}
-                  style={{padding:'6px 10px',backgroundColor:'#0b1220',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
-                >
-                  {showGradeBands ? 'Hide' : 'Show'}
-                </button>
-              </div>
-              {showGradeBands && (
-                <>
-                  <p style={{margin:'0 0 16px',fontSize:13,color:'#94a3b8'}}>
-                    Each weekly score S maps to a V-grade using the exact ranges below. Colors match the badges on the leaderboard and profile pages.
-                  </p>
-                  <div style={{overflowX:'auto'}}>
-                    <table style={{width:'100%',borderCollapse:'collapse',minWidth:360}}>
-                      <thead>
-                        <tr>
-                          <th style={{textAlign:'left',padding:'8px 6px',fontSize:12,letterSpacing:0.5,color:'#94a3b8',borderBottom:'1px solid #1e293b'}}>Grade</th>
-                          <th style={{textAlign:'left',padding:'8px 6px',fontSize:12,letterSpacing:0.5,color:'#94a3b8',borderBottom:'1px solid #1e293b'}}>Score range</th>
-                          <th style={{textAlign:'left',padding:'8px 6px',fontSize:12,letterSpacing:0.5,color:'#94a3b8',borderBottom:'1px solid #1e293b'}}>Color swatch</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {GRADE_BOUNDS.map(bound => {
-                          const colors = getGradeColor(bound.grade);
-                          return (
-                            <tr key={bound.grade} style={{borderBottom:'1px solid #1e293b'}}>
-                              <td style={{padding:'10px 6px',fontWeight:700,color:'#e2e8f0'}}>{bound.grade}</td>
-                              <td style={{padding:'10px 6px',color:'#cbd5e1'}}>{formatGradeRangeLabel(bound.min, bound.max)} pts</td>
-                              <td style={{padding:'10px 6px'}}>
-                                <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                  <span style={{width:32,height:14,borderRadius:999,backgroundColor:colors.backgroundColor,border:'1px solid rgba(0,0,0,0.2)'}}></span>
-                                  <span style={{fontSize:12,color:colors.textColor}}>{colors.backgroundColor}</span>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
           </div>
 
-          {/* Practical user guide for everyday users */}
-
-          {showUserGuide ? (
-            <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
-                {[
-                  '1. Navigate to New Session.',
-                  '2. Select wall section (reference available).',
-                  '3. Select route color.',
-                  '4. Add or subtract route.',
-                  '5. Add session once done.'
-                ].map((step) => (
-                  <div key={step} style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
-                    <h5 style={{margin:0,fontSize:15,color:'#93c5fd'}}>{step}</h5>
+          <div style={guideSectionCardStyle}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+              <h4 style={{margin:0,color:'#bfdbfe',fontSize:16}}>Scoring formula</h4>
+              <GuideToggleButton
+                label="scoring formula"
+                isOpen={showScoringFormula}
+                onToggle={() => setShowScoringFormula(prev => !prev)}
+              />
+            </div>
+            {showScoringFormula && (
+              <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
+                <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start',justifyContent:'space-between'}}>
+                  <div style={{flex:'1 1 260px',minWidth:220}}>
+                    <h5 style={{margin:'0 0 6px',color:'#bfdbfe',fontSize:15}}>Scoring at a glance</h5>
+                    <div style={{fontSize:14,lineHeight:1.6,color:'#cbd5e1'}}>
+                      <strong>Climb harder routes to get more points.</strong> Sends are processed from Black → Green with a diminishing returns factor (r = 0.95) so earlier sends pay out more.
+                      Your weekly total is then translated into a grade band (V0 → V9+) so you can compare sessions at a glance.
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:16,color:'#cbd5e1'}}>
+                  <div style={{backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
+                    <div style={{fontSize:15,marginBottom:12,overflowX:'auto',textAlign:'center'}}>
+                      <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
+                    </div>
+                    <div style={{fontSize:14,lineHeight:1.6,textAlign:'center'}}>
+                      <div style={{marginBottom:6}}>Weighting function:</div>
+                      <InlineMath math="W(n) = \frac{1 - r^n}{1 - r}" />
+                      {' with '}
+                      <InlineMath math="r = 0.95" />
+                    </div>
+                  </div>
 
-              <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
-                Black and Red climbs wait for review before they count toward the leaderboard.
-              </div>
-
-              <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:'#0b1220',border:'1px solid #122235',borderRadius:8,padding:'12px 16px'}}>
-                <button
-                  onClick={() => {
-                    const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
-                  }}
-                  style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
-                >
-                  Export CSV
-                </button>
-
-                <button
-                  onClick={() => setShowSettings(true)}
-                  style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
-                >
-                  Open Settings
-                </button>
-
-                <div style={{fontSize:13,color:'#93c5fd',fontWeight:600,display:'flex',flexDirection:'column',gap:4}}>
-                  <span>Need more help? Check Notifications or the GitHub repo link.</span>
-                  <span>Feel free to check out analytics at the bottom of the page.</span>
+                  <div style={{display:'flex',flexDirection:'column',gap:12,backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
+                    <div style={{padding:'10px 12px',backgroundColor:'rgba(59, 130, 246, 0.12)',borderRadius:6,color:'#93c5fd',fontSize:14,lineHeight:1.6}}>
+                      <strong>💡 TL;DR:</strong> Prioritize Black, Red, and Orange climbs. Diversify your sends to avoid diminishing returns and keep the points flowing.
+                    </div>
+                    <div style={{fontSize:14,lineHeight:1.7}}>
+                      <h5 style={{margin:'0 0 8px',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Scoring flow</h5>
+                      <ol style={{paddingLeft:20,margin:0}}>
+                        <li style={{marginBottom:6}}>
+                          <strong>Color order:</strong> Black → Red → Orange → Yellow → Blue → Green.
+                        </li>
+                        <li style={{marginBottom:6}}>
+                          <strong>Base values (<InlineMath math="b_c" />):</strong> Black(108) · Red(36) · Orange(12) · Yellow(4)· Blue(1.5) · Green(0.5).
+                        </li>
+                        <li style={{marginBottom:6}}>
+                          <strong>Grade boundaries:</strong> Every score maps to a V-grade (see table below) so you know if your week felt like V3 or V8.
+                        </li>
+                        <li style={{marginBottom:6}}>
+                          <strong>Diminishing returns:</strong> Early climbs for each color earn more than later repeats.
+                        </li>
+                        <li style={{marginBottom:6}}>
+                          <InlineMath math="n_{\text{cmltve}}" /> counts all harder colors already processed; <InlineMath math="n_c" /> counts climbs of the current color.
+                        </li>
+                        <li>
+                          <strong>Marginal gains shrink</strong> as totals increase, encouraging steady progression across colors.
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
+
+          <div style={guideSectionCardStyle}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+              <h4 style={{margin:'0 0 8px',color:'#bfdbfe',fontSize:15,flex:1}}>Grade boundaries</h4>
+              <GuideToggleButton
+                label="grade boundaries"
+                isOpen={showGradeBoundaries}
+                onToggle={() => setShowGradeBoundaries(prev => !prev)}
+              />
             </div>
-          ) : null}
+            {showGradeBoundaries && (
+              <>
+                <p style={{margin:'16px 0',fontSize:13,color:'#94a3b8'}}>
+                  Each weekly score S maps to a V-grade using the exact ranges below. Colors match the badges on the leaderboard and profile pages.
+                </p>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
+                  {GRADE_BOUNDS.map(bound => {
+                    const colors = getGradeColor(bound.grade);
+                    return (
+                      <div key={bound.grade} style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #1e293b'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                          <span style={{width:18,height:18,borderRadius:4,backgroundColor:colors.backgroundColor,border:'1px solid rgba(0,0,0,0.2)'}}></span>
+                          <span style={{fontWeight:700,color:'#e2e8f0'}}>{bound.grade}</span>
+                        </div>
+                        <div style={{fontSize:13,color:'#94a3b8'}}>{formatGradeRangeLabel(bound.min, bound.max)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Practical user guide included above for consistency */}
 
         </div>
       </GlowingCard>
