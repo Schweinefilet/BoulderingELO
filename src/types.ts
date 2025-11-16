@@ -30,6 +30,7 @@ export type Climber = {
   country?: string;
   started_bouldering?: string;
   bio?: string;
+  instagram_handle?: string;
   hidden?: boolean;
   created_at?: Date;
 };

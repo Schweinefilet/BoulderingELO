@@ -12,6 +12,7 @@ export interface Climber {
   country?: string;
   started_bouldering?: string;
   bio?: string;
+  instagram_handle?: string;
 }
 
 export interface User {
@@ -174,7 +175,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return handleResponse<{ success: boolean; message: string }>(response);
 }
 
-export async function updateUserSettings(settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string }): Promise<{ success: boolean; user: any }> {
+export async function updateUserSettings(settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string; instagram_handle?: string }): Promise<{ success: boolean; user: any }> {
   const response = await fetch(`${API_URL}/api/user/settings`, {
     method: 'PUT',
     headers: getHeaders(true),
@@ -270,6 +271,7 @@ export async function updateClimberProfile(climberId: number, updates: {
   country?: string;
   started_bouldering?: string;
   bio?: string;
+  instagram_handle?: string;
   role?: string;
 }): Promise<{ success: boolean; climber: Climber }> {
   const response = await fetch(`${API_URL}/api/admin/climber/${climberId}`, {

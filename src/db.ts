@@ -75,17 +75,29 @@ export async function initDB() {
       country TEXT,
       started_bouldering TEXT,
       bio TEXT,
+      instagram_handle TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
   
   // Add google_id column if it doesn't exist (for existing databases)
   await pool.query(`
-    DO $$ 
+    DO $$
     BEGIN
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                      WHERE table_name='climbers' AND column_name='google_id') THEN
         ALTER TABLE climbers ADD COLUMN google_id TEXT UNIQUE;
+      END IF;
+    END $$;
+  `);
+
+  // Add instagram_handle column if it doesn't exist
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_name='climbers' AND column_name='instagram_handle') THEN
+        ALTER TABLE climbers ADD COLUMN instagram_handle TEXT;
       END IF;
     END $$;
   `);
@@ -487,8 +499,8 @@ export async function updateClimberPassword(climberId: number, password: string)
   await pool.query('UPDATE climbers SET password = $1 WHERE id = $2', [password, climberId]);
 }
 
-export async function updateUserSettings(climberId: number, settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string }) {
-  const { username, name, country, started_bouldering, bio } = settings;
+export async function updateUserSettings(climberId: number, settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string; instagram_handle?: string }) {
+  const { username, name, country, started_bouldering, bio, instagram_handle } = settings;
   
   // Update climber profile (which includes username)
   const result = await pool.query(
@@ -497,37 +509,40 @@ export async function updateUserSettings(climberId: number, settings: { username
          username = COALESCE($2, username),
          country = COALESCE($3, country),
          started_bouldering = COALESCE($4, started_bouldering),
-         bio = COALESCE($5, bio)
-     WHERE id = $6 
+        bio = COALESCE($5, bio),
+        instagram_handle = COALESCE($6, instagram_handle)
+     WHERE id = $7
      RETURNING *`,
-    [name || null, username ? username.toLowerCase() : null, country || null, 
-     started_bouldering || null, bio || null, climberId]
+    [name || null, username ? username.toLowerCase() : null, country || null,
+     started_bouldering || null, bio || null, instagram_handle || null, climberId]
   );
   
   return result.rows[0];
 }
 
-export async function updateClimberProfile(climberId: number, updates: { 
-  name?: string; 
-  username?: string; 
-  country?: string; 
-  started_bouldering?: string; 
+export async function updateClimberProfile(climberId: number, updates: {
+  name?: string;
+  username?: string;
+  country?: string;
+  started_bouldering?: string;
   bio?: string;
+  instagram_handle?: string;
   role?: string;
 }) {
-  const { name, username, country, started_bouldering, bio, role } = updates;
+  const { name, username, country, started_bouldering, bio, instagram_handle, role } = updates;
   const result = await pool.query(
-    `UPDATE climbers 
+    `UPDATE climbers
      SET name = COALESCE($1, name),
          username = COALESCE($2, username),
          country = COALESCE($3, country),
          started_bouldering = COALESCE($4, started_bouldering),
          bio = COALESCE($5, bio),
-         role = COALESCE($6, role)
-     WHERE id = $7 
+         instagram_handle = COALESCE($6, instagram_handle),
+         role = COALESCE($7, role)
+     WHERE id = $8
      RETURNING *`,
-    [name || null, username ? username.toLowerCase() : null, country || null, 
-     started_bouldering || null, bio || null, role || null, climberId]
+    [name || null, username ? username.toLowerCase() : null, country || null,
+     started_bouldering || null, bio || null, instagram_handle || null, role || null, climberId]
   );
   return result.rows[0];
 }
