@@ -120,9 +120,9 @@ const renderGradeReferenceLines = () => GRADE_REFERENCE_LINES.map(({ grade, valu
 });
 
 const formatGradeRangeLabel = (min: number, max?: number) => {
-  if (min === 0 && typeof max === 'number') return `< ${max}`;
-  if (typeof max === 'number') return `${min} – < ${max}`;
-  return `≥ ${min}`;
+  if (min === 0 && typeof max === 'number') return `S < ${max}`;
+  if (typeof max === 'number') return `${min} ≤ S < ${max}`;
+  return `S ≥ ${min}`;
 };
 
 const formatBaseValue = (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(1));
@@ -2140,7 +2140,6 @@ export default function App(){
                   </button>
 
                   <div style={{fontSize:13,color:'#93c5fd',fontWeight:600,display:'flex',flexDirection:'column',gap:4}}>
-                    <span>Need more help? Check Notifications or the GitHub repo link.</span>
                     <span>Feel free to check out analytics at the bottom of the page.</span>
                   </div>
                 </div>
@@ -2182,9 +2181,7 @@ export default function App(){
                   </div>
 
                   <div style={{display:'flex',flexDirection:'column',gap:12,backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
-                    <div style={{padding:'10px 12px',backgroundColor:'rgba(59, 130, 246, 0.12)',borderRadius:6,color:'#93c5fd',fontSize:14,lineHeight:1.6}}>
-                      <strong>💡 TL;DR:</strong> Prioritize Black, Red, and Orange climbs. Diversify your sends to avoid diminishing returns and keep the points flowing.
-                    </div>
+                    {/* TL;DR removed per guide update */}
                     <div style={{fontSize:14,lineHeight:1.7}}>
                       <h5 style={{margin:'0 0 8px',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Scoring flow</h5>
                       <ol style={{paddingLeft:20,margin:0}}>
