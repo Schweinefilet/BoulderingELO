@@ -20,11 +20,20 @@ const isMobileDevice = () => {
 
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
+const COLOR_SWATCHES: Record<keyof Counts, string> = {
+  green: '#10b981',
+  blue: '#3b82f6',
+  yellow: '#eab308',
+  orange: '#f97316',
+  red: '#ef4444',
+  black: '#d1d5db'
+};
+
 const CLIMB_CATEGORY_COLUMNS: Array<{ key: keyof Counts; label: string; color: string }> = [
-  { key: 'black', label: 'BLACK', color: '#d1d5db' },
-  { key: 'red', label: 'RED', color: '#ef4444' },
-  { key: 'orange', label: 'ORANGE', color: '#f97316' },
-  { key: 'yellow', label: 'YELLOW', color: '#eab308' }
+  { key: 'black', label: 'BLACK', color: COLOR_SWATCHES.black },
+  { key: 'red', label: 'RED', color: COLOR_SWATCHES.red },
+  { key: 'orange', label: 'ORANGE', color: COLOR_SWATCHES.orange },
+  { key: 'yellow', label: 'YELLOW', color: COLOR_SWATCHES.yellow }
 ];
 
 const EMPTY_COUNTS: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
@@ -115,6 +124,8 @@ const formatGradeRangeLabel = (min: number, max?: number) => {
   if (typeof max === 'number') return `${min} – < ${max}`;
   return `≥ ${min}`;
 };
+
+const formatBaseValue = (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(1));
 
 const normalizeSessionCounts = (session: any, expiredSections: string[] = []): Counts => {
   if (!session) return { ...EMPTY_COUNTS };
@@ -1539,6 +1550,7 @@ export default function App(){
   // Reset wall section for all sessions (admin): sets all climbs in the section to 0
   const [resetResult, setResetResult] = useState<{ message: string; changed: any[]; auditId?: string } | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
+  const [recalculateScoresLoading, setRecalculateScoresLoading] = useState(false);
 
   async function resetWallSectionAdmin(section: string) {
     if (!confirm(`Reset all climbs in section "${section}" to 0 for all sessions? This will keep the section but set all counts to zero.`)) {
@@ -3630,7 +3642,10 @@ export default function App(){
             })()}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="date" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" />
+              <YAxis
+                stroke="#94a3b8"
+                label={{ value: 'Score', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }}
+              />
               <Tooltip
                 contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
                 formatter={(value: any) => {
@@ -3888,7 +3903,10 @@ export default function App(){
                       return `${d.getMonth() + 1}/${d.getDate()}`;
                     }}
                   />
-                  <YAxis stroke="#94a3b8" />
+                  <YAxis
+                    stroke="#94a3b8"
+                    label={{ value: 'Score', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }}
+                  />
                   <Tooltip
                     contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
                     formatter={(value: any) => typeof value === 'number' ? `${value.toFixed(2)} (${getGradeForScore(value)})` : value}
@@ -3944,17 +3962,9 @@ export default function App(){
                     formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
                   />
                   <Legend />
-                  {ORDER.map((color:any,i:number)=>{
-                    const colorMap: any = {
-                      green: '#10b981',
-                      blue: '#3b82f6',
-                      yellow: '#eab308',
-                      orange: '#f97316',
-                      red: '#ef4444',
-                      black: '#d1d5db'
-                    };
-                    return <Bar key={color} dataKey={color} fill={colorMap[color]} />;
-                  })}
+                  {ORDER.map((color:any)=> (
+                    <Bar key={color} dataKey={color} fill={COLOR_SWATCHES[color as keyof Counts]} />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -5153,9 +5163,10 @@ export default function App(){
                           stroke="#94a3b8"
                           style={{fontSize:12}}
                         />
-                        <YAxis 
+                        <YAxis
                           stroke="#94a3b8"
                           style={{fontSize:12}}
+                          label={{ value: 'Score', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }}
                         />
                         <Tooltip
                           contentStyle={{
@@ -5607,6 +5618,35 @@ export default function App(){
                         }}
                       >
                         Migrate Old Wall Names
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Recalculate every session score with the latest scoring system?')) return;
+                          try {
+                            setRecalculateScoresLoading(true);
+                            const result = await api.recalculateScores();
+                            alert(result.message || 'Scores recalculated');
+                            await loadData();
+                          } catch (err: any) {
+                            alert('Recalculation failed: ' + err.message);
+                          } finally {
+                            setRecalculateScoresLoading(false);
+                          }
+                        }}
+                        style={{
+                          padding:'8px 16px',
+                          backgroundColor: recalculateScoresLoading ? '#1d4ed8' : '#2563eb',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor: recalculateScoresLoading ? 'not-allowed' : 'pointer',
+                          fontSize:14,
+                          fontWeight:'600',
+                          opacity: recalculateScoresLoading ? 0.7 : 1
+                        }}
+                        disabled={recalculateScoresLoading}
+                      >
+                        {recalculateScoresLoading ? 'Recalculating…' : 'Recalculate Scores'}
                       </button>
                     </div>
                   </div>
