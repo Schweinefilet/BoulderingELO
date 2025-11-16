@@ -984,6 +984,7 @@ export default function App(){
   const [editClimberCountry, setEditClimberCountry] = useState('')
   const [editClimberStarted, setEditClimberStarted] = useState('')
   const [editClimberBio, setEditClimberBio] = useState('')
+  const [editClimberInstagram, setEditClimberInstagram] = useState('')
   const [editClimberRole, setEditClimberRole] = useState<'user' | 'admin'>('user')
   
   // Profile view state
@@ -1001,6 +1002,7 @@ export default function App(){
   const [settingsCountry, setSettingsCountry] = useState('')
   const [settingsStarted, setSettingsStarted] = useState('')
   const [settingsBio, setSettingsBio] = useState('')
+  const [settingsInstagram, setSettingsInstagram] = useState('')
   const [settingsError, setSettingsError] = useState<string|null>(null)
   const [settingsSuccess, setSettingsSuccess] = useState(false)
   
@@ -1635,6 +1637,7 @@ export default function App(){
     setEditClimberCountry(climber.country || '');
     setEditClimberStarted(climber.started_bouldering || '');
     setEditClimberBio(climber.bio || '');
+    setEditClimberInstagram(climber.instagram_handle || '');
     setEditClimberRole(climber.role || 'user');
   }
 
@@ -1645,6 +1648,7 @@ export default function App(){
     setEditClimberCountry('');
     setEditClimberStarted('');
     setEditClimberBio('');
+    setEditClimberInstagram('');
     setEditClimberRole('user');
   }
 
@@ -1659,6 +1663,7 @@ export default function App(){
         country: editClimberCountry || undefined,
         started_bouldering: editClimberStarted || undefined,
         bio: editClimberBio || undefined,
+        instagram_handle: editClimberInstagram || undefined,
         role: editClimberRole
       });
       
@@ -1930,6 +1935,7 @@ export default function App(){
                     setSettingsCountry(currentClimber.country || '');
                     setSettingsStarted(currentClimber.started_bouldering || '');
                     setSettingsBio(currentClimber.bio || '');
+                    setSettingsInstagram(currentClimber.instagram_handle || '');
                   }
                   setShowSettings(true);
                 }}
@@ -1993,12 +1999,6 @@ export default function App(){
           border:'1px solid #3b82f6'
         }}>
           <div style={{marginBottom:8}}>Please wait up to 50 seconds, API loading.</div>
-          <div style={{fontSize:12,color:'#94a3b8',marginBottom:8}}>
-            ⏰ <strong>First time loading?</strong> The free tier API may be sleeping.
-          </div>
-          <div style={{fontSize:12,color:'#94a3b8'}}>
-            Please wait up to 50 seconds for the server to wake up, then refresh if needed.
-          </div>
         </div>
       )}
       
@@ -4099,7 +4099,8 @@ export default function App(){
                     name: settingsName,
                     country: settingsCountry,
                     started_bouldering: settingsStarted,
-                    bio: settingsBio
+                    bio: settingsBio,
+                    instagram_handle: settingsInstagram
                   });
                   setSettingsSuccess(true);
                   
@@ -4233,7 +4234,36 @@ export default function App(){
                     }}
                   />
                 </div>
-                
+
+                <div style={{
+                  backgroundColor:'#0f172a',
+                  padding:12,
+                  borderRadius:8,
+                  border:'1px solid #475569',
+                  marginBottom:12
+                }}>
+                  <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>Instagram</label>
+                  <input
+                    type="text"
+                    value={settingsInstagram}
+                    onChange={e => setSettingsInstagram(e.target.value)}
+                    placeholder="e.g., @myhandle or https://instagram.com/myhandle"
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#1e293b',
+                      color:'white',
+                      fontSize:14,
+                      boxSizing:'border-box'
+                    }}
+                  />
+                  <div style={{fontSize:12,color:'#94a3b8',marginTop:8}}>
+                    We'll show this on your public profile so others can follow you.
+                  </div>
+                </div>
+
                 <div style={{
                   backgroundColor:'#0f172a',
                   padding:12,
@@ -4536,7 +4566,8 @@ export default function App(){
                       await api.updateUserSettings({
                         country: settingsCountry,
                         started_bouldering: settingsStarted,
-                        bio: settingsBio
+                        bio: settingsBio,
+                        instagram_handle: settingsInstagram
                       });
                       setSettingsSuccess(true);
                       
@@ -4573,6 +4604,7 @@ export default function App(){
                     setSettingsCountry('');
                     setSettingsStarted('');
                     setSettingsBio('');
+                    setSettingsInstagram('');
                     setSettingsError(null);
                     setSettingsSuccess(false);
                     setCurrentPassword('');
@@ -4688,6 +4720,19 @@ export default function App(){
           ? profileLeaderboardEntry.total_score
           : (profileSessions[0]?.score || 0);
         const latestGrade = getGradeForScore(latestScoreValue || 0);
+
+        const rawInstagram = profileClimber?.instagram_handle?.trim();
+        const normalizedInstagram = rawInstagram?.replace(/^@/, '') || '';
+        const instagramUrl = rawInstagram
+          ? rawInstagram.startsWith('http')
+            ? rawInstagram
+            : `https://instagram.com/${normalizedInstagram}`
+          : '';
+        const instagramDisplay = rawInstagram
+          ? rawInstagram.startsWith('http')
+            ? rawInstagram.replace(/^https?:\/\//, '')
+            : `@${normalizedInstagram}`
+          : '';
         
         // Calculate CUMULATIVE total climbs by tracking increases between sessions
         // Each session stores current state, so we calculate deltas to get actual climbs completed
@@ -4919,8 +4964,8 @@ export default function App(){
                       </h1>
                     </div>
                     
-                    {/* Bio and Started Climbing */}
-                    {(profileClimber?.bio || profileClimber?.started_bouldering) && (
+                    {/* Bio, Started Climbing, Instagram */}
+                    {(profileClimber?.bio || profileClimber?.started_bouldering || profileClimber?.instagram_handle) && (
                       <div style={{marginTop:16, padding:16, backgroundColor:'rgba(0,0,0,0.2)', borderRadius:8, border:'1px solid rgba(255,255,255,0.1)'}}>
                         {profileClimber?.started_bouldering && (
                           <div style={{marginBottom: profileClimber?.bio ? 12 : 0}}>
@@ -4940,6 +4985,21 @@ export default function App(){
                             <div style={{fontSize:14, color:'white', lineHeight:'1.5', whiteSpace:'pre-wrap'}}>
                               {profileClimber.bio}
                             </div>
+                          </div>
+                        )}
+                        {profileClimber?.instagram_handle && instagramDisplay && (
+                          <div style={{marginTop: profileClimber?.bio ? 12 : (profileClimber?.started_bouldering ? 12 : 0)}}>
+                            <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4, fontWeight:'600'}}>
+                              Instagram
+                            </div>
+                            <a
+                              href={instagramUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{fontSize:14, color:'#a5b4fc', textDecoration:'none', fontWeight:600}}
+                            >
+                              {instagramDisplay}
+                            </a>
                           </div>
                         )}
                       </div>
@@ -5417,6 +5477,25 @@ export default function App(){
                                   value={editClimberStarted}
                                   onChange={(e) => setEditClimberStarted(e.target.value)}
                                   placeholder="e.g., 2020"
+                                  style={{
+                                    width:'100%',
+                                    padding:'8px 12px',
+                                    backgroundColor:'#0f172a',
+                                    border:'1px solid #475569',
+                                    borderRadius:6,
+                                    color:'white',
+                                    fontSize:14
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{display:'block',fontSize:14,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                                  Instagram
+                                </label>
+                                <input
+                                  value={editClimberInstagram}
+                                  onChange={(e) => setEditClimberInstagram(e.target.value)}
+                                  placeholder="@handle or URL"
                                   style={{
                                     width:'100%',
                                     padding:'8px 12px',
