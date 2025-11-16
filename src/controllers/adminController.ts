@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import * as db from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { sendSuccess, sendError, handleControllerError } from '../utils/response';
-import { scoreSession, combineCounts } from '../score';
+import { computeWeeklyScore, combineCounts } from '../score';
 import { Counts, WallCounts } from '../types';
 
 /**
@@ -258,7 +258,7 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
 
         // Compute totals and new score
         const totalCounts = combineCounts(newWallCounts as any);
-        const newScore = scoreSession(totalCounts);
+        const newScore = computeWeeklyScore(totalCounts);
 
         // Determine previous official score (most recent non-adjustment session)
         const prevRes = await client.query(

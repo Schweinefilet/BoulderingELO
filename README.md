@@ -122,9 +122,10 @@ This guide walks a typical user through the site: how to add climbers and sessio
 ### Scoring Model
 
 - Decay per placement: r = 0.95
-- Base points: Green (0.25), Blue (0.75), Yellow (3.5), Orange (12.5), Red (56), Black (120)
+- Base points: Green (0.5), Blue (1.5), Yellow (4), Orange (12), Red (36), Black (108)
 - Weighted sum formula: Score = Σ (base × (W(cumulative+count) - W(cumulative)))
 - Where W(n) = (1 - r^n) / (1 - r)
+- Weekly scores map to grade bands: V0 (<3), V1 (3–<6), V2 (6–<19), V3 (19–<45), V4 (45–<70), V5 (70–<106), V6 (106–<186), V7 (186–<297), V8 (297–<420), V9+ (≥420)
 
 ## API Endpoints
 

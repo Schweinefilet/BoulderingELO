@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google'
-import { scoreSession, marginalGain, ORDER, BASE, combineCounts, type Counts, type WallCounts } from './lib/scoring'
+import { computeWeeklyScore, marginalGain, ORDER, BASE, combineCounts, getGradeForScore, getGradeColor, GRADE_BOUNDS, type Counts, type WallCounts } from './lib/scoring'
 import * as store from './lib/storage'
 import * as api from './lib/api'
 import { API_URL } from './lib/api'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
@@ -28,6 +28,59 @@ const CLIMB_CATEGORY_COLUMNS: Array<{ key: keyof Counts; label: string; color: s
 ];
 
 const EMPTY_COUNTS: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+
+type GradeName = ReturnType<typeof getGradeForScore>;
+
+const GRADE_REFERENCE_LINES = GRADE_BOUNDS
+  .filter(bound => bound.min > 0)
+  .map(bound => ({ grade: bound.grade, value: bound.min }));
+
+const gradeBadgeSizing = {
+  sm: { fontSize: 11, padding: '2px 6px' },
+  md: { fontSize: 13, padding: '4px 10px' },
+  lg: { fontSize: 16, padding: '6px 16px' }
+} as const;
+
+const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'md' | 'lg' }) => {
+  const { backgroundColor, textColor } = getGradeColor(grade);
+  return (
+    <span
+      style={{
+        backgroundColor,
+        color: textColor,
+        borderRadius: 999,
+        fontWeight: 700,
+        letterSpacing: 0.5,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 48,
+        ...gradeBadgeSizing[size]
+      }}
+    >
+      {grade}
+    </span>
+  );
+};
+
+const renderGradeReferenceLines = () => GRADE_REFERENCE_LINES.map(({ grade, value }) => {
+  const colors = getGradeColor(grade);
+  return (
+    <ReferenceLine
+      key={`${grade}-${value}`}
+      y={value}
+      stroke={colors.backgroundColor}
+      strokeDasharray="3 3"
+      label={{ position: 'right', value: grade, fill: colors.textColor, fontSize: 10 }}
+    />
+  );
+});
+
+const formatGradeRangeLabel = (min: number, max?: number) => {
+  if (min === 0 && typeof max === 'number') return `< ${max}`;
+  if (typeof max === 'number') return `${min} – < ${max}`;
+  return `≥ ${min}`;
+};
 
 const normalizeSessionCounts = (session: any, expiredSections: string[] = []): Counts => {
   if (!session) return { ...EMPTY_COUNTS };
@@ -920,6 +973,8 @@ export default function App(){
   const [showGoogleLinkReminder, setShowGoogleLinkReminder] = useState(false)
 
   const totalCounts = combineCounts(wallCounts);
+  const previewScore = computeWeeklyScore(totalCounts);
+  const previewGrade = getGradeForScore(previewScore);
   
   // Helper function to get total routes for a color across all wall sections
   const getTotalForColor = (color: string): number => {
@@ -2015,7 +2070,8 @@ export default function App(){
               <div style={{flex:'1 1 260px',minWidth:220}}>
                 <h4 style={{margin:'0 0 6px',color:'#bfdbfe',fontSize:16}}>Scoring at a glance</h4>
                 <div style={{fontSize:14,lineHeight:1.6,color:'#cbd5e1'}}>
-                  <strong>Climb harder routes to get more points.</strong>
+                  <strong>Climb harder routes to get more points.</strong> Sends are processed from Black → Green with a diminishing returns factor (r = 0.95) so earlier sends pay out more.
+                  Your weekly total is then translated into a grade band (V0 → V9+) so you can compare sessions at a glance.
                 </div>
               </div>
               <button
@@ -2069,7 +2125,10 @@ export default function App(){
                         <strong>Color order:</strong> Black → Red → Orange → Yellow → Blue → Green.
                       </li>
                       <li style={{marginBottom:6}}>
-                        <strong>Base values (<InlineMath math="b_c" />):</strong> Black(120) · Red(56) · Orange(12.5) · Yellow(3.5) · Blue(0.75) · Green(0.25).
+                        <strong>Base values (<InlineMath math="b_c" />):</strong> Black(108) · Red(36) · Orange(12) · Yellow(4) · Blue(1.5) · Green(0.5).
+                      </li>
+                      <li style={{marginBottom:6}}>
+                        <strong>Weekly grade bands:</strong> Every score maps to a V-grade (see table below) so you know if your week felt like V3 or V8.
                       </li>
                       <li style={{marginBottom:6}}>
                         <strong>Diminishing returns:</strong> Early climbs for each color earn more than later repeats.
@@ -2085,6 +2144,33 @@ export default function App(){
                 </div>
               </div>
             )}
+
+            <div style={{
+              marginTop:16,
+              padding:'16px',
+              backgroundColor:'#071029',
+              borderRadius:8,
+              border:'1px solid #122235'
+            }}>
+              <h4 style={{margin:'0 0 8px',color:'#bfdbfe',fontSize:15}}>Weekly grade bands</h4>
+              <p style={{margin:'0 0 16px',fontSize:13,color:'#94a3b8'}}>
+                Each weekly score S maps to a V-grade using the exact ranges below. Colors match the badges on the leaderboard and profile pages.
+              </p>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
+                {GRADE_BOUNDS.map(bound => {
+                  const colors = getGradeColor(bound.grade);
+                  return (
+                    <div key={bound.grade} style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #1e293b'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                        <span style={{width:18,height:18,borderRadius:4,backgroundColor:colors.backgroundColor,border:'1px solid rgba(0,0,0,0.2)'}}></span>
+                        <span style={{fontWeight:700,color:'#e2e8f0'}}>{bound.grade}</span>
+                      </div>
+                      <div style={{fontSize:13,color:'#94a3b8'}}>{formatGradeRangeLabel(bound.min, bound.max)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Practical user guide for everyday users */}
@@ -2155,7 +2241,7 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(6, minmax(60px, 1fr))',
+                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
                 columnGap:4,
                 padding:'12px 8px',
                 backgroundColor:'#1e293b',
@@ -2172,6 +2258,7 @@ export default function App(){
                   <span></span>
                 </div>
                 <div style={{textAlign:'center',fontSize:11}}>Score</div>
+                <div style={{textAlign:'center',fontSize:11}}>Grade</div>
                 <div style={{textAlign:'center',fontSize:11}}>Sessions</div>
                 {CLIMB_CATEGORY_COLUMNS.map(column => (
                   <div
@@ -2207,12 +2294,17 @@ export default function App(){
                 // Use the non-adjustment score for leaderboard totals when available
                 const displayScore = latestNonAdjSession ? latestNonAdjSession.score : (e.total_score || 0);
 
+                const resolvedScore = typeof displayScore === 'number'
+                  ? displayScore
+                  : (typeof e.total_score === 'number' ? e.total_score : Number(e.total_score) || 0);
+                const rowGrade = getGradeForScore(resolvedScore);
+
                 return (
-                    <div 
+                    <div
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(6, minmax(60px, 1fr))',
+                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
                         columnGap:4,
                         padding:'10px 8px',
                         backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
@@ -2248,9 +2340,14 @@ export default function App(){
                     
                     {/* Ranked Score (use latest non-adjustment session when available) */}
                     <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#3b82f6'}}>
-                      {typeof displayScore === 'number' ? displayScore.toFixed(2) : (e.total_score || 0).toFixed(2)}
+                      {resolvedScore.toFixed(2)}
                     </div>
-                    
+
+                    {/* Grade */}
+                    <div style={{display:'flex',justifyContent:'center'}}>
+                      <GradeBadge grade={rowGrade} size="sm" />
+                    </div>
+
                     {/* Sessions */}
                     <div style={{textAlign:'center',color:'#94a3b8',fontSize:13}}>{playCount}</div>
                     
@@ -2729,8 +2826,12 @@ export default function App(){
               {/* Live Preview - moved here for better proximity to Current Progress */}
               <div style={{marginTop:16,backgroundColor:'#1e293b',padding:16,borderRadius:8,border:'1px solid #475569'}}>
                 <h4 style={{marginTop:0,marginBottom:16,fontSize:16,fontWeight:'600'}}>Live Preview</h4>
-                <div style={{fontSize:36,fontWeight:700,color:'#3b82f6',marginBottom:16,textAlign:'center'}}>
-                  {scoreSession(totalCounts).toFixed(2)}
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,marginBottom:16}}>
+                  <div style={{fontSize:36,fontWeight:700,color:'#3b82f6',textAlign:'center'}}>
+                    {previewScore.toFixed(2)}
+                  </div>
+                  <GradeBadge grade={previewGrade} size="md" />
+                  <div style={{fontSize:12,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5}}>Weekly grade</div>
                 </div>
                 <div>
                   <h5 style={{marginTop:0,marginBottom:12,fontSize:12,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal Gains</h5>
@@ -2951,8 +3052,12 @@ export default function App(){
         <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
           <div style={{padding:24}}>
             <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
-            <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',marginBottom:20,textAlign:'center'}}>
-              {scoreSession(totalCounts).toFixed(2)}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,marginBottom:20}}>
+              <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',textAlign:'center'}}>
+                {previewScore.toFixed(2)}
+              </div>
+              <GradeBadge grade={previewGrade} size="lg" />
+              <div style={{fontSize:13,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5}}>Weekly grade</div>
             </div>
             <div>
               <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal</h4>
@@ -3048,6 +3153,7 @@ export default function App(){
                           
                           const scoreDiff = prevSession ? s.score - prevSession.score : s.score;
                           const displayScore = scoreDiff >= 0 ? `+${scoreDiff.toFixed(2)}` : scoreDiff.toFixed(2);
+                          const sessionGrade = getGradeForScore(s.score || 0);
                           
                           // Color based on score change
                           let color = '#10b981';
@@ -3109,6 +3215,7 @@ export default function App(){
                                 <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
                                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                                   <span style={{color,fontWeight:'700',fontSize:18}}>{displayScore}</span>
+                                  <GradeBadge grade={sessionGrade} size="sm" />
                                   <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▸'}</span>
                                 </div>
                               </div>
@@ -3508,19 +3615,11 @@ export default function App(){
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="date" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
-                formatter={(value: any, name: string) => {
+                formatter={(value: any) => {
                   if (typeof value !== 'number') return value;
-                  // Find the climber's current rank by score
-                  const climberScores = climbers.map((c:any) => {
-                    const latestSession = sessions
-                      .filter((s:any) => s.climberId === c.id)
-                      .sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                    return {name: c.name, score: latestSession?.score || 0};
-                  }).sort((a, b) => b.score - a.score);
-                  
-                  return value.toFixed(2);
+                  return `${value.toFixed(2)} (${getGradeForScore(value)})`;
                 }}
                 labelFormatter={(label) => `Date: ${label}`}
                 itemSorter={(item: any) => {
@@ -3536,6 +3635,7 @@ export default function App(){
                   return rank;
                 }}
               />
+              {renderGradeReferenceLines()}
               <Legend />
               {(() => {
                 // Get top 10 climbers by current score
@@ -3773,14 +3873,15 @@ export default function App(){
                     }}
                   />
                   <YAxis stroke="#94a3b8" />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
-                    formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                    formatter={(value: any) => typeof value === 'number' ? `${value.toFixed(2)} (${getGradeForScore(value)})` : value}
                     labelFormatter={(label) => {
                       const d = new Date(label);
                       return d.toLocaleDateString();
                     }}
                   />
+                  {renderGradeReferenceLines()}
                   <Legend />
                   {selectedClimbersForComparison.map((climberId: number, idx: number) => {
                     const climber = climbers.find((c: any) => c.id === climberId);
@@ -4557,6 +4658,10 @@ export default function App(){
           .filter((s:any) => s.climberId === viewingProfile)
           .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const profileLeaderboardEntry = leaderboard.find((e:any) => e.climber === profileClimber?.name);
+        const latestScoreValue = typeof profileLeaderboardEntry?.total_score === 'number'
+          ? profileLeaderboardEntry.total_score
+          : (profileSessions[0]?.score || 0);
+        const latestGrade = getGradeForScore(latestScoreValue || 0);
         
         // Calculate CUMULATIVE total climbs by tracking increases between sessions
         // Each session stores current state, so we calculate deltas to get actual climbs completed
@@ -4713,6 +4818,8 @@ export default function App(){
           }
         }
         
+        const peakScoreGrade = typeof peakScore === 'number' ? getGradeForScore(peakScore) : null;
+
         if (!profileClimber) return null;
         
         const currentRank = leaderboard.findIndex((e:any) => e.climber === profileClimber.name) + 1;
@@ -4832,9 +4939,11 @@ export default function App(){
                   }}>
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Score</div>
-                      <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
-                        {profileLeaderboardEntry?.total_score.toFixed(2) || '0.00'}
+                      <div style={{fontSize:20, fontWeight:'700', color:'white', display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+                        {latestScoreValue.toFixed(2)}
+                        <GradeBadge grade={latestGrade} size="sm" />
                       </div>
+                      <div style={{fontSize:12,color:'#94a3b8',marginTop:4}}>Current weekly grade</div>
                     </div>
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Session Count</div>
@@ -4850,8 +4959,9 @@ export default function App(){
                     </div>
                     <div>
                       <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4}}>Peak Score</div>
-                      <div style={{fontSize:20, fontWeight:'700', color:'white'}}>
+                      <div style={{fontSize:20, fontWeight:'700', color:'white', display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
                         {peakScore ? peakScore.toFixed(2) : 'N/A'}
+                        {peakScore && peakScoreGrade ? <GradeBadge grade={peakScoreGrade} size="sm" /> : null}
                       </div>
                     </div>
                   </div>
@@ -5031,15 +5141,16 @@ export default function App(){
                           stroke="#94a3b8"
                           style={{fontSize:12}}
                         />
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{
                             backgroundColor:'#1e293b',
                             border:'1px solid #475569',
                             borderRadius:6
                           }}
-                          formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value}
+                          formatter={(value: any) => typeof value === 'number' ? `${value.toFixed(2)} (${getGradeForScore(value)})` : value}
                         />
-                        <Line 
+                        {renderGradeReferenceLines()}
+                        <Line
                           type="monotone" 
                           dataKey="score" 
                           stroke="#10b981" 
@@ -5076,8 +5187,9 @@ export default function App(){
                                   day: 'numeric' 
                                 })}
                               </div>
-                              <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
-                                Score: {session.score.toFixed(2)}
+                              <div style={{fontSize:14,color:'#94a3b8',marginTop:4,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                                <span>Score: {session.score.toFixed(2)}</span>
+                                <GradeBadge grade={getGradeForScore(session.score || 0)} size="sm" />
                               </div>
                             </div>
                           </div>
@@ -5618,8 +5730,9 @@ export default function App(){
                                 <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
                                   {climbers.find(c => c.id === session.climberId)?.name || 'Unknown'}
                                 </div>
-                                <div style={{fontSize:14,color:'#94a3b8',marginTop:4}}>
-                                  {new Date(session.date).toLocaleDateString()} • Score: {session.score.toFixed(2)}
+                                <div style={{fontSize:14,color:'#94a3b8',marginTop:4,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                                  <span>{new Date(session.date).toLocaleDateString()} • Score: {session.score.toFixed(2)}</span>
+                                  <GradeBadge grade={getGradeForScore(session.score || 0)} size="sm" />
                                 </div>
                               </div>
                               <div style={{display:'flex',gap:8}}>
