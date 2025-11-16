@@ -5,7 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import * as db from './db';
 import { corsOptions } from './config/cors';
-import { PORT } from './config/constants';
+import { PORT, RENDER_BOOT_TIMEOUT_MS } from './config/constants';
 import apiRoutes from './routes';
 
 const app = express();
@@ -116,26 +116,49 @@ app.use((err: any, req: any, res: any, next: any) => {
 if (require.main === module) {
   // Allow skipping DB init in lightweight dev environments
   const skipDb = process.env.SKIP_DB_INIT === 'true';
+
+  let serverStarted = false;
+  const startServer = (mode: 'normal' | 'degraded') => {
+    if (serverStarted) return;
+    serverStarted = true;
+
+    app.listen(PORT, () => {
+      if (mode === 'normal') {
+        console.log(`🚀 BoulderingELO API v2.0 running on http://localhost:${PORT}`);
+        console.log(`📚 API documentation available at http://localhost:${PORT}/`);
+      } else {
+        console.warn('Starting server before database initialization has completed. Some endpoints may temporarily fail.');
+        console.log(`⚠️ BoulderingELO API running in degraded mode on http://localhost:${PORT}`);
+      }
+    });
+  };
+
   if (skipDb) {
     console.warn('SKIP_DB_INIT is set - skipping database initialization. Some endpoints will be unavailable.');
-    app.listen(PORT, () => {
-      console.log(`🚀 BoulderingELO API (no DB) running on http://localhost:${PORT}`);
-      console.log(`📚 API documentation available at http://localhost:${PORT}/`);
-    });
+    startServer('degraded');
   } else {
+    const bootTimer = setTimeout(() => {
+      if (!serverStarted) {
+        console.warn(
+          `⏱️ Database initialization exceeded ${RENDER_BOOT_TIMEOUT_MS}ms. Starting server so Render health checks stop restarting it.`
+        );
+        startServer('degraded');
+      }
+    }, RENDER_BOOT_TIMEOUT_MS);
+
     db.initDB()
       .then(() => {
-        app.listen(PORT, () => {
-          console.log(`🚀 BoulderingELO API v2.0 running on http://localhost:${PORT}`);
-          console.log(`📚 API documentation available at http://localhost:${PORT}/`);
-        });
+        clearTimeout(bootTimer);
+        if (serverStarted) {
+          console.log('✅ Database initialization completed after server started.');
+        }
+        startServer('normal');
       })
       .catch((err) => {
+        clearTimeout(bootTimer);
         console.error('❌ Failed to initialize database:', err);
         console.warn('Starting server anyway in degraded mode. Set SKIP_DB_INIT=true to silence this message.');
-        app.listen(PORT, () => {
-          console.log(`⚠️ BoulderingELO API running in degraded mode on http://localhost:${PORT}`);
-        });
+        startServer('degraded');
       });
   }
 }
