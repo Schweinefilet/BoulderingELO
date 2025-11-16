@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import * as db from '../db';
-import { scoreSession, validateCounts, combineCounts } from '../score';
+import { computeWeeklyScore, validateCounts, combineCounts } from '../score';
 import { AuthRequest } from '../middleware/auth';
 import { Counts, WallCounts } from '../types';
 import { sendSuccess, sendError, handleControllerError } from '../utils/response';
@@ -57,7 +57,7 @@ export async function addSession(req: AuthRequest, res: Response) {
       }
       
       // Create new session with ONLY the new data (not added together)
-      const score = scoreSession(totalCounts);
+      const score = computeWeeklyScore(totalCounts);
       const session = { climberId, date, notes: mergedNotes || null, score };
       const out = await db.addSession(session as any, totalCounts, validatedWalls);
       
@@ -73,7 +73,7 @@ export async function addSession(req: AuthRequest, res: Response) {
       });
     } else {
       // No existing session - create new one
-      const score = scoreSession(totalCounts);
+      const score = computeWeeklyScore(totalCounts);
       const session = { climberId, date, notes: notes || null, score };
       const out = await db.addSession(session as any, totalCounts, validatedWalls);
       

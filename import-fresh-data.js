@@ -75,12 +75,12 @@ const SESSIONS = [
 function calculateScore(wallCounts) {
   const r = 0.95;
   const BASE = {
-    black: 120,
-    red: 56,
-    orange: 12.5,
-    yellow: 3.5,
-    blue: 0.75,
-    green: 0.25
+    black: 108,
+    red: 36,
+    orange: 12,
+    yellow: 4,
+    blue: 1.5,
+    green: 0.5
   };
   
   // Combine all wall counts

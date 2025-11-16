@@ -5,7 +5,7 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import * as db from './db';
-import { scoreSession, validateCounts, combineCounts } from './score';
+import { computeWeeklyScore, validateCounts, combineCounts } from './score';
 import { Counts, WallCounts } from './types';
 
 const app = express();
@@ -516,7 +516,7 @@ app.post('/api/admin/wipe-and-import', authenticateToken, requireAdmin, async (r
       const climberId = climberMap[session.climber];
       
       // Calculate score
-      const { scoreSession } = require('./score');
+      const { computeWeeklyScore } = require('./score');
       const totalCounts: any = { black: 0, red: 0, orange: 0, yellow: 0, blue: 0, green: 0 };
       for (const wall of ['midWall', 'overhang', 'sideWall']) {
         const wc = (session.wallCounts as any)[wall];
@@ -524,7 +524,7 @@ app.post('/api/admin/wipe-and-import', authenticateToken, requireAdmin, async (r
           totalCounts[color] += wc[color] || 0;
         }
       }
-      const score = scoreSession(totalCounts);
+      const score = computeWeeklyScore(totalCounts);
       
       // Insert session
       const sessionResult = await client.query(
@@ -604,14 +604,14 @@ app.post('/api/sessions', authenticateToken, async (req: any, res) => {
         sideWall: validateCounts(wallCounts.sideWall || {})
       };
       totalCounts = combineCounts(validatedWalls);
-      const score = scoreSession(totalCounts);
+      const score = computeWeeklyScore(totalCounts);
       const session = { climberId, date, notes: notes || null, score };
       const out = await db.addSession(session as any, totalCounts, validatedWalls);
       res.json({ id: out.id, climberId, date, counts: totalCounts, wallCounts: validatedWalls, score });
     } else {
       // Legacy: flat counts
       totalCounts = validateCounts(counts || {});
-      const score = scoreSession(totalCounts);
+      const score = computeWeeklyScore(totalCounts);
       const session = { climberId, date, notes: notes || null, score };
       const out = await db.addSession(session as any, totalCounts);
       res.json({ id: out.id, climberId, date, counts: totalCounts, score });

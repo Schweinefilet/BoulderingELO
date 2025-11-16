@@ -642,9 +642,9 @@ export async function approveVideo(reviewId: number) {
     );
     
     // Recalculate the session score from wall counts
-    const { scoreSession, combineCounts } = require('./score');
+    const { computeWeeklyScore, combineCounts } = require('./score');
     const totalCounts = combineCounts(wallCounts);
-    const newScore = scoreSession(totalCounts);
+    const newScore = computeWeeklyScore(totalCounts);
     
     // Update counts table
     await client.query(
@@ -709,7 +709,7 @@ export async function seedData(sample: {
     if (c.sessions && c.sessions.length) {
       for (const s of c.sessions) {
         // compute score: the addSession expects a session object with score
-        // We will compute score using existing scoreSession util in server; here we approximate by inserting with score 0 and let server recalc if needed.
+        // We will compute score using the computeWeeklyScore util in server; here we approximate by inserting with score 0 and let server recalc if needed.
         // Simpler: compute totals from wallCounts and use scoring logic in server when adding via API. Since this is DB-level seeding, we will compute a naive score of 0.
         const score = 0;
         const counts = combineCountsLocal(s.wallCounts);
