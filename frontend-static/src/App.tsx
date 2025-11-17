@@ -2626,76 +2626,7 @@ export default function App(){
                     </div>
                   </div>
                 )}
-                
-                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>📍 Wall Section</label>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',gap:8}}>
-                  {Object.keys(wallTotals).map(section => {
-                    const isSelected = dropdownWall === section;
-                    const displayName = formatWallSectionName(section);
-                    return (
-                      <button
-                        key={section}
-                        onClick={()=>{setDropdownWall(section as any); setCurrentImageIndex(0);}}
-                        style={{
-                          padding:'10px',
-                          border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
-                          borderRadius:8,
-                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
-                          color: isSelected ? '#3b82f6' : '#cbd5e1',
-                          fontWeight: isSelected ? '700' : '600',
-                          fontSize:'clamp(11px, 2.5vw, 13px)',
-                          cursor:'pointer',
-                          transition:'all 0.2s',
-                          boxShadow: isSelected ? '0 0 12px rgba(59, 130, 246, 0.4)' : 'none',
-                          textAlign:'center',
-                          wordBreak:'break-word'
-                        }}
-                      >
-                        {displayName}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
-
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>🎨 Route Color</label>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3, 1fr)',gap:8}}>
-                  {ORDER.map((c:any)=> {
-                    const colorMap: any = {
-                      green: '#10b981',
-                      blue: '#3b82f6',
-                      yellow: '#eab308',
-                      orange: '#f97316',
-                      red: '#ef4444',
-                      black: '#d1d5db'
-                    };
-                    const isSelected = dropdownColor === c;
-                    return (
-                      <button
-                        key={c}
-                        onClick={()=>setDropdownColor(c as keyof Counts)}
-                        style={{
-                          padding:'clamp(10px, 2vw, 12px)',
-                          border: isSelected ? `2px solid ${colorMap[c]}` : '2px solid transparent',
-                          borderRadius:8,
-                          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : '#1e293b',
-                          color: colorMap[c],
-                          fontWeight: isSelected ? '700' : '600',
-                          fontSize:'clamp(12px, 3vw, 14px)',
-                          cursor:'pointer',
-                          textTransform:'capitalize',
-                          transition:'all 0.2s',
-                          boxShadow: isSelected ? `0 0 12px ${colorMap[c]}40` : 'none'
-                        }}
-                      >
-                        {c}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {(dropdownColor === 'red' || dropdownColor === 'black') && (
                 <div style={{marginBottom:16,padding:16,backgroundColor:'#7f1d1d',borderRadius:6,border:'1px solid #991b1b'}}>
                   <label style={{display:'block',marginBottom:8,fontWeight:'bold',fontSize:14}}>⚠️ Video Evidence Required</label>
