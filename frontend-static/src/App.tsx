@@ -2250,17 +2250,17 @@ export default function App(){
       
       {/* Leaderboard - visible to everyone */}
       <section style={{marginBottom:20}}>
-        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
+        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#000">
           <div style={{padding:24}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Leaderboard</h2>
             </div>
             <div style={{
-              backgroundColor:'#0f172a',
-              borderRadius:8,
+              backgroundColor:'#000',
+              borderRadius:12,
               overflow:'auto',
               WebkitOverflowScrolling:'touch' as any,
-              border:'1px solid #334155',
+              border:'1px solid rgba(148, 163, 184, 0.2)',
               position:'relative'
             }}>
               {/* Header */}
@@ -2269,15 +2269,15 @@ export default function App(){
                 gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
                 columnGap:4,
                 padding:'12px 8px',
-                backgroundColor:'#1e293b',
+                backgroundColor:'#000',
                 fontWeight:'600',
                 fontSize:12,
                 color:'#94a3b8',
-                borderBottom:'1px solid #334155',
+                borderBottom:'1px solid rgba(148, 163, 184, 0.2)',
                 alignItems:'center',
                 minWidth:'fit-content'
               }}>
-                <div style={{textAlign:'center',position:'sticky',left:0,backgroundColor:'#1e293b',zIndex:2}}></div>
+                <div style={{textAlign:'center',position:'sticky',left:0,backgroundColor:'#000',zIndex:2}}></div>
                 <div style={{display:'flex', alignItems:'center', gap:8}}>
                   <span style={{width:16,display:'inline-block'}}></span>
                   <span></span>
@@ -2324,6 +2324,7 @@ export default function App(){
                   : (typeof e.total_score === 'number' ? e.total_score : Number(e.total_score) || 0);
                 const rowGrade = getGradeForScore(resolvedScore);
 
+                const defaultRowColor = i % 2 === 0 ? '#000' : '#050505';
                 return (
                     <div
                       key={i}
@@ -2332,15 +2333,22 @@ export default function App(){
                         gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
                         columnGap:4,
                         padding:'10px 8px',
-                        backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
-                        borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid #334155' : 'none',
+                        backgroundColor: defaultRowColor,
+                        ['--row-bg-color' as any]: defaultRowColor,
+                        borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid rgba(148, 163, 184, 0.2)' : 'none',
                         alignItems:'center',
                         transition:'background-color 0.2s',
                         cursor:'pointer',
                         minWidth:'fit-content'
                       }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? '#0f172a' : '#1a1f2e'}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = '#111';
+                      e.currentTarget.style.setProperty('--row-bg-color', '#111');
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = defaultRowColor;
+                      e.currentTarget.style.setProperty('--row-bg-color', defaultRowColor);
+                    }}
                     onClick={() => climber && setViewingProfile(climber.id)}
                   >
                     {/* Rank */}
@@ -2351,7 +2359,7 @@ export default function App(){
                       color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b',
                       position:'sticky',
                       left:0,
-                      backgroundColor: i % 2 === 0 ? '#0f172a' : '#1a1f2e',
+                      backgroundColor:'var(--row-bg-color)' as any,
                       zIndex:1
                     }}>
                       #{i + 1}
@@ -2391,8 +2399,8 @@ export default function App(){
                 <div style={{
                   padding:16,
                   textAlign:'center',
-                  backgroundColor:'#1e293b',
-                  borderTop:'1px solid #334155'
+                  backgroundColor:'#000',
+                  borderTop:'1px solid rgba(148, 163, 184, 0.2)'
                 }}>
                   <button
                     onClick={() => setShowAllLeaderboard(true)}
@@ -2419,8 +2427,8 @@ export default function App(){
                 <div style={{
                   padding:16,
                   textAlign:'center',
-                  backgroundColor:'#1e293b',
-                  borderTop:'1px solid #334155'
+                  backgroundColor:'#000',
+                  borderTop:'1px solid rgba(148, 163, 184, 0.2)'
                 }}>
                   <button
                     onClick={() => setShowAllLeaderboard(false)}
