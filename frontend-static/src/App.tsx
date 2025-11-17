@@ -50,6 +50,12 @@ const gradeBadgeSizing = {
   lg: { fontSize: 16, padding: '6px 16px' }
 } as const;
 
+const BLACK_PANEL_BG = '#000';
+const BLACK_PANEL_BORDER_COLOR = 'rgba(148, 163, 184, 0.2)';
+const BLACK_PANEL_BORDER = `1px solid ${BLACK_PANEL_BORDER_COLOR}`;
+const BLACK_ROW_BG = '#050505';
+const PANEL_RADIUS = 10;
+
 const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'md' | 'lg' }) => {
   const { backgroundColor, textColor } = getGradeColor(grade);
   return (
@@ -75,9 +81,9 @@ const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'm
 const guideSectionCardStyle: React.CSSProperties = {
   marginTop: 16,
   padding: '16px',
-  backgroundColor: '#071029',
+  backgroundColor: BLACK_PANEL_BG,
   borderRadius: 8,
-  border: '1px solid #122235'
+  border: BLACK_PANEL_BORDER
 };
 
 const guideSectionHeaderStyle: React.CSSProperties = {
@@ -102,9 +108,9 @@ const guideToggleButtonStyle = (isActive: boolean): React.CSSProperties => ({
   borderRadius: 999,
   fontSize: 13,
   fontWeight: 600,
-  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.18)' : 'rgba(15, 23, 42, 0.9)',
+  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.18)' : BLACK_ROW_BG,
   color: '#bfdbfe',
-  border: `1px solid ${isActive ? 'rgba(59, 130, 246, 0.55)' : '#1e3a5f'}`,
+  border: `1px solid ${isActive ? 'rgba(59, 130, 246, 0.55)' : BLACK_PANEL_BORDER_COLOR}`,
   cursor: 'pointer',
   transition: 'background-color 0.2s ease, border-color 0.2s ease',
   minWidth: 160,
@@ -2061,7 +2067,7 @@ export default function App(){
       )}
       
       <GlowingCard>
-        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20}}>
+        <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, marginBottom:20, border: BLACK_PANEL_BORDER}}>
           {/* Notification center (admin can post messages) */}
           <div style={{marginBottom:16}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
@@ -2070,7 +2076,7 @@ export default function App(){
                 <div style={{fontSize:12,color:'#94a3b8'}}>Admin editable</div>
               )}
             </div>
-            <div style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #334155'}}>
+            <div style={{backgroundColor: BLACK_ROW_BG, borderRadius:8, padding:12, border: BLACK_PANEL_BORDER}}>
               {notifLoading ? (
                 <div style={{color:'#94a3b8'}}>Loading notifications...</div>
               ) : (
@@ -2086,7 +2092,7 @@ export default function App(){
 
             {api.isAdmin() && (
               <div style={{marginTop:8,display:'flex',gap:8}}>
-                <textarea value={newNotificationText} onChange={e => setNewNotificationText(e.target.value)} placeholder="Type notification message..." style={{flex:1,minHeight:48,padding:8,backgroundColor:'#091427',color:'white',border:'1px solid #334155',borderRadius:6}} />
+                <textarea value={newNotificationText} onChange={e => setNewNotificationText(e.target.value)} placeholder="Type notification message..." style={{flex:1,minHeight:48,padding:8,backgroundColor:BLACK_PANEL_BG,color:'white',border:BLACK_PANEL_BORDER,borderRadius:6}} />
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
                   <button onClick={async () => {
                     if (!newNotificationText.trim()) return alert('Enter a message');
@@ -2109,7 +2115,7 @@ export default function App(){
       </GlowingCard>
 
       <GlowingCard>
-        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20}}>
+        <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, marginBottom:20, border: BLACK_PANEL_BORDER}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <h3 style={{marginTop:0,marginBottom:16}}>Guide</h3>
           </div>
@@ -2138,7 +2144,7 @@ export default function App(){
                     '4. Add or subtract route.',
                     '5. Add session once done.'
                   ].map((step) => (
-                    <div key={step} style={{padding:'14px 16px',backgroundColor:'#0b1220',borderRadius:8,border:'1px solid #122235',color:'#cbd5e1'}}>
+                    <div key={step} style={{padding:'14px 16px',backgroundColor:BLACK_ROW_BG,borderRadius:8,border:BLACK_PANEL_BORDER,color:'#cbd5e1'}}>
                       <h5 style={{margin:0,fontSize:15,color:'#93c5fd'}}>{step}</h5>
                     </div>
                   ))}
@@ -2148,19 +2154,19 @@ export default function App(){
                   Black and Red climbs wait for review before they count toward the leaderboard.
                 </div>
 
-                <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:'#0b1220',border:'1px solid #122235',borderRadius:8,padding:'12px 16px'}}>
+                <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:BLACK_ROW_BG,border:BLACK_PANEL_BORDER,borderRadius:8,padding:'12px 16px'}}>
                   <button
                     onClick={() => {
                       const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
                     }}
-                    style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#93c5fd',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                    style={{padding:'8px 12px',backgroundColor:BLACK_PANEL_BG,color:'#93c5fd',border:BLACK_PANEL_BORDER,borderRadius:6,cursor:'pointer'}}
                   >
                     Export CSV
                   </button>
 
                   <button
                     onClick={() => setShowSettings(true)}
-                    style={{padding:'8px 12px',backgroundColor:'#0f172a',color:'#34d399',border:'1px solid #122235',borderRadius:6,cursor:'pointer'}}
+                    style={{padding:'8px 12px',backgroundColor:BLACK_PANEL_BG,color:'#34d399',border:BLACK_PANEL_BORDER,borderRadius:6,cursor:'pointer'}}
                   >
                     Open Settings
                   </button>
@@ -2194,7 +2200,7 @@ export default function App(){
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:16,color:'#cbd5e1'}}>
-                  <div style={{backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
+                  <div style={{backgroundColor:BLACK_ROW_BG,borderRadius:6,padding:'12px 16px',border:BLACK_PANEL_BORDER}}>
                     <div style={{fontSize:15,marginBottom:12,overflowX:'auto',textAlign:'center'}}>
                       <BlockMath math="\text{Score} = \sum_{c \in \text{colors}} \left( b_c \times \left[ W(n_{\text{cmltve}} + n_c) - W(n_{\text{cmltve}}) \right] \right)" />
                     </div>
@@ -2206,7 +2212,7 @@ export default function App(){
                     </div>
                   </div>
 
-                  <div style={{display:'flex',flexDirection:'column',gap:12,backgroundColor:'#0f172a',borderRadius:6,padding:'12px 16px',boxShadow:'inset 0 0 0 1px #1e293b'}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:12,backgroundColor:BLACK_ROW_BG,borderRadius:6,padding:'12px 16px',border:BLACK_PANEL_BORDER}}>
                     {/* TL;DR removed per guide update */}
                     <div style={{fontSize:14,lineHeight:1.7}}>
                       <h5 style={{margin:'0 0 8px',color:'#94a3b8',fontSize:14,fontWeight:600,letterSpacing:0.3}}>Scoring flow</h5>
@@ -2255,7 +2261,7 @@ export default function App(){
                   {GRADE_BOUNDS.map(bound => {
                     const colors = getGradeColor(bound.grade);
                     return (
-                      <div key={bound.grade} style={{backgroundColor:'#0f172a',borderRadius:8,padding:12,border:'1px solid #1e293b'}}>
+                      <div key={bound.grade} style={{backgroundColor:BLACK_ROW_BG,borderRadius:8,padding:12,border:BLACK_PANEL_BORDER}}>
                         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
                           <span style={{width:18,height:18,borderRadius:4,backgroundColor:colors.backgroundColor,border:'1px solid rgba(0,0,0,0.2)'}}></span>
                           <span style={{fontWeight:700,color:'#e2e8f0'}}>{bound.grade}</span>
@@ -2276,17 +2282,17 @@ export default function App(){
       
       {/* Leaderboard - visible to everyone */}
       <section style={{marginBottom:20}}>
-        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#000">
-          <div style={{padding:24}}>
+        <GlowingCard borderRadius={PANEL_RADIUS}>
+          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius:PANEL_RADIUS, border:BLACK_PANEL_BORDER}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Leaderboard</h2>
             </div>
             <div style={{
               backgroundColor:'#000',
-              borderRadius:12,
+              borderRadius:PANEL_RADIUS,
               overflow:'auto',
               WebkitOverflowScrolling:'touch' as any,
-              border:'1px solid rgba(148, 163, 184, 0.2)',
+              border:BLACK_PANEL_BORDER,
               position:'relative'
             }}>
               {/* Header */}
@@ -2478,14 +2484,14 @@ export default function App(){
               )}
             </div>
           </div>
-        </GlowBorder>
+        </GlowingCard>
       </section>
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
           <div style={{flex:1,minWidth:Math.min(300, window.innerWidth - 40)}}>
-            <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-              <div style={{padding:'clamp(12px, 4vw, 24px)'}}>
+            <GlowingCard borderRadius={PANEL_RADIUS}>
+              <div style={{padding:'clamp(12px, 4vw, 24px)', backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
                 <h2 style={{marginTop:0,marginBottom:8,fontSize:'clamp(20px, 5vw, 24px)',fontWeight:'600'}}>New Session</h2>
                 <p style={{marginTop:0,marginBottom:20,fontSize:'clamp(12px, 3vw, 14px)',color:'#94a3b8'}}>
                   Track your climbing progress by adding completed routes
@@ -2497,13 +2503,13 @@ export default function App(){
                 <select 
                   value={selectedClimber||''} 
                   onChange={e=>setSelectedClimber(parseInt(e.target.value)||undefined)}
-                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                  style={{width:'100%',padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                 >
                   <option value="">Select...</option>
                   {climbers.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                 </select>
               ) : (
-                <div style={{padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'#94a3b8',fontSize:14}}>
+                <div style={{padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'#94a3b8',fontSize:14}}>
                   {climbers.find(c => c.id === user?.climberId)?.name || 'Loading...'}
                 </div>
               )}
@@ -2513,7 +2519,7 @@ export default function App(){
                     placeholder="New name" 
                     value={newName} 
                     onChange={e=>setNewName(e.target.value)}
-                    style={{flex:1,padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                    style={{flex:1,padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                   />
                   <button 
                     onClick={addClimber}
@@ -2531,7 +2537,7 @@ export default function App(){
               type="date" 
               value={date} 
               onChange={e=>setDate(e.target.value)}
-              style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+              style={{width:'100%',padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
             />
           </div>
 
@@ -2569,7 +2575,7 @@ export default function App(){
                     position:'relative'
                   }}>
                     <div style={{
-                      backgroundColor:'#1e293b',
+                      backgroundColor:BLACK_ROW_BG,
                       padding:'8px 12px',
                       borderBottom:'1px solid #3b82f6',
                       fontSize:12,
@@ -2669,7 +2675,7 @@ export default function App(){
                     placeholder="Enter video URL (required for red/black)" 
                     value={videoUrl} 
                     onChange={e=>setVideoUrl(e.target.value)}
-                    style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #991b1b',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                    style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #991b1b',backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                   />
                 </div>
               )}
@@ -2716,11 +2722,11 @@ export default function App(){
                 </button>
               </div>
 
-              <div style={{backgroundColor:'#1e293b',padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:'1px solid #475569',overflowX:'auto'}}>
+              <div style={{backgroundColor:BLACK_PANEL_BG,padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:BLACK_PANEL_BORDER,overflowX:'auto'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
                 <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
                   <thead>
-                    <tr style={{borderBottom:'1px solid #475569'}}>
+                    <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
                       <th style={{textAlign:'left',padding:'8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
                       <th style={{textAlign:'center',padding:'8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
                       <th style={{textAlign:'center',padding:'8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
@@ -2733,14 +2739,15 @@ export default function App(){
                   <tbody>
                     {Object.keys(wallTotals)
                       .filter(section => !expiredSections.includes(section))
-                      .map(section => {
+                      .map((section, idx) => {
                       const sectionCounts = wallCounts[section] || emptyWall();
                       const sectionTotals = wallTotals[section] || {};
                       const displayName = formatWallSectionName(section);
                       const isSelectedWall = section === dropdownWall;
+                      const rowBackground = idx % 2 === 0 ? BLACK_PANEL_BG : BLACK_ROW_BG;
                       
                       return (
-                        <tr key={section} style={{borderBottom:'1px solid #334155'}}>
+                        <tr key={section} style={{borderBottom:BLACK_PANEL_BORDER, backgroundColor: rowBackground}}>
                           <td style={{
                             padding:'8px 6px',
                             transition: 'all 0.2s'
@@ -2814,7 +2821,7 @@ export default function App(){
               </div>
               
               {/* Live Preview - moved here for better proximity to Current Progress */}
-              <div style={{marginTop:16,backgroundColor:'#1e293b',padding:16,borderRadius:8,border:'1px solid #475569'}}>
+              <div style={{marginTop:16,backgroundColor:BLACK_PANEL_BG,padding:16,borderRadius:8,border:BLACK_PANEL_BORDER}}>
                 <h4 style={{marginTop:0,marginBottom:16,fontSize:16,fontWeight:'600'}}>Live Preview</h4>
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,marginBottom:16}}>
                   <div style={{fontSize:36,fontWeight:700,color:'#3b82f6',textAlign:'center'}}>
@@ -2827,7 +2834,7 @@ export default function App(){
                   <h5 style={{marginTop:0,marginBottom:12,fontSize:12,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal Gains</h5>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(2, 1fr)',gap:8}}>
                     {ORDER.map((color:any)=> (
-                      <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',backgroundColor:'#0f172a',borderRadius:6}}>
+                      <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',backgroundColor:BLACK_ROW_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
                         <div style={{textTransform:'capitalize',fontSize:13,fontWeight:'500'}}>{color}</div>
                         <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:13}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
                       </div>
@@ -2854,18 +2861,18 @@ export default function App(){
                     {wallSectionImages[section] && wallSectionImages[section].length > 0 && (
                       <div style={{
                         marginBottom:12,
-                        border:'2px solid #3b82f6',
-                        borderRadius:8,
-                        overflow:'hidden',
-                        backgroundColor:'#000',
-                        position:'relative'
-                      }}>
-                        <div style={{
-                          backgroundColor:'#1e293b',
-                          padding:'8px 12px',
-                          borderBottom:'1px solid #3b82f6',
-                          fontSize:12,
-                          color:'#3b82f6',
+                      border:'2px solid #3b82f6',
+                      borderRadius:8,
+                      overflow:'hidden',
+                      backgroundColor:'#000',
+                      position:'relative'
+                    }}>
+                      <div style={{
+                        backgroundColor:BLACK_ROW_BG,
+                        padding:'8px 12px',
+                        borderBottom:'1px solid #3b82f6',
+                        fontSize:12,
+                        color:'#3b82f6',
                           fontWeight:'600',
                           display:'flex',
                           justifyContent:'space-between',
@@ -2999,7 +3006,7 @@ export default function App(){
                               max={typeof total === 'number' ? total : undefined}
                               value={currentCount} 
                               onChange={e=>updateWallCount(section,color,e.target.value)}
-                              style={{width:'100%',padding:'8px',borderRadius:6,border:'1px solid #475569',backgroundColor:'#1e293b',color:'white',fontSize:14}}
+                              style={{width:'100%',padding:'8px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                             />
                           </div>
                         );
@@ -3032,15 +3039,15 @@ export default function App(){
               Add Session
             </button>
           </div>
+            </div>
+          </GlowingCard>
         </div>
-      </GlowBorder>
-    </div>
 
-    {/* Live Preview - only show in manual mode since dropdown mode has it integrated */}
-    {manualMode && (
-      <div style={{width:350}}>
-        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-          <div style={{padding:24}}>
+        {/* Live Preview - only show in manual mode since dropdown mode has it integrated */}
+        {manualMode && (
+          <div style={{width:350}}>
+        <GlowingCard borderRadius={PANEL_RADIUS}>
+          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
             <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,marginBottom:20}}>
               <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',textAlign:'center'}}>
@@ -3053,7 +3060,7 @@ export default function App(){
               <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal</h4>
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
                 {ORDER.map((color:any)=> (
-                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:'#0f172a',borderRadius:6}}>
+                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:BLACK_ROW_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
                     <div style={{textTransform:'capitalize',fontSize:14,fontWeight:'500'}}>{color}</div>
                     <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:14}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
                   </div>
@@ -3061,15 +3068,15 @@ export default function App(){
               </div>
             </div>
           </div>
-        </GlowBorder>
-      </div>
-    )}
-    </section>
+        </GlowingCard>
+          </div>
+        )}
+        </section>
       )}
 
       <section style={{marginTop:32}}>
-        <GlowBorder glowColor="rgba(59, 130, 246, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-          <div style={{padding:24}}>
+        <GlowingCard borderRadius={PANEL_RADIUS}>
+          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
             <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>Sessions</h2>
           
           {/* Expired Sections Notice */}
@@ -3120,7 +3127,7 @@ export default function App(){
               return (
                 <>
                   {datesToShow.map(([date, dateSessions]) => (
-                    <div key={date} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #475569'}}>
+                    <div key={date} style={{marginBottom:24,paddingBottom:24,borderBottom:BLACK_PANEL_BORDER}}>
                       <h3 style={{fontSize:18,fontWeight:'600',marginBottom:16,color:'#3b82f6'}}>{date}</h3>
                       <div style={{display:'flex',flexDirection:'column',gap:10}}>
                         {dateSessions.map(s => {
@@ -3187,23 +3194,23 @@ export default function App(){
                           return (
                             <div key={s.id}>
                               <div 
-                                onClick={() => setExpandedSession(isExpanded ? null : s.id)}
-                                style={{
-                                  display:'flex',
-                                  justifyContent:'space-between',
-                                  alignItems:'center',
-                                  padding:'12px 16px',
-                                  backgroundColor:'#0f172a',
-                                  borderRadius:6,
-                                  border:'1px solid #334155',
-                                  cursor:'pointer',
-                                  transition:'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e293b'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f172a'}
-                              >
-                                <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
-                                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                              onClick={() => setExpandedSession(isExpanded ? null : s.id)}
+                              style={{
+                                display:'flex',
+                                justifyContent:'space-between',
+                                alignItems:'center',
+                                padding:'12px 16px',
+                                backgroundColor:BLACK_ROW_BG,
+                                borderRadius:6,
+                                border:BLACK_PANEL_BORDER,
+                                cursor:'pointer',
+                                transition:'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BLACK_ROW_BG}
+                            >
+                              <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
+                              <div style={{display:'flex',alignItems:'center',gap:12}}>
                                   <span style={{color,fontWeight:'700',fontSize:18}}>{displayScore}</span>
                                   <GradeBadge grade={sessionGrade} size="sm" />
                                   <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▸'}</span>
@@ -3211,7 +3218,7 @@ export default function App(){
                               </div>
                               
                               {isExpanded && Object.keys(newClimbs).length > 0 && (
-                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1e293b',borderRadius:6,border:'1px solid #475569'}}>
+                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:BLACK_PANEL_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
                                   <h5 style={{margin:'0 0 8px 0',fontSize:13,fontWeight:'600',color:'#94a3b8'}}>Changes:</h5>
                                   {Object.entries(newClimbs).map(([section, colors]: [string, any]) => (
                                     <div key={section} style={{marginBottom:6,fontSize:12}}>
@@ -3231,7 +3238,7 @@ export default function App(){
                               )}
                               
                               {isExpanded && Object.keys(newClimbs).length === 0 && (
-                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:'#1e293b',borderRadius:6,border:'1px solid #475569',fontSize:12,color:'#94a3b8'}}>
+                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:BLACK_PANEL_BG,borderRadius:6,border:BLACK_PANEL_BORDER,fontSize:12,color:'#94a3b8'}}>
                                   First session - no previous data to compare
                                 </div>
                               )}
@@ -3269,12 +3276,12 @@ export default function App(){
             })()}
           </div>
           </div>
-        </GlowBorder>
+        </GlowingCard>
       </section>
 
       <section style={{marginTop:32}}>
-        <GlowBorder glowColor="rgba(168, 85, 247, 0.4)" borderRadius={12} backgroundColor="#1e293b">
-          <div style={{padding:24}}>
+        <GlowingCard borderRadius={PANEL_RADIUS}>
+          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
             <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>🎥 Video Evidence Review</h2>
           
           {!api.isAuthenticated() && (
@@ -3305,7 +3312,7 @@ export default function App(){
                   cursor:'pointer',
                   background: videoFilter === status
                     ? 'linear-gradient(to right, #a855f7, #ec4899)'
-                    : 'rgba(255,255,255,0.05)',
+                    : BLACK_ROW_BG,
                   color: videoFilter === status ? '#fff' : '#94a3b8',
                   transition:'all 0.2s'
                 }}
@@ -3325,10 +3332,10 @@ export default function App(){
               
               return (
                 <div key={video.id} style={{
-                  backgroundColor:'rgba(255,255,255,0.05)',
+                  backgroundColor:BLACK_ROW_BG,
                   backdropFilter:'blur(10px)',
                   borderRadius:12,
-                  border:'1px solid rgba(255,255,255,0.1)',
+                  border:BLACK_PANEL_BORDER,
                   overflow:'hidden',
                   transition:'all 0.2s'
                 }}>
@@ -3542,7 +3549,7 @@ export default function App(){
             </p>
           )}
           </div>
-        </GlowBorder>
+        </GlowingCard>
       </section>
 
       <section style={{marginTop:24}}>
@@ -3609,7 +3616,7 @@ export default function App(){
                 label={{ value: 'Score', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 12 } }}
               />
               <Tooltip
-                contentStyle={{backgroundColor:'#1e293b',border:'1px solid #475569'}}
+                contentStyle={{backgroundColor:BLACK_PANEL_BG,border:BLACK_PANEL_BORDER}}
                 formatter={(value: any) => {
                   if (typeof value !== 'number') return value;
                   return `${value.toFixed(2)} (${getGradeForScore(value)})`;
@@ -3675,7 +3682,7 @@ export default function App(){
         </div>
 
         {/* Comparison Selector */}
-        <div style={{marginTop:24,marginBottom:24,backgroundColor:'#1e293b',padding:16,borderRadius:8,border:'1px solid #475569'}}>
+        <div style={{marginTop:24,marginBottom:24,backgroundColor:BLACK_PANEL_BG,padding:16,borderRadius:8,border:BLACK_PANEL_BORDER}}>
           <h3 style={{marginTop:0,marginBottom:12}}>Compare Climbers</h3>
           <div style={{marginBottom:16}}>
             <label style={{display:'block',fontWeight:'500',marginBottom:8,fontSize:14}}>
@@ -3690,8 +3697,8 @@ export default function App(){
                 width:'100%',
                 padding:'10px 12px',
                 borderRadius:6,
-                border:'1px solid #475569',
-                backgroundColor:'#0f172a',
+                border:BLACK_PANEL_BORDER,
+                backgroundColor:BLACK_ROW_BG,
                 color:'white',
                 fontSize:14,
                 marginBottom:12
@@ -3709,9 +3716,10 @@ export default function App(){
                         key={id}
                         style={{
                           padding:'4px 10px',
-                          backgroundColor:'#1e3a8a',
+                          backgroundColor:BLACK_ROW_BG,
                           color:'#60a5fa',
                           borderRadius:6,
+                          border:BLACK_PANEL_BORDER,
                           fontSize:13,
                           display:'flex',
                           alignItems:'center',
@@ -3737,7 +3745,7 @@ export default function App(){
                 </div>
               </div>
             )}
-            <div style={{maxHeight:200,overflowY:'auto',border:'1px solid #475569',borderRadius:6,backgroundColor:'#0f172a'}}>
+            <div style={{maxHeight:200,overflowY:'auto',border:BLACK_PANEL_BORDER,borderRadius:6,backgroundColor:BLACK_ROW_BG}}>
               {climbers
                 .filter((c:any) => 
                   c.name.toLowerCase().includes(comparisonSearchQuery.toLowerCase()) &&
@@ -3759,11 +3767,12 @@ export default function App(){
                         padding:'10px 12px',
                         cursor: canSelect ? 'pointer' : 'not-allowed',
                         opacity: canSelect ? 1 : 0.5,
-                        borderBottom:'1px solid #334155',
-                        transition:'background-color 0.2s'
+                        borderBottom:BLACK_PANEL_BORDER,
+                        transition:'background-color 0.2s',
+                        backgroundColor: BLACK_ROW_BG
                       }}
-                      onMouseEnter={(e) => canSelect && (e.currentTarget.style.backgroundColor = '#1e293b')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      onMouseEnter={(e) => canSelect && (e.currentTarget.style.backgroundColor = '#0d0d0d')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BLACK_ROW_BG)}
                     >
                       <div style={{fontSize:14,fontWeight:'500'}}>{c.name}</div>
                     </div>

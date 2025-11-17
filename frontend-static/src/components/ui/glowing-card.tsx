@@ -24,15 +24,15 @@ interface GlowingCardProps {
 
 export const GlowingCard = ({
   children,
-  blur = 24,
-  borderWidth = 5,
-  spread = 420,
+  blur = 32,
+  borderWidth = 6,
+  spread = 520,
   glow = true,
   disabled = false,
   proximity = 200,
   inactiveZone = 0.01,
   className = "",
-  borderRadius = 12,
+  borderRadius = 10,
 }: GlowingCardProps) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
