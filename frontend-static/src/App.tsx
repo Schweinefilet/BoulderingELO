@@ -12,12 +12,6 @@ import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-em
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
 
-// Detect if running on mobile device
-const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-         window.innerWidth <= 768;
-};
-
 const emptyWall = (): Counts => ({green:0,blue:0,yellow:0,orange:0,red:0,black:0});
 
 const COLOR_SWATCHES: Record<keyof Counts, string> = {
@@ -51,7 +45,7 @@ const gradeBadgeSizing = {
 } as const;
 
 const BLACK_PANEL_BG = '#000';
-const BLACK_PANEL_BORDER_COLOR = 'rgba(148, 163, 184, 0.2)';
+const BLACK_PANEL_BORDER_COLOR = '#ffffff';
 const BLACK_PANEL_BORDER = `1px solid ${BLACK_PANEL_BORDER_COLOR}`;
 const BLACK_ROW_BG = '#050505';
 const PANEL_RADIUS = 10;
@@ -1885,7 +1879,7 @@ export default function App(){
 
   return (
     <div style={{fontFamily:'Inter, Arial, sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
-      {!isMobileDevice() && <BackgroundBeams />}
+      <BackgroundBeams />
       
       {/* Toast Notification */}
       {toast && (
