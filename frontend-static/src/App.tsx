@@ -2674,7 +2674,7 @@ export default function App(){
                     return (
                       <button
                         key={c}
-                        onClick={()=>setDropdownColor(c as any)}
+                        onClick={()=>setDropdownColor(c as keyof Counts)}
                         style={{
                           padding:'clamp(10px, 2vw, 12px)',
                           border: isSelected ? `2px solid ${colorMap[c]}` : '2px solid transparent',
@@ -2809,7 +2809,7 @@ export default function App(){
                                 <div 
                                   onClick={() => {
                                     setDropdownWall(section);
-                                    setDropdownColor(color);
+                                    setDropdownColor(color as keyof Counts);
                                   }}
                                   style={{
                                   display: 'inline-block',
@@ -4912,21 +4912,22 @@ export default function App(){
             <div 
               onClick={(e) => e.stopPropagation()}
               style={{
-              backgroundColor:'#1e293b',
+              backgroundColor:'#000',
               borderRadius:12,
-              border:'2px solid #475569',
+              border:'2px solid #fff',
               maxWidth:1000,
               width:'100%',
               maxHeight:'90vh',
               overflowY:'auto',
               scrollbarWidth:'none',
-              msOverflowStyle:'none'
+              msOverflowStyle:'none',
+              color:'#f5f5f5'
             }}
               className="hide-scrollbar"
             >
-              {/* Header Section - osu! style */}
+              {/* Header Section */}
               <div style={{
-                background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+                backgroundColor: '#000',
                 padding: 'clamp(16px, 4vw, 32px)',
                 borderTopLeftRadius: 10,
                 borderTopRightRadius: 10,
@@ -4939,12 +4940,12 @@ export default function App(){
                     top: 16,
                     right: 16,
                     padding:'8px 16px',
-                    backgroundColor:'rgba(0,0,0,0.3)',
-                    color:'white',
-                    border:'1px solid rgba(255,255,255,0.2)',
-                    borderRadius:6,
+                    backgroundColor:'rgba(0,0,0,0.65)',
+                    color:'#fff',
+                    border:'1px solid #fff',
+                    borderRadius:8,
                     fontSize:14,
-                    fontWeight:'600',
+                    fontWeight:'700',
                     cursor:'pointer',
                     zIndex:10
                   }}
@@ -4963,7 +4964,7 @@ export default function App(){
                     
                     {/* Bio, Started Climbing, Instagram */}
                     {(profileClimber?.bio || profileClimber?.started_bouldering || profileClimber?.instagram_handle) && (
-                      <div style={{marginTop:16, padding:16, backgroundColor:'rgba(0,0,0,0.2)', borderRadius:8, border:'1px solid rgba(255,255,255,0.1)'}}>
+                      <div style={{marginTop:16, padding:16, backgroundColor:'#000', borderRadius:8, border:'1px solid #fff'}}>
                         {profileClimber?.started_bouldering && (
                           <div style={{marginBottom: profileClimber?.bio ? 12 : 0}}>
                             <div style={{fontSize:12, color:'rgba(255,255,255,0.7)', marginBottom:4, fontWeight:'600'}}>
@@ -5055,16 +5056,16 @@ export default function App(){
               <div style={{padding:32}}>
                 {/* Current Climbs Section */}
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:24,
-                  borderRadius:8,
-                  border:'1px solid #475569',
+                  borderRadius:12,
+                  border:'1px solid #fff',
                   marginBottom:24
                 }}>
                   <h3 style={{marginTop:0, marginBottom:8, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>CURRENT CLIMBS</h3>
                   <p style={{marginTop:0, marginBottom:20, fontSize:13, color:'#64748b'}}>From latest session - routes available this week</p>
                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:16}}>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
                       <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
                         {currentClimbs.green}/{getTotalForColor('green') || '?'}
@@ -5073,7 +5074,7 @@ export default function App(){
                         ({getTotalForColor('green') > 0 ? ((currentClimbs.green / getTotalForColor('green')) * 100).toFixed(1) : '0.0'}%)
                       </div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
                       <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
                         {currentClimbs.blue}/{getTotalForColor('blue') || '?'}
@@ -5082,7 +5083,7 @@ export default function App(){
                         ({getTotalForColor('blue') > 0 ? ((currentClimbs.blue / getTotalForColor('blue')) * 100).toFixed(1) : '0.0'}%)
                       </div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
                       <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
                         {currentClimbs.yellow}/{getTotalForColor('yellow') || '?'}
@@ -5091,7 +5092,7 @@ export default function App(){
                         ({getTotalForColor('yellow') > 0 ? ((currentClimbs.yellow / getTotalForColor('yellow')) * 100).toFixed(1) : '0.0'}%)
                       </div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
                       <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
                         {currentClimbs.orange}/{getTotalForColor('orange') || '?'}
@@ -5100,7 +5101,7 @@ export default function App(){
                         ({getTotalForColor('orange') > 0 ? ((currentClimbs.orange / getTotalForColor('orange')) * 100).toFixed(1) : '0.0'}%)
                       </div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
                       <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
                         {currentClimbs.red}/{getTotalForColor('red') || '?'}
@@ -5109,7 +5110,7 @@ export default function App(){
                         ({getTotalForColor('red') > 0 ? ((currentClimbs.red / getTotalForColor('red')) * 100).toFixed(1) : '0.0'}%)
                       </div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
                       <div style={{fontSize:22, fontWeight:'700', color:'white'}}>
                         {currentClimbs.black}/{getTotalForColor('black') || '?'}
@@ -5123,36 +5124,36 @@ export default function App(){
 
                 {/* Total Climbs by Color */}
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:24,
-                  borderRadius:8,
-                  border:'1px solid #475569',
+                  borderRadius:12,
+                  border:'1px solid #fff',
                   marginBottom:24
                 }}>
                   <h3 style={{marginTop:0, marginBottom:8, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>TOTAL CLIMBS</h3>
                   <p style={{marginTop:0, marginBottom:20, fontSize:13, color:'#64748b'}}>All-time climbs including replaced routes</p>
                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:16}}>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#10b981', marginBottom:6, fontWeight:'600'}}>GREEN</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.green}</div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#3b82f6', marginBottom:6, fontWeight:'600'}}>BLUE</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.blue}</div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#eab308', marginBottom:6, fontWeight:'600'}}>YELLOW</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.yellow}</div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#f97316', marginBottom:6, fontWeight:'600'}}>ORANGE</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.orange}</div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#ef4444', marginBottom:6, fontWeight:'600'}}>RED</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.red}</div>
                     </div>
-                    <div style={{backgroundColor:'#1e293b', padding:16, borderRadius:6}}>
+                    <div style={{backgroundColor:'#000', padding:16, borderRadius:6, border:'1px solid #222'}}>
                       <div style={{fontSize:12, color:'#d1d5db', marginBottom:6, fontWeight:'600'}}>BLACK</div>
                       <div style={{fontSize:28, fontWeight:'700', color:'white'}}>{totalClimbs.black}</div>
                     </div>
@@ -5161,13 +5162,13 @@ export default function App(){
 
                 {/* Rank History Graph */}
                 {rankHistory.length > 0 && (
-                  <div style={{
-                    backgroundColor:'#0f172a',
-                    padding:24,
-                    borderRadius:8,
-                    border:'1px solid #475569',
-                    marginBottom:24
-                  }}>
+                <div style={{
+                  backgroundColor:'#000',
+                  padding:24,
+                  borderRadius:12,
+                  border:'1px solid #fff',
+                  marginBottom:24
+                }}>
                     <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RANK HISTORY</h3>
                     <ResponsiveContainer width="100%" height={200}>
                       <LineChart data={rankHistory}>
@@ -5185,9 +5186,10 @@ export default function App(){
                         />
                         <Tooltip 
                           contentStyle={{
-                            backgroundColor:'#1e293b',
-                            border:'1px solid #475569',
-                            borderRadius:6
+                            backgroundColor:'#000',
+                            border:'1px solid #fff',
+                            borderRadius:6,
+                            color:'#f5f5f5'
                           }}
                         />
                         <Line 
@@ -5204,13 +5206,13 @@ export default function App(){
 
                 {/* Score History Graph */}
                 {scoreHistory.length > 0 && (
-                  <div style={{
-                    backgroundColor:'#0f172a',
-                    padding:24,
-                    borderRadius:8,
-                    border:'1px solid #475569',
-                    marginBottom:24
-                  }}>
+                <div style={{
+                  backgroundColor:'#000',
+                  padding:24,
+                  borderRadius:12,
+                  border:'1px solid #fff',
+                  marginBottom:24
+                }}>
                     <h3 style={{marginTop:0, marginBottom:20, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>SCORE OVER TIME</h3>
                     <ResponsiveContainer width="100%" height={200}>
                       <LineChart data={scoreHistory}>
@@ -5227,9 +5229,10 @@ export default function App(){
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor:'#1e293b',
-                            border:'1px solid #475569',
-                            borderRadius:6
+                            backgroundColor:'#000',
+                            border: '1px solid #fff',
+                            borderRadius:6,
+                            color:'#f5f5f5'
                           }}
                           formatter={(value: any) => typeof value === 'number' ? `${value.toFixed(2)} (${getGradeForScore(value)})` : value}
                         />
@@ -5255,10 +5258,10 @@ export default function App(){
                         <div 
                           key={session.id}
                           style={{
-                            backgroundColor:'#0f172a',
+                            backgroundColor:'#000',
                             padding:16,
-                            borderRadius:8,
-                            border:'1px solid #475569'
+                            borderRadius:12,
+                            border:'1px solid #fff'
                           }}
                         >
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
