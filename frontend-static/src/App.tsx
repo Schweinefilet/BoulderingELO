@@ -80,6 +80,23 @@ const guideSectionCardStyle: React.CSSProperties = {
   border: '1px solid #122235'
 };
 
+const guideSectionHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  flexWrap: 'wrap'
+};
+
+const guideSectionTitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: '#bfdbfe',
+  fontSize: 16,
+  fontWeight: 600,
+  flex: 1,
+  minWidth: 180
+};
+
 const guideToggleButtonStyle = (isActive: boolean): React.CSSProperties => ({
   padding: '8px 16px',
   borderRadius: 999,
@@ -89,7 +106,12 @@ const guideToggleButtonStyle = (isActive: boolean): React.CSSProperties => ({
   color: '#bfdbfe',
   border: `1px solid ${isActive ? 'rgba(59, 130, 246, 0.55)' : '#1e3a5f'}`,
   cursor: 'pointer',
-  transition: 'background-color 0.2s ease, border-color 0.2s ease'
+  transition: 'background-color 0.2s ease, border-color 0.2s ease',
+  minWidth: 160,
+  display: 'inline-flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  textTransform: 'capitalize'
 });
 
 const GuideToggleButton = ({
@@ -2083,15 +2105,19 @@ export default function App(){
               </div>
             )}
           </div>
+        </div>
+      </GlowingCard>
 
+      <GlowingCard>
+        <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <h3 style={{marginTop:0,marginBottom:16}}>Guide</h3>
           </div>
-          
+
 
           <div style={{...guideSectionCardStyle, marginTop: 0}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
-              <h4 style={{margin:0,color:'#bfdbfe',fontSize:16}}>Quick start guide</h4>
+            <div style={guideSectionHeaderStyle}>
+              <h4 style={guideSectionTitleStyle}>Quick start guide</h4>
               <GuideToggleButton
                 label="guide"
                 isOpen={showUserGuide}
@@ -2148,8 +2174,8 @@ export default function App(){
           </div>
 
           <div style={guideSectionCardStyle}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
-              <h4 style={{margin:0,color:'#bfdbfe',fontSize:16}}>Scoring formula</h4>
+            <div style={guideSectionHeaderStyle}>
+              <h4 style={guideSectionTitleStyle}>Scoring formula</h4>
               <GuideToggleButton
                 label="scoring formula"
                 isOpen={showScoringFormula}
@@ -2212,8 +2238,8 @@ export default function App(){
           </div>
 
           <div style={guideSectionCardStyle}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
-              <h4 style={{margin:'0 0 8px',color:'#bfdbfe',fontSize:15,flex:1}}>Grade boundaries</h4>
+            <div style={guideSectionHeaderStyle}>
+              <h4 style={guideSectionTitleStyle}>Grade boundaries</h4>
               <GuideToggleButton
                 label="grade boundaries"
                 isOpen={showGradeBoundaries}
