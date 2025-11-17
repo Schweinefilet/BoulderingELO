@@ -2674,48 +2674,6 @@ export default function App(){
                 </div>
               )}
 
-              <div style={{marginBottom:16,display:'flex',gap:12}}>
-                <button
-                  onClick={addClimb}
-                  style={{
-                    flex:1,
-                    padding:'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)',
-                    backgroundColor:'#3b82f6',
-                    color:'white',
-                    border:'none',
-                    borderRadius:8,
-                    fontSize:'clamp(14px, 3.5vw, 16px)',
-                    fontWeight:'600',
-                    cursor:'pointer',
-                    transition:'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-                >
-                  ➕ Add Climb
-                </button>
-                
-                <button
-                  onClick={subtractClimb}
-                  style={{
-                    flex:1,
-                    padding:'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)',
-                    backgroundColor:'#ef4444',
-                    color:'white',
-                    border:'none',
-                    borderRadius:8,
-                    fontSize:'clamp(14px, 3.5vw, 16px)',
-                    fontWeight:'600',
-                    cursor:'pointer',
-                    transition:'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
-                >
-                  ➖ Subtract Climb
-                </button>
-              </div>
-
               <div style={{backgroundColor:BLACK_PANEL_BG,padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:BLACK_PANEL_BORDER,overflowX:'auto'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
                 <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
@@ -2813,7 +2771,49 @@ export default function App(){
                   </tbody>
                 </table>
               </div>
-              
+
+              <div style={{margin:'16px 0',display:'flex',gap:12}}>
+                <button
+                  onClick={addClimb}
+                  style={{
+                    flex:1,
+                    padding:'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)',
+                    backgroundColor:'#3b82f6',
+                    color:'white',
+                    border:'none',
+                    borderRadius:8,
+                    fontSize:'clamp(14px, 3.5vw, 16px)',
+                    fontWeight:'600',
+                    cursor:'pointer',
+                    transition:'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                >
+                  ➕ Add Climb
+                </button>
+
+                <button
+                  onClick={subtractClimb}
+                  style={{
+                    flex:1,
+                    padding:'clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px)',
+                    backgroundColor:'#ef4444',
+                    color:'white',
+                    border:'none',
+                    borderRadius:8,
+                    fontSize:'clamp(14px, 3.5vw, 16px)',
+                    fontWeight:'600',
+                    cursor:'pointer',
+                    transition:'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                >
+                  ➖ Subtract Climb
+                </button>
+              </div>
+
               {/* Live Preview - moved here for better proximity to Current Progress */}
               <div style={{marginTop:16,backgroundColor:BLACK_PANEL_BG,padding:16,borderRadius:8,border:BLACK_PANEL_BORDER}}>
                 <h4 style={{marginTop:0,marginBottom:16,fontSize:16,fontWeight:'600'}}>Live Preview</h4>
