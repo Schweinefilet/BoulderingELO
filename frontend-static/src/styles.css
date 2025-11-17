@@ -2,18 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #000000;
+  --text: #f1f5f9;
+  --panel-bg: #000000; /* box backgrounds: black */
+  --panel-text: #cbd5e1;
+  --muted: #94a3b8;
+  --accent: #3b82f6;
+  --button-bg: var(--accent);
+  --button-text: #ffffff;
+  --input-bg: #000000; /* inputs black */
+  --input-border: #ffffff; /* outlines white */
+  --card-border: #ffffff; /* card outline white */
+  --glow: 0 0 18px rgba(255,255,255,0.12);
+  --glow-strong: 0 0 28px rgba(255,255,255,0.18);
+  --glow-color: rgba(255,255,255,0.12);
+  --glow-color-40: rgba(255,255,255,0.4);
+  --panel-alt-bg: #030303;
+}
+
+/* Black & White theme (reversed monochrome) */
+[data-theme="bw"] {
+  /* Swap only UI surfaces (backgrounds, panels, inputs, borders).
+     Do NOT change text color variables so existing vibrant text remains intact. */
+  --bg: #ffffff; /* page background becomes white */
+  --panel-bg: #000000; /* panels become black */
+  --button-bg: #000000;
+  --input-bg: #000000;
+  --input-border: #ffffff;
+  --card-border: #ffffff;
+  --glow: 0 0 18px rgba(255,255,255,0.12);
+}
+
 body {
   margin: 0;
   padding: 0;
-  background: #000000;
-  color: #f1f5f9;
+  background: var(--bg);
+  color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
 button {
   padding: 8px 16px;
-  background: #3b82f6;
-  color: white;
+  background: var(--button-bg);
+  color: var(--button-text);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -22,15 +54,15 @@ button {
 }
 
 button:hover {
-  background: #2563eb;
+  filter: brightness(0.95);
 }
 
 input, select {
   padding: 8px;
-  background: #1e293b;
-  border: 1px solid #475569;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
-  color: white;
+  color: var(--panel-text);
   font-size: 14px;
   margin-top: 4px;
   width: 100%;
@@ -39,23 +71,23 @@ input, select {
 
 table {
   margin-top: 12px;
-  color: #cbd5e1;
+  color: var(--panel-text);
 }
 
 th {
   text-align: left;
   padding: 8px;
-  border-bottom: 1px solid #475569;
-  color: #94a3b8;
+  border-bottom: 1px solid var(--input-border);
+  color: var(--muted);
 }
 
 td {
   padding: 8px;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--card-border);
 }
 
 h1, h2, h3, h4 {
-  color: white;
+  color: var(--text);
 }
 
 /* Hide scrollbar for modals */
@@ -74,3 +106,52 @@ h1, h2, h3, h4 {
     opacity: 1;
   }
 }
+
+/* Utility: panel/card background that respects theme */
+.panel, .card, .glowing-card, .guide-section {
+  background: var(--panel-bg);
+  color: var(--panel-text);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--glow);
+}
+
+/* Utility surface class to apply black surface + white outline + glow */
+.surface {
+  background: var(--panel-bg) !important;
+  color: var(--panel-text) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--glow) !important;
+}
+
+/* Small variant for alternate panel background */
+.surface-alt {
+  background: var(--panel-alt-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--glow) !important;
+}
+
+/* Inputs and buttons focus states get a white glow */
+input:focus, select:focus, textarea:focus, button:focus {
+  outline: none;
+  box-shadow: var(--glow-strong);
+  border-color: var(--input-border);
+}
+
+/* Fallback overrides: override common inline surface literals to ensure boxes become black with white outlines.
+   These use attribute selectors and !important to catch any remaining inline style uses. */
+*[style*="#0f172a"] {
+  background-color: var(--panel-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--glow) !important;
+}
+*[style*="#1e293b"] {
+  background-color: var(--panel-alt-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--glow) !important;
+}
+*[style*="#475569"], *[style*="#334155"] {
+  border-color: var(--card-border) !important;
+}
+
+/* Remove aggressive global overrides so vibrant text colors (inline) remain unchanged.
+   The theme now only swaps backgrounds/borders while leaving most text colors intact. */

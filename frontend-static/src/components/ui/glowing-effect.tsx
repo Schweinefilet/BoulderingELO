@@ -74,7 +74,7 @@ export const GlowingEffect = ({
         )}
         style={{
           opacity: opacity,
-          background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, 0.4), transparent 40%)`,
+          background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(255,255,255,${Math.min(0.4, opacity * 0.6)}), transparent 40%)`,
         }}
       />
       <div
@@ -82,7 +82,7 @@ export const GlowingEffect = ({
         style={{
           borderWidth: `${borderWidth}px`,
           borderStyle: "solid",
-          borderImage: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, ${opacity}), transparent 40%) 1`,
+          borderImage: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(255,255,255,${opacity}), transparent 40%) 1`,
           filter: blur > 0 ? `blur(${blur}px)` : "none",
         }}
       />

@@ -19,23 +19,26 @@ interface GlowingCardProps {
   proximity?: number;
   inactiveZone?: number;
   className?: string;
+  borderRadius?: number | string;
 }
 
 export const GlowingCard = ({
   children,
-  blur = 20,
+  blur = 24,
   borderWidth = 5,
-  spread = 350,
+  spread = 420,
   glow = true,
   disabled = false,
   proximity = 200,
   inactiveZone = 0.01,
   className = "",
+  borderRadius = 12,
 }: GlowingCardProps) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0);
   const isMobile = isMobileDevice();
+  const radiusValue = typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!divRef.current || disabled || isMobile) return;
@@ -59,6 +62,7 @@ export const GlowingCard = ({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className={cn("relative", className)}
+      style={{ borderRadius: radiusValue }}
     >
       {/* Only render glow effects on desktop */}
       {!isMobile && (
@@ -68,8 +72,9 @@ export const GlowingCard = ({
             className="pointer-events-none absolute -inset-1 rounded-lg transition-opacity duration-300"
             style={{
               opacity: opacity,
-              background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, 0.8), rgba(147, 51, 234, 0.4) 40%, transparent 70%)`,
+              background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.35) 40%, transparent 70%)`,
               filter: `blur(${blur}px)`,
+              borderRadius: radiusValue,
             }}
           />
           {/* Bright border effect */}
@@ -78,10 +83,11 @@ export const GlowingCard = ({
             style={{
               opacity: opacity,
               border: `${borderWidth}px solid transparent`,
-              background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(59, 130, 246, 1), rgba(147, 51, 234, 0.6) 50%, transparent 80%) border-box`,
+              background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.5) 50%, transparent 80%) border-box`,
               WebkitMask: 'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)',
               WebkitMaskComposite: 'xor',
               maskComposite: 'exclude',
+              borderRadius: radiusValue,
             }}
           />
         </>

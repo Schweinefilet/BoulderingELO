@@ -10,7 +10,7 @@ interface GlowBorderProps {
 
 export function GlowBorder({ 
   children, 
-  glowColor = 'rgba(59, 130, 246, 0.5)',
+  glowColor = 'var(--glow-color)',
   borderRadius = 8,
   padding = 0,
   backgroundColor = 'transparent'
