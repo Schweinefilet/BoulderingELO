@@ -4,6 +4,36 @@ export const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localho
 const TOKEN_KEY = 'boulderingelo_token';
 const USER_KEY = 'boulderingelo_user';
 
+export class ApiBootingError extends Error {
+  constructor(message = 'API is still starting on Render') {
+    super(message);
+    this.name = 'ApiBootingError';
+  }
+}
+
+const RENDER_BOOT_MARKERS = [
+  'please wait up to 50 seconds',
+  'your service is starting',
+  'render will keep trying'
+];
+
+const looksLikeRenderBootResponse = (text: string | null | undefined) => {
+  if (!text) return false;
+  const normalized = text.toLowerCase();
+  return RENDER_BOOT_MARKERS.some(marker => normalized.includes(marker));
+};
+
+export function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function isBootingError(error: unknown): error is ApiBootingError {
+  if (error instanceof ApiBootingError) return true;
+  if (!error || typeof error !== 'object') return false;
+  const message = (error as any).message;
+  return typeof message === 'string' && /render|boot|starting|warming/i.test(message);
+}
+
 export interface Climber {
   id: number;
   name: string;
@@ -103,14 +133,39 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+  const isJsonResponse = contentType.includes('application/json');
+
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
       clearToken();
       throw new Error('Authentication required');
     }
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
+
+    if (response.status === 502 || response.status === 503) {
+      throw new ApiBootingError();
+    }
+
+    if (isJsonResponse) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || 'Request failed');
+    }
+
+    const text = await response.text().catch(() => '');
+    if (looksLikeRenderBootResponse(text)) {
+      throw new ApiBootingError();
+    }
+    throw new Error(text || 'Request failed');
   }
+
+  if (!isJsonResponse) {
+    const text = await response.text().catch(() => '');
+    if (looksLikeRenderBootResponse(text)) {
+      throw new ApiBootingError();
+    }
+    throw new Error('Unexpected response from server. Please try again.');
+  }
+
   return response.json();
 }
 
