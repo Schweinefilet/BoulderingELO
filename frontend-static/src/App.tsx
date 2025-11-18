@@ -956,6 +956,7 @@ export default function App(){
   const [pendingVideos, setPendingVideos] = useState<Array<{videoUrl: string, color: string, wall: string}>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
+  const [bootStatus, setBootStatus] = useState<string | null>(null)
   
   // Track last edited cell for highlighting
   const [lastEditedCell, setLastEditedCell] = useState<{wall: string, color: string} | null>(null)
@@ -1202,41 +1203,64 @@ export default function App(){
     }
   }, [user, climbers, isGoogleConfigured]);
   
+  const API_BOOT_MAX_ATTEMPTS = 5;
+
   async function loadData() {
     setLoading(true);
     setError(null);
+    setBootStatus(null);
     try {
-      console.log('Loading data from API...');
-      const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
-        api.getClimbers(),
-        api.getSessions(),
-        api.getLeaderboard()
-      ]);
-      console.log('Data loaded successfully:', { 
-        climbers: loadedClimbers.length, 
-        sessions: loadedSessions.length, 
-        leaderboard: loadedLeaderboard.length
-      });
-      setClimbers(loadedClimbers);
-      setSessions(loadedSessions);
-      setLeaderboard(loadedLeaderboard);
-      await loadVideos(); // Load videos too
-      // Load admin notifications (non-blocking)
-      (async () => {
+      for (let attempt = 1; attempt <= API_BOOT_MAX_ATTEMPTS; attempt++) {
         try {
-          setNotifLoading(true);
-          const noteRes = await api.getAdminNotifications();
-          setNotifications(noteRes.notifications || []);
-        } catch (e) {
-          console.warn('Failed to load admin notifications', e);
-        } finally {
-          setNotifLoading(false);
+          console.log(`Loading data from API (attempt ${attempt})...`);
+          const [loadedClimbers, loadedSessions, loadedLeaderboard] = await Promise.all([
+            api.getClimbers(),
+            api.getSessions(),
+            api.getLeaderboard()
+          ]);
+          console.log('Data loaded successfully:', {
+            climbers: loadedClimbers.length,
+            sessions: loadedSessions.length,
+            leaderboard: loadedLeaderboard.length
+          });
+          setClimbers(loadedClimbers);
+          setSessions(loadedSessions);
+          setLeaderboard(loadedLeaderboard);
+          await loadVideos(); // Load videos too
+          // Load admin notifications (non-blocking)
+          (async () => {
+            try {
+              setNotifLoading(true);
+              const noteRes = await api.getAdminNotifications();
+              setNotifications(noteRes.notifications || []);
+            } catch (e) {
+              console.warn('Failed to load admin notifications', e);
+            } finally {
+              setNotifLoading(false);
+            }
+          })();
+          setBootStatus(null);
+          setError(null);
+          return;
+        } catch (err: any) {
+          if (api.isBootingError(err) && attempt < API_BOOT_MAX_ATTEMPTS) {
+            const waitMs = attempt * 4000;
+            setBootStatus(`Render is waking the API (retry ${attempt}/${API_BOOT_MAX_ATTEMPTS}). Retrying in ${Math.ceil(waitMs / 1000)}s...`);
+            await api.delay(waitMs);
+            continue;
+          }
+          throw err;
         }
-      })();
+      }
     } catch (err: any) {
       console.error('Failed to load data:', err);
-      setError(err.message || 'Failed to load data. Check if API is online at https://bouldering-elo-api.onrender.com');
+      if (api.isBootingError(err)) {
+        setError('The API is still starting on Render. Please try again in a minute or refresh the page.');
+      } else {
+        setError(err.message || 'Failed to load data. Check if API is online at https://bouldering-elo-api.onrender.com');
+      }
     } finally {
+      setBootStatus(null);
       setLoading(false);
     }
   }
@@ -2053,7 +2077,9 @@ export default function App(){
           borderRadius:8,
           border:'1px solid #3b82f6'
         }}>
-          <div style={{marginBottom:8}}>Please wait up to 50 seconds, API loading.</div>
+          <div style={{marginBottom:8}}>
+            {bootStatus || 'Please wait up to 50 seconds, API loading.'}
+          </div>
         </div>
       )}
       
