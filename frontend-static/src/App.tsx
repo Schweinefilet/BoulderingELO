@@ -5,7 +5,6 @@ import * as store from './lib/storage'
 import * as api from './lib/api'
 import { API_URL } from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { GlowingCard } from './components/ui/glowing-card'
 import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
 import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
@@ -2052,12 +2051,12 @@ export default function App(){
       )}
       
       {!isAuthenticated && !loading && (
-        <GlowingCard>
+        
           <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20,border:'2px solid #3b82f6'}}>
             <h2 style={{marginTop:0,color:'#3b82f6'}}>Welcome to BoulderingELO</h2>
             <p>Track your climbing progress with our weighted scoring system. View stats below or login to add your sessions!</p>
           </div>
-        </GlowingCard>
+        
       )}
       
       {/* Expired Sections Banner */}
@@ -2087,7 +2086,7 @@ export default function App(){
         </div>
       )}
       
-      <GlowingCard>
+      
         <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, marginBottom:20, border: BLACK_PANEL_BORDER}}>
           {/* Notification center (admin can post messages) */}
           <div style={{marginBottom:16}}>
@@ -2133,9 +2132,9 @@ export default function App(){
             )}
           </div>
         </div>
-      </GlowingCard>
+      
 
-      <GlowingCard>
+      
         <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, marginBottom:20, border: BLACK_PANEL_BORDER}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <h3 style={{marginTop:0,marginBottom:16}}>Guide</h3>
@@ -2299,11 +2298,11 @@ export default function App(){
           {/* Practical user guide included above for consistency */}
 
         </div>
-      </GlowingCard>
+      
       
       {/* Leaderboard - visible to everyone */}
       <section style={{marginBottom:20}}>
-        <GlowingCard borderRadius={PANEL_RADIUS}>
+        
           <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius:PANEL_RADIUS, border:BLACK_PANEL_BORDER}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Leaderboard</h2>
@@ -2505,13 +2504,13 @@ export default function App(){
               )}
             </div>
           </div>
-        </GlowingCard>
+        
       </section>
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
           <div style={{flex:1,minWidth:Math.min(300, window.innerWidth - 40)}}>
-            <GlowingCard borderRadius={PANEL_RADIUS}>
+            
               <div style={{padding:'clamp(12px, 4vw, 24px)', backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
                 <h2 style={{marginTop:0,marginBottom:8,fontSize:'clamp(20px, 5vw, 24px)',fontWeight:'600'}}>New Session</h2>
                 <p style={{marginTop:0,marginBottom:20,fontSize:'clamp(12px, 3vw, 14px)',color:'#94a3b8'}}>
@@ -3061,13 +3060,13 @@ export default function App(){
             </button>
           </div>
             </div>
-          </GlowingCard>
+          
         </div>
 
         {/* Live Preview - only show in manual mode since dropdown mode has it integrated */}
         {manualMode && (
           <div style={{width:350}}>
-        <GlowingCard borderRadius={PANEL_RADIUS}>
+        
           <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
             <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,marginBottom:20}}>
@@ -3089,14 +3088,14 @@ export default function App(){
               </div>
             </div>
           </div>
-        </GlowingCard>
+        
           </div>
         )}
         </section>
       )}
 
       <section style={{marginTop:32}}>
-        <GlowingCard borderRadius={PANEL_RADIUS}>
+        
           <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
             <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>Sessions</h2>
           
@@ -3297,11 +3296,11 @@ export default function App(){
             })()}
           </div>
           </div>
-        </GlowingCard>
+        
       </section>
 
       <section style={{marginTop:32}}>
-        <GlowingCard borderRadius={PANEL_RADIUS}>
+        
           <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
             <h2 style={{marginTop:0,marginBottom:20,fontSize:24,fontWeight:'600'}}>🎥 Video Evidence Review</h2>
           
@@ -3570,7 +3569,7 @@ export default function App(){
             </p>
           )}
           </div>
-        </GlowingCard>
+        
       </section>
 
       <section style={{marginTop:24}}>
