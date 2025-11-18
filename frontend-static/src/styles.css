@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --bg: #000000;
+  --bg: #010409;
   --text: #f1f5f9;
-  --panel-bg: #000000; /* box backgrounds: black */
+  --panel-bg: rgba(0, 0, 0, 0.55); /* semi-transparent so beams show through */
   --panel-text: #cbd5e1;
   --muted: #94a3b8;
   --accent: #3b82f6;
   --button-bg: var(--accent);
   --button-text: #ffffff;
-  --input-bg: #000000; /* inputs black */
-  --input-border: #ffffff; /* outlines white */
-  --card-border: #ffffff; /* card outline white */
+  --input-bg: rgba(0, 0, 0, 0.55);
+  --input-border: rgba(255, 255, 255, 0.45);
+  --card-border: rgba(255, 255, 255, 0.45);
   --glow: 0 0 18px rgba(255,255,255,0.12);
   --glow-strong: 0 0 28px rgba(255,255,255,0.18);
   --glow-color: rgba(255,255,255,0.12);
   --glow-color-40: rgba(255,255,255,0.4);
-  --panel-alt-bg: #030303;
+  --panel-alt-bg: rgba(0, 0, 0, 0.35);
 }
 
 .mrs-saint-delafield-regular {
@@ -44,11 +44,11 @@
   /* Swap only UI surfaces (backgrounds, panels, inputs, borders).
      Do NOT change text color variables so existing vibrant text remains intact. */
   --bg: #ffffff; /* page background becomes white */
-  --panel-bg: #000000; /* panels become black */
+  --panel-bg: rgba(0, 0, 0, 0.7);
   --button-bg: #000000;
-  --input-bg: #000000;
-  --input-border: #ffffff;
-  --card-border: #ffffff;
+  --input-bg: rgba(0, 0, 0, 0.7);
+  --input-border: rgba(0, 0, 0, 0.75);
+  --card-border: rgba(0, 0, 0, 0.75);
   --glow: 0 0 18px rgba(255,255,255,0.12);
 }
 

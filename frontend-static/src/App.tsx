@@ -44,10 +44,11 @@ const gradeBadgeSizing = {
   lg: { fontSize: 16, padding: '6px 16px' }
 } as const;
 
-const BLACK_PANEL_BG = '#000';
-const BLACK_PANEL_BORDER_COLOR = '#ffffff';
+const BLACK_PANEL_BG = 'rgba(0, 0, 0, 0.55)';
+const BLACK_PANEL_BORDER_COLOR = 'rgba(255, 255, 255, 0.45)';
 const BLACK_PANEL_BORDER = `1px solid ${BLACK_PANEL_BORDER_COLOR}`;
-const BLACK_ROW_BG = '#050505';
+const BLACK_ROW_BG = 'rgba(0, 0, 0, 0.35)';
+const BLACK_HOVER_BG = 'rgba(0, 0, 0, 0.65)';
 const PANEL_RADIUS = 10;
 
 const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'md' | 'lg' }) => {
@@ -887,6 +888,7 @@ export default function App(){
   const [isAuthenticated, setIsAuthenticated] = useState(validateAuth());
   const [user, setUser] = useState<api.User | null>(api.getUser());
   const [showLoginScreen, setShowLoginScreen] = useState(false); // Don't show login modal by default
+  const [backgroundEnabled, setBackgroundEnabled] = useState(false);
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
@@ -1882,7 +1884,7 @@ export default function App(){
 
   return (
     <div style={{fontFamily:'"Red Hat Text", sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
-      <BackgroundBeams />
+      {backgroundEnabled && <BackgroundBeams />}
       
       {/* Toast Notification */}
       {toast && (
@@ -1931,7 +1933,26 @@ export default function App(){
             ⭐ GitHub Repository (please give it a star!)
           </a>
         </div>
-        <div style={{display:'flex',gap:12,alignItems:'center'}}>
+        <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
+          <button
+            type="button"
+            aria-pressed={backgroundEnabled}
+            onClick={() => setBackgroundEnabled(prev => !prev)}
+            style={{
+              padding:'8px 16px',
+              backgroundColor: backgroundEnabled ? 'rgba(59,130,246,0.18)' : '#1e293b',
+              color:'#bfdbfe',
+              border:'1px solid rgba(148,163,184,0.6)',
+              borderRadius:999,
+              fontWeight:600,
+              textTransform:'uppercase',
+              letterSpacing:0.5,
+              transition:'background-color 0.2s ease, color 0.2s ease',
+              minWidth:160
+            }}
+          >
+            {backgroundEnabled ? 'Hide Background' : 'Show Background'}
+          </button>
           {isAuthenticated && user && (
             <>
               <span style={{color:'#94a3b8'}}>
@@ -3206,7 +3227,7 @@ export default function App(){
                                 cursor:'pointer',
                                 transition:'all 0.2s'
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d0d0d'}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BLACK_HOVER_BG}
                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BLACK_ROW_BG}
                             >
                               <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
@@ -3771,7 +3792,7 @@ export default function App(){
                         transition:'background-color 0.2s',
                         backgroundColor: BLACK_ROW_BG
                       }}
-                      onMouseEnter={(e) => canSelect && (e.currentTarget.style.backgroundColor = '#0d0d0d')}
+                      onMouseEnter={(e) => canSelect && (e.currentTarget.style.backgroundColor = BLACK_HOVER_BG)}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BLACK_ROW_BG)}
                     >
                       <div style={{fontSize:14,fontWeight:'500'}}>{c.name}</div>
