@@ -72,6 +72,13 @@ const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'm
   );
 };
 
+const SessionColorIndicator = ({ color, count }: { color: string; count: number }) => (
+  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color }}>
+    <span style={{ display: 'inline-block', width: 12, height: 8, borderRadius: 2, backgroundColor: color }} />
+    {count}
+  </span>
+);
+
 const guideSectionCardStyle: React.CSSProperties = {
   marginTop: 16,
   padding: '16px',
@@ -5275,12 +5282,18 @@ export default function App(){
                             </div>
                           </div>
                           <div style={{display:'flex',gap:16,flexWrap:'wrap',marginTop:12,fontSize:14}}>
-                            {session.green > 0 && <span style={{color:'#10b981'}}>🟢 {session.green}</span>}
-                            {session.blue > 0 && <span style={{color:'#3b82f6'}}>� {session.blue}</span>}
-                            {session.yellow > 0 && <span style={{color:'#eab308'}}>� {session.yellow}</span>}
-                            {session.orange > 0 && <span style={{color:'#f97316'}}>� {session.orange}</span>}
-                            {session.red > 0 && <span style={{color:'#ef4444'}}>� {session.red}</span>}
-                            {session.black > 0 && <span style={{color:'#d1d5db'}}>⚫ {session.black}</span>}
+                            {[
+                              { key: 'green', count: session.green, color: COLOR_SWATCHES.green },
+                              { key: 'blue', count: session.blue, color: COLOR_SWATCHES.blue },
+                              { key: 'yellow', count: session.yellow, color: COLOR_SWATCHES.yellow },
+                              { key: 'orange', count: session.orange, color: COLOR_SWATCHES.orange },
+                              { key: 'red', count: session.red, color: COLOR_SWATCHES.red },
+                              { key: 'black', count: session.black, color: COLOR_SWATCHES.black }
+                            ]
+                              .filter(({ count }) => count > 0)
+                              .map(({ key, count, color }) => (
+                                <SessionColorIndicator key={key} color={color} count={count} />
+                              ))}
                           </div>
                         </div>
                       ))}
