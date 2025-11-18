@@ -21,6 +21,24 @@
   --panel-alt-bg: #030303;
 }
 
+.mrs-saint-delafield-regular {
+  font-family: "Mrs Saint Delafield", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.dm-serif-text {
+  font-family: "DM Serif Text", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.italianno {
+  font-family: "Italianno", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
 /* Black & White theme (reversed monochrome) */
 [data-theme="bw"] {
   /* Swap only UI surfaces (backgrounds, panels, inputs, borders).
@@ -39,7 +57,7 @@ body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "Red Hat Text", sans-serif;
 }
 
 button {
@@ -51,6 +69,7 @@ button {
   cursor: pointer;
   font-size: 14px;
   margin-right: 8px;
+  font-family: "Red Hat Text", sans-serif;
 }
 
 button:hover {
@@ -64,6 +83,7 @@ input, select {
   border-radius: 6px;
   color: var(--panel-text);
   font-size: 14px;
+  font-family: "Red Hat Text", sans-serif;
   margin-top: 4px;
   width: 100%;
   box-sizing: border-box;

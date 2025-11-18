@@ -24,9 +24,9 @@ interface GlowingCardProps {
 
 export const GlowingCard = ({
   children,
-  blur = 42,
-  borderWidth = 8,
-  spread = 720,
+  blur = 60,
+  borderWidth = 12,
+  spread = 920,
   glow = true,
   disabled = false,
   proximity = 200,
@@ -55,14 +55,27 @@ export const GlowingCard = ({
     }
   }, [touchDevice, disabled]);
 
+  const moveGlowPosition = (clientX: number, clientY: number) => {
+    if (!divRef.current) return;
+
+    const rect = divRef.current.getBoundingClientRect();
+    setPosition({ x: clientX - rect.left, y: clientY - rect.top });
+  };
+
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!divRef.current || disabled) return;
 
-    const div = divRef.current;
-    const rect = div.getBoundingClientRect();
+    moveGlowPosition(e.clientX, e.clientY);
 
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setOpacity(1);
+  };
 
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!divRef.current || disabled) return;
+    const touch = e.touches[0] ?? e.changedTouches[0];
+    if (!touch) return;
+
+    moveGlowPosition(touch.clientX, touch.clientY);
     setOpacity(1);
   };
 
@@ -71,12 +84,37 @@ export const GlowingCard = ({
     setOpacity(touchDevice ? 0.65 : 0);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    handleTouchMove(e);
+  };
+
+  const handleTouchEnd = () => {
+    handlePointerLeave();
+  };
+
+  const handleTouchCancel = () => {
+    handlePointerLeave();
+  };
+
+  const mobileIdleOpacity = 0.65;
+  const glowActive = glow && !disabled;
+  const baseOpacity = touchDevice ? mobileIdleOpacity : 0.12;
+  const effectiveOpacity = glowActive ? Math.max(opacity, baseOpacity) : 0;
+  const highlightColor = "rgba(255, 255, 255, 0.96)";
+  const accentColor = "rgba(59, 130, 246, 0.6)";
+  const borderTint = "rgba(16, 185, 129, 0.75)";
+  const shadowColor = `rgba(59, 130, 246, ${Math.min(0.85, effectiveOpacity)})`;
+
   return (
     <div
       ref={divRef}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       className={cn("relative", className)}
       style={{ borderRadius: radiusValue }}
     >
@@ -85,23 +123,26 @@ export const GlowingCard = ({
         <div
           className="pointer-events-none absolute -inset-1 rounded-lg transition-opacity duration-300"
           style={{
-            opacity: opacity,
-            background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.45) 45%, transparent 75%)`,
+            opacity: effectiveOpacity,
+            background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, ${highlightColor}, ${accentColor} 45%, transparent 78%)`,
             filter: `blur(${blur}px)`,
+            boxShadow: effectiveOpacity ? `0 0 ${spread / 2}px ${shadowColor}` : undefined,
             borderRadius: radiusValue,
+            mixBlendMode: "screen",
           }}
         />
         {/* Bright border effect */}
         <div
           className="pointer-events-none absolute -inset-px rounded-lg transition-opacity duration-300"
           style={{
-            opacity: opacity,
+            opacity: effectiveOpacity,
             border: `${borderWidth}px solid transparent`,
-            background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.6) 55%, transparent 82%) border-box`,
+            background: `radial-gradient(${spread}px circle at ${position.x}px ${position.y}px, ${highlightColor}, ${borderTint} 55%, transparent 82%) border-box`,
             WebkitMask: 'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)',
             WebkitMaskComposite: 'xor',
             maskComposite: 'exclude',
             borderRadius: radiusValue,
+            boxShadow: effectiveOpacity ? `0 0 ${borderWidth * 3}px ${shadowColor}` : undefined,
           }}
         />
       </>

@@ -367,7 +367,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div style={{
-      fontFamily:'Inter, Arial, sans-serif'
+      fontFamily:'"Red Hat Text", sans-serif'
     }}>
       <div style={{
         backgroundColor:'#1e293b',
@@ -377,7 +377,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         width:400,
         maxWidth:'90%'
       }}>
-        <h1 style={{marginTop:0,marginBottom:24,textAlign:'center'}}>BoulderingELO</h1>
+          <h1 className="mrs-saint-delafield-regular" style={{marginTop:0,marginBottom:24,textAlign:'center'}}>
+            <span className="italianno" style={{marginRight: 4}}>Bouldering</span>
+            <span className="dm-serif-text">ELO</span>
+          </h1>
         
         <div style={{display:'flex',gap:8,marginBottom:24}}>
           <button
@@ -1878,7 +1881,7 @@ export default function App(){
   }
 
   return (
-    <div style={{fontFamily:'Inter, Arial, sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
+    <div style={{fontFamily:'"Red Hat Text", sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
       <BackgroundBeams />
       
       {/* Toast Notification */}
@@ -1905,7 +1908,10 @@ export default function App(){
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <div style={{display:'flex',flexDirection:'column'}}>
-            <h1 style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>BoulderingELO</h1>
+            <h1 className="mrs-saint-delafield-regular" style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>
+              <span className="italianno" style={{marginRight: 6}}>Bouldering</span>
+              <span className="dm-serif-text">ELO</span>
+            </h1>
             <div style={{fontSize:12,color:'#94a3b8',fontWeight:600,marginTop:4}}>UMass Ascend</div>
           </div>
           <a 
