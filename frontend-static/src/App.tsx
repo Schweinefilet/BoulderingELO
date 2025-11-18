@@ -2560,11 +2560,23 @@ export default function App(){
 
           <div style={{marginBottom:16}}>
             <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Date</label>
-            <input 
-              type="date" 
-              value={date} 
+            <input
+              type="date"
+              value={date}
               onChange={e=>setDate(e.target.value)}
-              style={{width:'100%',padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
+              style={{
+                width:'100%',
+                maxWidth:'100%',
+                minWidth:0,
+                boxSizing:'border-box',
+                display:'block',
+                padding:'10px 12px',
+                borderRadius:6,
+                border:BLACK_PANEL_BORDER,
+                backgroundColor:BLACK_ROW_BG,
+                color:'white',
+                fontSize:14
+              }}
             />
           </div>
 
@@ -5760,6 +5772,10 @@ export default function App(){
                                 onChange={(e) => setEditSessionDate(e.target.value)}
                                 style={{
                                   width:'100%',
+                                  maxWidth:'100%',
+                                  minWidth:0,
+                                  boxSizing:'border-box',
+                                  display:'block',
                                   padding:'8px 12px',
                                   backgroundColor:'#0f172a',
                                   border:'1px solid #475569',
