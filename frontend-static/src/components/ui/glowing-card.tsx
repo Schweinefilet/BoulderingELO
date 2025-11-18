@@ -39,6 +39,9 @@ export const GlowingCard = ({
   const [opacity, setOpacity] = useState(0);
   const [touchDevice, setTouchDevice] = useState(false);
   const radiusValue = typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius;
+  const mobileIdleOpacity = 0.65;
+  const desktopIdleOpacity = 0.35;
+  const getBaseOpacity = () => (touchDevice ? mobileIdleOpacity : desktopIdleOpacity);
 
   useEffect(() => {
     setTouchDevice(isTouchDevice());
@@ -50,8 +53,8 @@ export const GlowingCard = ({
     // Default the glow to the center so touch users see it immediately
     const rect = divRef.current.getBoundingClientRect();
     setPosition({ x: rect.width / 2, y: rect.height / 2 });
-    if (!disabled && touchDevice) {
-      setOpacity(0.8);
+    if (!disabled) {
+      setOpacity(getBaseOpacity());
     }
   }, [touchDevice, disabled]);
 
@@ -81,7 +84,7 @@ export const GlowingCard = ({
 
   const handlePointerLeave = () => {
     if (disabled) return;
-    setOpacity(touchDevice ? 0.65 : 0);
+    setOpacity(getBaseOpacity());
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -96,9 +99,8 @@ export const GlowingCard = ({
     handlePointerLeave();
   };
 
-  const mobileIdleOpacity = 0.65;
   const glowActive = glow && !disabled;
-  const baseOpacity = touchDevice ? mobileIdleOpacity : 0.12;
+  const baseOpacity = getBaseOpacity();
   const effectiveOpacity = glowActive ? Math.max(opacity, baseOpacity) : 0;
   const highlightColor = "rgba(255, 255, 255, 0.96)";
   const accentColor = "rgba(59, 130, 246, 0.6)";

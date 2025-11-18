@@ -62,9 +62,10 @@ export const BackgroundBeams = React.memo(
     return (
       <div
         className={cn(
-          "pointer-events-none fixed inset-0 z-0 flex h-full w-full items-center justify-center overflow-hidden [mask-repeat:no-repeat] [mask-size:40px]",
+          "pointer-events-none fixed top-0 bottom-0 left-[calc(-33.333%)] z-0 flex h-full w-[133.333%] items-center justify-center overflow-hidden [mask-repeat:no-repeat] [mask-size:40px]",
           className,
         )}
+        style={{ transform: "translate3d(0, -11px, 0)" }}
       >
         <svg
           className="pointer-events-none absolute z-0 h-full w-full"
