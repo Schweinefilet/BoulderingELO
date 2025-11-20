@@ -1107,6 +1107,51 @@ export default function App(){
     loadWallSectionImages();
   }, []);
 
+  // Ensure the dropdown carousel index always points to a valid image
+  useEffect(() => {
+    setCurrentImageIndex(prev => {
+      const images = wallSectionImages[dropdownWall] || [];
+      if (images.length === 0) {
+        return 0;
+      }
+      const normalizedIndex = Math.min(prev, images.length - 1);
+      return normalizedIndex < 0 ? 0 : normalizedIndex;
+    });
+  }, [dropdownWall, wallSectionImages]);
+
+  // Keep manual mode carousel indexes in sync with available images
+  useEffect(() => {
+    setManualModeImageIndexes(prev => {
+      let changed = false;
+      const next: Record<string, number> = {};
+
+      Object.entries(wallSectionImages).forEach(([section, images]) => {
+        if (!images || images.length === 0) {
+          return;
+        }
+
+        const prevIndex = prev[section] ?? 0;
+        const normalizedIndex = Math.min(Math.max(prevIndex, 0), images.length - 1);
+        next[section] = normalizedIndex;
+
+        if (normalizedIndex !== prevIndex) {
+          changed = true;
+        }
+      });
+
+      const prevKeys = Object.keys(prev).filter(section => (wallSectionImages[section] || []).length > 0);
+      const nextKeys = Object.keys(next);
+      if (
+        prevKeys.length !== nextKeys.length ||
+        prevKeys.some(key => !nextKeys.includes(key))
+      ) {
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [wallSectionImages]);
+
   // Load data on mount
   useEffect(() => {
     loadData();
@@ -2747,7 +2792,13 @@ export default function App(){
 
               <div style={{backgroundColor:BLACK_PANEL_BG,padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:BLACK_PANEL_BORDER,overflowX:'auto'}}>
                 <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
+                <table style={{width:'100%',minWidth:520,borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
+                  <colgroup>
+                    <col style={{width:'25%'}} />
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                      <col key={idx} style={{width:'12.5%'}} />
+                    ))}
+                  </colgroup>
                   <thead>
                     <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
                       <th style={{textAlign:'left',padding:'8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
