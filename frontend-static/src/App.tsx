@@ -1806,7 +1806,12 @@ export default function App(){
     setWallCounts({...wallCounts, [wall]: {...currentWallCounts, [color]: cappedValue}});
   }
   
-  function addClimb() {
+  async function addClimb() {
+    if (!selectedClimber) {
+      alert('Please select a climber first.');
+      return;
+    }
+
     // Require video evidence for red or black
     if ((dropdownColor === 'red' || dropdownColor === 'black') && !videoUrl.trim()) {
       alert('Video evidence required for red and black climbs!');
@@ -1846,35 +1851,50 @@ export default function App(){
       return;
     }
     
-    setWallCounts({
-      ...wallCounts, 
+    const newWallCounts = {
+      ...wallCounts,
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current + 1}
-    });
-    
+    };
+
+    setWallCounts(newWallCounts);
+
     // Track last edited cell for highlighting
     setLastEditedCell({wall: dropdownWall, color: dropdownColor});
     setTimeout(() => setLastEditedCell(null), 2000); // Clear highlight after 2 seconds
-    
-    // Show success toast
-    setToast({message: `✅ Added 1 ${dropdownColor} climb to ${formatWallSectionName(dropdownWall)}!`, type: 'success'});
-    setTimeout(() => setToast(null), 3000);
-    
+
+    let updatedPendingVideos = pendingVideos;
+    let updatedSessionNotes = sessionNotes;
+
     // Track video for submission after session is created
     if (videoUrl.trim()) {
-      setPendingVideos([...pendingVideos, {
+      updatedPendingVideos = [...pendingVideos, {
         videoUrl: videoUrl.trim(),
         color: dropdownColor,
         wall: dropdownWall
-      }]);
+      }];
       const videoNote = `${dropdownColor} on ${dropdownWall}: ${videoUrl}`;
-      setSessionNotes(sessionNotes ? `${sessionNotes}\n${videoNote}` : videoNote);
+      updatedSessionNotes = sessionNotes ? `${sessionNotes}\n${videoNote}` : videoNote;
+      setPendingVideos(updatedPendingVideos);
+      setSessionNotes(updatedSessionNotes);
       setVideoUrl('');
+    }
+
+    const submitted = await submit(newWallCounts, updatedPendingVideos, updatedSessionNotes);
+
+    if (submitted) {
+      setToast({message: `✅ Added 1 ${dropdownColor} climb to ${formatWallSectionName(dropdownWall)}!`, type: 'success'});
+      setTimeout(() => setToast(null), 3000);
     }
   }
 
-  function subtractClimb() {
+  async function subtractClimb() {
+    if (!selectedClimber) {
+      alert('Please select a climber first.');
+      return;
+    }
+
     const current = wallCounts[dropdownWall]?.[dropdownColor];
-    
+
     // Check if wallCounts doesn't have this section
     if (current === undefined) {
       const availableSections = Object.keys(wallCounts);
@@ -1891,30 +1911,45 @@ export default function App(){
       return;
     }
     
-    setWallCounts({
-      ...wallCounts, 
+    const newWallCounts = {
+      ...wallCounts,
       [dropdownWall]: {...wallCounts[dropdownWall], [dropdownColor]: current - 1}
-    });
-    
+    };
+
+    setWallCounts(newWallCounts);
+
     // Track last edited cell for highlighting
     setLastEditedCell({wall: dropdownWall, color: dropdownColor});
     setTimeout(() => setLastEditedCell(null), 2000); // Clear highlight after 2 seconds
-    
-    // Show success toast
-    setToast({message: `➖ Removed 1 ${dropdownColor} climb from ${formatWallSectionName(dropdownWall)}`, type: 'success'});
-    setTimeout(() => setToast(null), 3000);
+
+    const submitted = await submit(newWallCounts);
+
+    if (submitted) {
+      setToast({message: `➖ Removed 1 ${dropdownColor} climb from ${formatWallSectionName(dropdownWall)}`, type: 'success'});
+      setTimeout(() => setToast(null), 3000);
+    }
   }
 
-  async function submit(){ 
-    if(!selectedClimber) return;
+  async function submit(
+    customWallCounts?: WallCounts,
+    customPendingVideos = pendingVideos,
+    customSessionNotes = sessionNotes
+  ) {
+    if (!selectedClimber) {
+      alert('Please select a climber first.');
+      return false;
+    }
+
+    const countsToUse = customWallCounts || wallCounts;
+
     setLoading(true);
     setError(null);
     try {
       // Exclude red/black climbs that have pending videos from the score
       // They will be added when admin approves the video
-      const adjustedWallCounts = JSON.parse(JSON.stringify(wallCounts)); // Deep copy
-      
-      pendingVideos.forEach(video => {
+      const adjustedWallCounts = JSON.parse(JSON.stringify(countsToUse)); // Deep copy
+
+      customPendingVideos.forEach(video => {
         if (video.color === 'red' || video.color === 'black') {
           const wall = video.wall as 'overhang' | 'midWall' | 'sideWall';
           const color = video.color as 'red' | 'black';
@@ -1923,35 +1958,37 @@ export default function App(){
           }
         }
       });
-      
+
       const session = await api.addSession({
         climberId: selectedClimber,
         date,
         wallCounts: adjustedWallCounts, // Submit WITHOUT pending red/black climbs
-        notes: sessionNotes
+        notes: customSessionNotes
       });
-      
+
       // Submit all pending videos with the session ID
-      if (pendingVideos.length > 0 && session.id) {
+      if (customPendingVideos.length > 0 && session.id) {
         await Promise.all(
-          pendingVideos.map(video => 
+          customPendingVideos.map(video =>
             api.submitVideo(session.id, video.videoUrl, video.color, video.wall)
           )
         );
       }
-      
+
       const [loadedSessions, loadedLeaderboard] = await Promise.all([
         api.getSessions(),
         api.getLeaderboard()
       ]);
       setSessions(loadedSessions);
-      setLeaderboard(loadedLeaderboard); 
-      setWallCounts(initializeWallCounts()); 
+      setLeaderboard(loadedLeaderboard);
+      setWallCounts(initializeWallCounts());
       setSessionNotes('');
       setVideoUrl('');
       setPendingVideos([]);
+      return true;
     } catch (err: any) {
       setError(err.message || 'Failed to submit session');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -2239,8 +2276,7 @@ export default function App(){
                     '1. Navigate to New Session.',
                     '2. Select wall section (reference available).',
                     '3. Select route color.',
-                    '4. Add or subtract route.',
-                    '5. Add session once done.'
+                    '4. Add or subtract route.'
                   ].map((step) => (
                     <div key={step} style={{padding:'14px 16px',backgroundColor:BLACK_ROW_BG,borderRadius:8,border:BLACK_PANEL_BORDER,color:'#cbd5e1'}}>
                       <h5 style={{margin:0,fontSize:15,color:'#93c5fd'}}>{step}</h5>
@@ -2548,7 +2584,7 @@ export default function App(){
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
                   >
-                    Show All ({leaderboard.length} players)
+                    Show All ({leaderboard.length} climbers)
                   </button>
                 </div>
               )}
@@ -3134,27 +3170,6 @@ export default function App(){
             </div>
           )}
 
-          <div style={{marginTop:16}}>
-            <button
-              onClick={submit}
-              style={{
-                width:'100%',
-                padding:'14px 18px',
-                backgroundColor:'#3b82f6',
-                color:'white',
-                border:'none',
-                borderRadius:8,
-                fontSize:18,
-                fontWeight:'600',
-                cursor:'pointer',
-                transition:'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-            >
-              Add Session
-            </button>
-          </div>
             </div>
           
         </div>
