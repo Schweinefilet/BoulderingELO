@@ -1677,8 +1677,10 @@ export default function App(){
   const [resetResult, setResetResult] = useState<{ message: string; changed: any[]; auditId?: string } | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
   const [recalculateScoresLoading, setRecalculateScoresLoading] = useState(false);
+  const [profileSessionsExpanded, setViewingProfileSessionsExpanded] = useState(false);
 
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isMobileCompact = typeof window !== 'undefined' && window.innerWidth <= 430;
 
   // Build responsive image sources to prefer AVIF/WEBP at ~1200px with fallback
   const buildImageSources = (path: string) => {
@@ -2673,8 +2675,14 @@ export default function App(){
               )}
 
               <div style={{backgroundColor:BLACK_PANEL_BG,padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:BLACK_PANEL_BORDER,overflowX:'auto'}}>
-                <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Current Progress</h4>
-                <table style={{width:'100%',minWidth:520,borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
+                <h4 style={{marginTop:0,marginBottom:12,fontSize:isMobileCompact ? 14 : 16,fontWeight:'600'}}>Current Progress</h4>
+                <table style={{
+                  width:'100%',
+                  minWidth: isMobileCompact ? undefined : 520,
+                  borderCollapse:'collapse',
+                  fontSize:isMobileCompact ? 11 : 12,
+                  tableLayout:'fixed'
+                }}>
                   <colgroup>
                     <col style={{width:'25%'}} />
                     {Array.from({ length: 6 }).map((_, idx) => (
@@ -2683,13 +2691,13 @@ export default function App(){
                   </colgroup>
                   <thead>
                     <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
-                      <th style={{textAlign:'left',padding:'8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
-                      <th style={{textAlign:'center',padding:'8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
-                      <th style={{textAlign:'center',padding:'8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
-                      <th style={{textAlign:'center',padding:'8px 6px',color:'#eab308',fontWeight:'600',width:'12.5%'}}>Yellow</th>
-                      <th style={{textAlign:'center',padding:'8px 6px',color:'#f97316',fontWeight:'600',width:'12.5%'}}>Orange</th>
-                      <th style={{textAlign:'center',padding:'8px 6px',color:'#ef4444',fontWeight:'600',width:'12.5%'}}>Red</th>
-                      <th style={{textAlign:'center',padding:'8px 6px',color:'#d1d5db',fontWeight:'600',width:'12.5%'}}>Black</th>
+                      <th style={{textAlign:'left',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
+                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
+                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
+                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#eab308',fontWeight:'600',width:'12.5%'}}>Yellow</th>
+                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#f97316',fontWeight:'600',width:'12.5%'}}>Orange</th>
+                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#ef4444',fontWeight:'600',width:'12.5%'}}>Red</th>
+                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#d1d5db',fontWeight:'600',width:'12.5%'}}>Black</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2705,12 +2713,12 @@ export default function App(){
                       return (
                         <tr key={section} style={{borderBottom:BLACK_PANEL_BORDER, backgroundColor: rowBackground}}>
                           <td style={{
-                            padding:'8px 6px',
+                            padding: isMobileCompact ? '6px 4px' : '8px 6px',
                             transition: 'all 0.2s'
                           }}>
                             <div style={{
                               display: 'inline-block',
-                              padding: '4px 8px',
+                              padding: isMobileCompact ? '3px 6px' : '4px 8px',
                               borderRadius: 6,
                               color:'#cbd5e1',
                               fontWeight:'500',
@@ -2729,7 +2737,7 @@ export default function App(){
                             return (
                               <td key={color} style={{
                                 textAlign:'center',
-                                padding:'8px 6px',
+                                padding: isMobileCompact ? '6px 4px' : '8px 6px',
                                 fontWeight:'600',
                                 transition: 'all 0.3s',
                                 position: 'relative' as const
@@ -5422,10 +5430,20 @@ export default function App(){
 
                 {/* Session History */}
                 <div>
-                  <h3 style={{marginTop:0, marginBottom:16, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RECENT SESSIONS</h3>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                    <h3 style={{marginTop:0, marginBottom:16, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RECENT SESSIONS</h3>
+                    {profileSessions.length > 5 && (
+                      <button
+                        onClick={() => setViewingProfileSessionsExpanded(prev => !prev)}
+                        style={{padding:'6px 12px',backgroundColor:'#1e293b',color:'#94a3b8',border:'1px solid #475569',borderRadius:6,fontSize:12,cursor:'pointer'}}
+                      >
+                        {profileSessionsExpanded ? 'Show 5' : 'See All'}
+                      </button>
+                    )}
+                  </div>
                   {profileSessions.length > 0 ? (
                     <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                      {profileSessions.slice(0, 5).map((session:any) => (
+                      {(profileSessionsExpanded ? profileSessions : profileSessions.slice(0, 5)).map((session:any) => (
                         <div 
                           key={session.id}
                           style={{
