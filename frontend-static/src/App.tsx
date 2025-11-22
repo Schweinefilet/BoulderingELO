@@ -7,6 +7,8 @@ import { API_URL } from './lib/api'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
+import { AuroraBackground } from './components/ui/aurora-background'
+import { GlowingEffect } from './components/ui/glowing-effect'
 import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
@@ -26,7 +28,9 @@ const CLIMB_CATEGORY_COLUMNS: Array<{ key: keyof Counts; label: string; color: s
   { key: 'black', label: 'BLACK', color: COLOR_SWATCHES.black },
   { key: 'red', label: 'RED', color: COLOR_SWATCHES.red },
   { key: 'orange', label: 'ORANGE', color: COLOR_SWATCHES.orange },
-  { key: 'yellow', label: 'YELLOW', color: COLOR_SWATCHES.yellow }
+  { key: 'yellow', label: 'YELLOW', color: COLOR_SWATCHES.yellow },
+  { key: 'blue', label: 'BLUE', color: COLOR_SWATCHES.blue },
+  { key: 'green', label: 'GREEN', color: COLOR_SWATCHES.green }
 ];
 
 const EMPTY_COUNTS: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
@@ -70,7 +74,7 @@ const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'm
       {grade}
     </span>
   );
-};
+}
 
 const SessionColorIndicator = ({ color, count }: { color: string; count: number }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color }}>
@@ -1674,6 +1678,18 @@ export default function App(){
   const [resetLoading, setResetLoading] = useState(false);
   const [recalculateScoresLoading, setRecalculateScoresLoading] = useState(false);
 
+  // Build responsive image sources to prefer AVIF/WEBP at ~1200px with fallback
+  const buildImageSources = (path: string) => {
+    const url = path.startsWith('http') ? path : `${API_URL}${path}`;
+    const sep = url.includes('?') ? '&' : '?';
+    const sized = `${url}${sep}w=1200`;
+    return {
+      avif: `${sized}&format=avif`,
+      webp: `${sized}&format=webp`,
+      fallback: sized
+    };
+  };
+
   async function resetWallSectionAdmin(section: string) {
     if (!confirm(`Reset all climbs in section "${section}" to 0 for all sessions? This will keep the section but set all counts to zero.`)) {
       return;
@@ -2186,8 +2202,8 @@ export default function App(){
       {!isAuthenticated && !loading && (
         
           <div style={{backgroundColor:'#1e293b',padding:24,borderRadius:8,marginBottom:20,border:'2px solid #3b82f6'}}>
-            <h2 style={{marginTop:0,color:'#3b82f6'}}>Welcome to BoulderingELO</h2>
-            <p>Track your climbing progress with our weighted scoring system. View stats below or login to add your sessions!</p>
+            <h2 style={{marginTop:0,color:'#3b82f6'}}>Welcome to my website ‎:) ‎</h2>
+            <p>Create an account or log in to start logging climbs and appear on the leaderboard.</p>
           </div>
         
       )}
@@ -2220,49 +2236,52 @@ export default function App(){
       )}
       
       
-        <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, marginBottom:20, border: BLACK_PANEL_BORDER}}>
-          {/* Notification center (admin can post messages) */}
-          <div style={{marginBottom:16}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-              <div style={{fontSize:16,fontWeight:700,color:'#fbbf24'}}>Notifications</div>
-              {api.isAdmin() && (
-                <div style={{fontSize:12,color:'#94a3b8'}}>Admin editable</div>
-              )}
-            </div>
-            <div style={{backgroundColor: BLACK_ROW_BG, borderRadius:8, padding:12, border: BLACK_PANEL_BORDER}}>
-              {notifLoading ? (
-                <div style={{color:'#94a3b8'}}>Loading notifications...</div>
-              ) : (
-                <div>
-                  {notifications.length === 0 ? (
-                    <div style={{color:'#94a3b8'}}>No notifications</div>
-                  ) : (
-                    <div style={{color:'#cbd5e1',whiteSpace:'pre-wrap'}}>{notifications[0].message}</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {api.isAdmin() && (
-              <div style={{marginTop:8,display:'flex',gap:8}}>
-                <textarea value={newNotificationText} onChange={e => setNewNotificationText(e.target.value)} placeholder="Type notification message..." style={{flex:1,minHeight:48,padding:8,backgroundColor:BLACK_PANEL_BG,color:'white',border:BLACK_PANEL_BORDER,borderRadius:6}} />
-                <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                  <button onClick={async () => {
-                    if (!newNotificationText.trim()) return alert('Enter a message');
-                    try {
-                      setNotifLoading(true);
-                      await api.setAdminNotification(newNotificationText.trim());
-                      const res = await api.getAdminNotifications();
-                      setNotifications(res.notifications || []);
-                      setNewNotificationText('');
-                    } catch (err: any) {
-                      alert('Failed to save notification: ' + (err.message || err));
-                    } finally { setNotifLoading(false); }
-                  }} style={{padding:'8px 12px',backgroundColor:'#3b82f6',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}>Save</button>
-                  <button onClick={() => setNewNotificationText('')} style={{padding:'8px 12px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}>Clear</button>
-                </div>
+        <div style={{position:'relative', marginBottom:20}}>
+          <GlowingEffect variant="white" glow blur={18} spread={36} borderWidth={1} disabled={false} />
+          <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, border: BLACK_PANEL_BORDER, position:'relative'}}>
+            {/* Notification center (admin can post messages) */}
+            <div style={{marginBottom:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                <div style={{fontSize:16,fontWeight:700,color:'#fbbf24'}}>Notifications</div>
+                {api.isAdmin() && (
+                  <div style={{fontSize:12,color:'#94a3b8'}}>Admin editable</div>
+                )}
               </div>
-            )}
+              <div style={{backgroundColor: BLACK_ROW_BG, borderRadius:8, padding:12, border: BLACK_PANEL_BORDER}}>
+                {notifLoading ? (
+                  <div style={{color:'#94a3b8'}}>Loading notifications...</div>
+                ) : (
+                  <div>
+                    {notifications.length === 0 ? (
+                      <div style={{color:'#94a3b8'}}>No notifications</div>
+                    ) : (
+                      <div style={{color:'#cbd5e1',whiteSpace:'pre-wrap'}}>{notifications[0].message}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {api.isAdmin() && (
+                <div style={{marginTop:8,display:'flex',gap:8}}>
+                  <textarea value={newNotificationText} onChange={e => setNewNotificationText(e.target.value)} placeholder="Type notification message..." style={{flex:1,minHeight:48,padding:8,backgroundColor:BLACK_PANEL_BG,color:'white',border:BLACK_PANEL_BORDER,borderRadius:6}} />
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    <button onClick={async () => {
+                      if (!newNotificationText.trim()) return alert('Enter a message');
+                      try {
+                        setNotifLoading(true);
+                        await api.setAdminNotification(newNotificationText.trim());
+                        const res = await api.getAdminNotifications();
+                        setNotifications(res.notifications || []);
+                        setNewNotificationText('');
+                      } catch (err: any) {
+                        alert('Failed to save notification: ' + (err.message || err));
+                      } finally { setNotifLoading(false); }
+                    }} style={{padding:'8px 12px',backgroundColor:'#3b82f6',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}>Save</button>
+                    <button onClick={() => setNewNotificationText('')} style={{padding:'8px 12px',backgroundColor:'#475569',color:'white',border:'none',borderRadius:6,cursor:'pointer'}}>Clear</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       
@@ -2302,8 +2321,15 @@ export default function App(){
                   ))}
                 </div>
 
-                <div style={{padding:'12px 16px',backgroundColor:'rgba(52, 211, 153, 0.12)',border:'1px solid rgba(52, 211, 153, 0.35)',borderRadius:8,color:'#bbf7d0',fontSize:14,lineHeight:1.6}}>
-                  Black and Red climbs wait for review before they count toward the leaderboard.
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:12}}>
+                  <div style={{padding:'12px 14px',backgroundColor:BLACK_ROW_BG,borderRadius:8,border:BLACK_PANEL_BORDER,color:'#cbd5e1',lineHeight:1.5}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'#93c5fd',marginBottom:6}}>Notes</div>
+                    <ul style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:6,fontSize:13}}>
+                      <li>Tap on any climber&apos;s name on the leaderboard to see their full profile.</li>
+                      <li>Your stats save so you do not need to reenter all the climbs you have done.</li>
+                      <li>Black and Red climbs wait for review before they count toward the leaderboard.</li>
+                    </ul>
+                  </div>
                 </div>
 
                 <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:BLACK_ROW_BG,border:BLACK_PANEL_BORDER,borderRadius:8,padding:'12px 16px'}}>
@@ -2432,9 +2458,9 @@ export default function App(){
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
-          <div style={{flex:1,minWidth:Math.min(300, window.innerWidth - 40)}}>
+          <div style={{flex:1,minWidth:0,width:'100%'}}>
             
-              <div style={{padding:'clamp(12px, 4vw, 24px)', backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
+              <div style={{padding:'clamp(12px, 4vw, 24px)', backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER, overflow:'hidden'}}>
                 <h2 style={{marginTop:0,marginBottom:8,fontSize:'clamp(20px, 5vw, 24px)',fontWeight:'600'}}>New Session</h2>
                 <p style={{marginTop:0,marginBottom:20,fontSize:'clamp(12px, 3vw, 14px)',color:'#94a3b8'}}>
                   Track your climbing progress by adding completed routes
@@ -2540,7 +2566,7 @@ export default function App(){
                       justifyContent:'space-between',
                       alignItems:'center'
                     }}>
-                      <span>📍 Wall Section Reference</span>
+                      <span>📍 Wall Section Reference ({formatWallSectionName(dropdownWall)})</span>
                       {wallSectionImages[dropdownWall].length > 1 && (
                         <span style={{fontSize:11,color:'#94a3b8'}}>
                           {currentImageIndex + 1} / {wallSectionImages[dropdownWall].length}
@@ -2548,24 +2574,33 @@ export default function App(){
                       )}
                     </div>
                     <div style={{position:'relative'}}>
-                        <img
-                          src={
-                            wallSectionImages[dropdownWall][currentImageIndex].startsWith('http')
-                              ? wallSectionImages[dropdownWall][currentImageIndex]
-                              : `${API_URL}${wallSectionImages[dropdownWall][currentImageIndex]}`
-                          }
-                          alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`}
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          style={{
-                            width:'100%',
-                            height:'auto',
-                            maxHeight:250,
-                            objectFit:'contain',
-                            display:'block'
-                          }}
-                          onError={referenceImageErrorHandler}
-                        />
+                        <picture>
+                          <source
+                            type="image/avif"
+                            srcSet={buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).avif}
+                          />
+                          <source
+                            type="image/webp"
+                            srcSet={buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).webp}
+                          />
+                          <img
+                            src={buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).fallback}
+                            alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`}
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            width={1200}
+                            height={900}
+                            style={{
+                              width:'100%',
+                              height:'auto',
+                              maxWidth:1200,
+                              maxHeight:250,
+                              objectFit:'contain',
+                              display:'block'
+                            }}
+                            onError={referenceImageErrorHandler}
+                          />
+                        </picture>
                       {wallSectionImages[dropdownWall].length > 1 && (
                         <>
                           <button
@@ -2839,7 +2874,7 @@ export default function App(){
                           justifyContent:'space-between',
                           alignItems:'center'
                         }}>
-                          <span>📍 Wall Section Reference</span>
+                          <span>📍 Wall Section Reference ({displayName})</span>
                           {wallSectionImages[section].length > 1 && (
                             <span style={{fontSize:11,color:'#94a3b8'}}>
                               {(manualModeImageIndexes[section] || 0) + 1} / {wallSectionImages[section].length}
@@ -2847,24 +2882,33 @@ export default function App(){
                           )}
                         </div>
                         <div style={{position:'relative'}}>
-                          <img
-                            src={
-                              wallSectionImages[section][manualModeImageIndexes[section] || 0].startsWith('http')
-                                ? wallSectionImages[section][manualModeImageIndexes[section] || 0]
-                                : `${API_URL}${wallSectionImages[section][manualModeImageIndexes[section] || 0]}`
-                            }
-                            alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`}
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            style={{
-                              width:'100%',
-                              height:'auto',
-                              maxHeight:250,
-                              objectFit:'contain',
-                              display:'block'
-                            }}
-                            onError={referenceImageErrorHandler}
-                          />
+                          <picture>
+                            <source
+                              type="image/avif"
+                              srcSet={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).avif}
+                            />
+                            <source
+                              type="image/webp"
+                              srcSet={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).webp}
+                            />
+                            <img
+                              src={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).fallback}
+                              alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              width={1200}
+                              height={900}
+                              style={{
+                                width:'100%',
+                                height:'auto',
+                                maxWidth:1200,
+                                maxHeight:250,
+                                objectFit:'contain',
+                                display:'block'
+                              }}
+                              onError={referenceImageErrorHandler}
+                            />
+                          </picture>
                           {wallSectionImages[section].length > 1 && (
                             <>
                               <button
@@ -2979,9 +3023,8 @@ export default function App(){
             </div>
           )}
 
-            </div>
-          
         </div>
+      </div>
 
         {/* Live Preview - only show in manual mode since dropdown mode has it integrated */}
         {manualMode && (
@@ -3032,7 +3075,7 @@ export default function App(){
               {/* Header */}
               <div style={{
                 display:'grid',
-                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
+                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(9, minmax(60px, 1fr))',
                 columnGap:4,
                 padding:'12px 8px',
                 backgroundColor:'#000',
@@ -3096,7 +3139,7 @@ export default function App(){
                       key={i}
                       style={{
                         display:'grid',
-                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
+                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(9, minmax(60px, 1fr))',
                         columnGap:4,
                         padding:'10px 8px',
                         backgroundColor: defaultRowColor,
@@ -5033,28 +5076,30 @@ export default function App(){
           }}>
             <div 
               onClick={(e) => e.stopPropagation()}
-              style={{
-              backgroundColor:'#000',
-              borderRadius:12,
-              border:'2px solid #fff',
-              maxWidth:1000,
-              width:'100%',
-              maxHeight:'90vh',
-              overflowY:'auto',
-              scrollbarWidth:'none',
-              msOverflowStyle:'none',
-              color:'#f5f5f5'
-            }}
               className="hide-scrollbar"
+              style={{
+                backgroundColor:'#000',
+                borderRadius:12,
+                border:'2px solid #fff',
+                maxWidth:1000,
+                width:'100%',
+                maxHeight:'90vh',
+                overflowY:'auto',
+                scrollbarWidth:'none',
+                msOverflowStyle:'none',
+                color:'#f5f5f5',
+                position:'relative'
+              }}
             >
               {/* Header Section */}
-              <div style={{
-                backgroundColor: '#000',
-                padding: 'clamp(16px, 4vw, 32px)',
-                borderTopLeftRadius: 10,
-                borderTopRightRadius: 10,
-                position: 'relative'
-              }}>
+              <AuroraBackground showRadialGradient style={{borderTopLeftRadius:10,borderTopRightRadius:10}}>
+                <div style={{
+                  backgroundColor: '#000',
+                  padding: 'clamp(16px, 4vw, 32px)',
+                  borderTopLeftRadius: 10,
+                  borderTopRightRadius: 10,
+                  position: 'relative'
+                }}>
                 <button
                   onClick={() => setViewingProfile(null)}
                   style={{
@@ -5175,6 +5220,8 @@ export default function App(){
               </div>
 
               {/* Stats Section */}
+              </AuroraBackground>
+              
               <div style={{padding:32}}>
                 {/* Current Climbs Section */}
                 <div style={{
@@ -6386,21 +6433,30 @@ export default function App(){
                                   overflow:'hidden',
                                   border:'1px solid #475569'
                                 }}>
-                                  <img
-                                    src={
-                                      imagePath.startsWith('http')
-                                        ? imagePath
-                                        : `${API_URL}${imagePath}`
-                                    }
-                                    alt={`${section} reference ${idx + 1}`}
-                                    referrerPolicy="no-referrer"
-                                    style={{
-                                      width:'100%',
-                                      height:'100%',
-                                      objectFit:'cover'
-                                    }}
-                                    onError={adminReferenceImageErrorHandler}
-                                  />
+                                  <picture>
+                                    <source
+                                      type="image/avif"
+                                      srcSet={buildImageSources(imagePath).avif}
+                                    />
+                                    <source
+                                      type="image/webp"
+                                      srcSet={buildImageSources(imagePath).webp}
+                                    />
+                                    <img
+                                      src={buildImageSources(imagePath).fallback}
+                                      alt={`${section} reference ${idx + 1}`}
+                                      referrerPolicy="no-referrer"
+                                      loading="lazy"
+                                      width={1200}
+                                      height={1200}
+                                      style={{
+                                        width:'100%',
+                                        height:'100%',
+                                        objectFit:'cover'
+                                      }}
+                                      onError={adminReferenceImageErrorHandler}
+                                    />
+                                  </picture>
                                   <button
                                     onClick={async () => {
                                       if (confirm(`Delete image ${idx + 1}?`)) {
@@ -6742,5 +6798,5 @@ export default function App(){
         </div>
       )}
     </div>
-  )
+  );
 }

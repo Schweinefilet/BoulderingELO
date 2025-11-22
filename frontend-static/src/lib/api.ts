@@ -1,5 +1,6 @@
 // API client for backend communication
-export const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+// Default to the hosted API so local dev/test hits the live backend unless overridden
+export const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://bouldering-elo-api.onrender.com';
 
 const TOKEN_KEY = 'boulderingelo_token';
 const USER_KEY = 'boulderingelo_user';

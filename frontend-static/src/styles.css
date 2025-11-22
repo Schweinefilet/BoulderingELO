@@ -110,6 +110,48 @@ h1, h2, h3, h4 {
   color: var(--text);
 }
 
+.aurora-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.aurora-layer {
+  position: absolute;
+  inset: -20%;
+  background-image:
+    radial-gradient(120% 80% at 10% 10%, rgba(255, 255, 255, 0.22), transparent 40%),
+    radial-gradient(120% 80% at 80% 0%, rgba(255, 255, 255, 0.18), transparent 35%),
+    linear-gradient(120deg, rgba(96, 165, 250, 0.18), rgba(56, 189, 248, 0.18), rgba(244, 114, 182, 0.18));
+  background-size: 200% 200%;
+  animation: aurora 60s linear infinite;
+  filter: blur(50px);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.aurora-radial {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15), transparent 35%),
+    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.12), transparent 30%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+@keyframes aurora {
+  from {
+    background-position:
+      50% 50%,
+      50% 50%;
+  }
+  to {
+    background-position:
+      350% 50%,
+      350% 50%;
+  }
+}
+
 /* Hide scrollbar for modals */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;

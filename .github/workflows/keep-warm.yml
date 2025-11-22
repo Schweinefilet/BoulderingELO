@@ -2,8 +2,8 @@ name: Keep API Warm
 
 on:
   schedule:
-    # run every 10 minutes
-    - cron: '*/10 * * * *'
+    # run every 5 minutes (UTC); script below checks NY open hours
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,26 @@ jobs:
       - name: Ping API root and leaderboard to keep Render instance warm
         run: |
           set -e
-          echo "Pinging BoulderingELO API to keep it warm..."
+          export TZ="America/New_York"
+          day_of_week=$(date +%u)  # 1=Mon ... 7=Sun
+          hour=$(date +%H)         # 00-23
+
+          is_weekday=$([[ $day_of_week -ge 1 && $day_of_week -le 5 ]] && echo true || echo false)
+          is_weekend=$([[ $day_of_week -ge 6 ]] && echo true || echo false)
+
+          open=false
+          if $is_weekday && [[ $hour -ge 12 && $hour -le 21 ]]; then
+            open=true
+          elif $is_weekend && [[ $hour -ge 12 && $hour -le 19 ]]; then
+            open=true
+          fi
+
+          if [ "$open" != "true" ]; then
+            echo "Skipping keep-warm ping: outside gym hours (America/New_York). Day=$day_of_week Hour=$hour"
+            exit 0
+          fi
+
+          echo "Within gym hours (America/New_York). Pinging BoulderingELO API to keep it warm..."
           # Ping /health (fast) and a common API endpoint
           curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/health || true
           curl -fsS -o /dev/null -w "%{http_code}\n" https://bouldering-elo-api.onrender.com/api/leaderboard || true
