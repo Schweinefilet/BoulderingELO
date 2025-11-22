@@ -2509,7 +2509,7 @@ export default function App(){
               value={date}
               onChange={e=>setDate(e.target.value)}
               style={{
-                width: isIOS ? 'calc(100% - 10px)' : '100%',
+                width: isIOS ? 'calc(100% - 20px)' : '100%',
                 maxWidth:'100%',
                 minWidth:0,
                 boxSizing:'border-box',
