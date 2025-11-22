@@ -968,14 +968,14 @@ export default function App(){
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string|null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
-  
+
   // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [showScoringFormula, setShowScoringFormula] = useState(false)
   const [showUserGuide, setShowUserGuide] = useState<boolean>(() => {
     try {
       const v = localStorage.getItem('showUserGuide');
-      if (v === null) return false;
+      if (v === null) return true;
       return v === '1' || v === 'true';
     } catch (e) {
       return false;
@@ -1235,7 +1235,7 @@ export default function App(){
     if (user && climbers.length > 0 && isGoogleConfigured) {
       const currentClimber = climbers.find(c => c.id === user.climberId);
       const hasGoogleLinked = currentClimber?.google_id;
-      
+
       // Show reminder if Google is not linked and we haven't shown it this session
       const reminderShown = sessionStorage.getItem('googleLinkReminderShown');
       if (!hasGoogleLinked && !reminderShown) {
@@ -1247,7 +1247,25 @@ export default function App(){
       }
     }
   }, [user, climbers, isGoogleConfigured]);
-  
+
+  const handleExportCSV = useCallback(async () => {
+    try {
+      const csv = await store.exportCSV(
+        climbers.length ? climbers : undefined,
+        sessions.length ? sessions : undefined
+      );
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bouldering.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Failed to export CSV: ' + (err?.message || err));
+    }
+  }, [climbers, sessions]);
+
   const API_BOOT_MAX_ATTEMPTS = 5;
 
   async function loadData() {
@@ -2270,13 +2288,13 @@ export default function App(){
               />
             </div>
             {showUserGuide && (
-              <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
-                  {[
-                    '1. Navigate to New Session.',
-                    '2. Select wall section (reference available).',
-                    '3. Select route color.',
-                    '4. Add or subtract route.'
+                  <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>
+                      {[
+                    '1. Scroll down to “New Session”.',
+                    '2. Select wall section + route color (reference available).',
+                    '3. Add new climbs that you have done on that wall section.',
+                    '4. See how you compare with others on the leaderboard!'
                   ].map((step) => (
                     <div key={step} style={{padding:'14px 16px',backgroundColor:BLACK_ROW_BG,borderRadius:8,border:BLACK_PANEL_BORDER,color:'#cbd5e1'}}>
                       <h5 style={{margin:0,fontSize:15,color:'#93c5fd'}}>{step}</h5>
@@ -2290,9 +2308,7 @@ export default function App(){
 
                 <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center',backgroundColor:BLACK_ROW_BG,border:BLACK_PANEL_BORDER,borderRadius:8,padding:'12px 16px'}}>
                   <button
-                    onClick={() => {
-                      const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url);
-                    }}
+                    onClick={handleExportCSV}
                     style={{padding:'8px 12px',backgroundColor:BLACK_PANEL_BG,color:'#93c5fd',border:BLACK_PANEL_BORDER,borderRadius:6,cursor:'pointer'}}
                   >
                     Export CSV
@@ -2413,213 +2429,6 @@ export default function App(){
 
         </div>
       
-      
-      {/* Leaderboard - visible to everyone */}
-      <section style={{marginBottom:20}}>
-        
-          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius:PANEL_RADIUS, border:BLACK_PANEL_BORDER}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Leaderboard</h2>
-            </div>
-            <div style={{
-              backgroundColor:'#000',
-              borderRadius:PANEL_RADIUS,
-              overflow:'auto',
-              WebkitOverflowScrolling:'touch' as any,
-              border:BLACK_PANEL_BORDER,
-              position:'relative'
-            }}>
-              {/* Header */}
-              <div style={{
-                display:'grid',
-                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
-                columnGap:4,
-                padding:'12px 8px',
-                backgroundColor:'#000',
-                fontWeight:'600',
-                fontSize:12,
-                color:'#94a3b8',
-                borderBottom:'1px solid rgba(148, 163, 184, 0.2)',
-                alignItems:'center',
-                minWidth:'fit-content'
-              }}>
-                <div style={{textAlign:'center',position:'sticky',left:0,backgroundColor:'#000',zIndex:2}}></div>
-                <div style={{display:'flex', alignItems:'center', gap:8}}>
-                  <span style={{width:16,display:'inline-block'}}></span>
-                  <span></span>
-                </div>
-                <div style={{textAlign:'center',fontSize:11}}>Score</div>
-                <div style={{textAlign:'center',fontSize:11}}>Grade</div>
-                <div style={{textAlign:'center',fontSize:11}}>Sessions</div>
-                {CLIMB_CATEGORY_COLUMNS.map(column => (
-                  <div
-                    key={column.key}
-                    style={{
-                      textAlign:'center',
-                      fontSize:11,
-                      fontWeight:'600',
-                      color:column.color
-                    }}
-                  >
-                    {column.label}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Rows */}
-                {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 10)).map((e:any,i:number)=> {
-                const climber = climbers.find((c:any) => c.name === e.climber);
-                const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
-                // Exclude adjustment (proxy) sessions from play count
-                const playCount = climberSessions.filter((s:any) => s.status !== 'adjustment').length;
-
-                // Get latest non-adjustment session for climb counts and leaderboard totals
-                const nonAdjSessions = climberSessions.filter((s:any) => s.status !== 'adjustment')
-                  .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                const latestNonAdjSession = nonAdjSessions.length > 0 ? nonAdjSessions[0] : null;
-                // Fallback to any latest session if no non-adjustment sessions exist
-                const latestAnySession = climberSessions.length > 0
-                  ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-                  : null;
-                const latestCounts = normalizeSessionCounts(latestNonAdjSession || latestAnySession, expiredSections);
-                // Use the non-adjustment score for leaderboard totals when available
-                const displayScore = latestNonAdjSession ? latestNonAdjSession.score : (e.total_score || 0);
-
-                const resolvedScore = typeof displayScore === 'number'
-                  ? displayScore
-                  : (typeof e.total_score === 'number' ? e.total_score : Number(e.total_score) || 0);
-                const rowGrade = getGradeForScore(resolvedScore);
-
-                const defaultRowColor = i % 2 === 0 ? '#000' : '#050505';
-                return (
-                    <div
-                      key={i}
-                      style={{
-                        display:'grid',
-                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
-                        columnGap:4,
-                        padding:'10px 8px',
-                        backgroundColor: defaultRowColor,
-                        ['--row-bg-color' as any]: defaultRowColor,
-                        borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid rgba(148, 163, 184, 0.2)' : 'none',
-                        alignItems:'center',
-                        transition:'background-color 0.2s',
-                        cursor:'pointer',
-                        minWidth:'fit-content'
-                      }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = '#111';
-                      e.currentTarget.style.setProperty('--row-bg-color', '#111');
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = defaultRowColor;
-                      e.currentTarget.style.setProperty('--row-bg-color', defaultRowColor);
-                    }}
-                    onClick={() => climber && setViewingProfile(climber.id)}
-                  >
-                    {/* Rank */}
-                    <div style={{
-                      textAlign:'center',
-                      fontWeight:'700',
-                      fontSize:14,
-                      color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b',
-                      position:'sticky',
-                      left:0,
-                      backgroundColor:'var(--row-bg-color)' as any,
-                      zIndex:1
-                    }}>
-                      #{i + 1}
-                    </div>
-                    
-                    {/* Player with flag */}
-                    <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0,overflow:'hidden'}}>
-                      <FlagEmoji countryCode={climber?.country} size={16} />
-                      <span style={{fontWeight:'600',fontSize:14,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
-                    </div>
-                    
-                    {/* Ranked Score (use latest non-adjustment session when available) */}
-                    <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#3b82f6'}}>
-                      {resolvedScore.toFixed(2)}
-                    </div>
-
-                    {/* Grade */}
-                    <div style={{display:'flex',justifyContent:'center'}}>
-                      <GradeBadge grade={rowGrade} size="sm" />
-                    </div>
-
-                    {/* Sessions */}
-                    <div style={{textAlign:'center',color:'#94a3b8',fontSize:13}}>{playCount}</div>
-                    
-                    {/* Climbs by color */}
-                    {CLIMB_CATEGORY_COLUMNS.map(column => (
-                      <div key={column.key} style={{textAlign:'center'}}>
-                        <div style={{fontSize:14,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-              
-              {/* Show All button */}
-              {!showAllLeaderboard && leaderboard.length > 10 && (
-                <div style={{
-                  padding:16,
-                  textAlign:'center',
-                  backgroundColor:'#000',
-                  borderTop:'1px solid rgba(148, 163, 184, 0.2)'
-                }}>
-                  <button
-                    onClick={() => setShowAllLeaderboard(true)}
-                    style={{
-                      padding:'10px 32px',
-                      backgroundColor:'#3b82f6',
-                      color:'white',
-                      border:'none',
-                      borderRadius:8,
-                      fontSize:14,
-                      fontWeight:'600',
-                      cursor:'pointer',
-                      transition:'background-color 0.2s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
-                  >
-                    Show All ({leaderboard.length} climbers)
-                  </button>
-                </div>
-              )}
-              
-              {showAllLeaderboard && leaderboard.length > 10 && (
-                <div style={{
-                  padding:16,
-                  textAlign:'center',
-                  backgroundColor:'#000',
-                  borderTop:'1px solid rgba(148, 163, 184, 0.2)'
-                }}>
-                  <button
-                    onClick={() => setShowAllLeaderboard(false)}
-                    style={{
-                      padding:'10px 32px',
-                      backgroundColor:'#475569',
-                      color:'white',
-                      border:'none',
-                      borderRadius:8,
-                      fontSize:14,
-                      fontWeight:'600',
-                      cursor:'pointer',
-                      transition:'background-color 0.2s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#64748b'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#475569'}
-                  >
-                    Show Less
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        
-      </section>
       
       {isAuthenticated && (
         <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
@@ -3204,6 +3013,214 @@ export default function App(){
         )}
         </section>
       )}
+
+      {/* Leaderboard - visible to everyone */}
+      <section style={{marginBottom:20}}>
+        
+          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius:PANEL_RADIUS, border:BLACK_PANEL_BORDER}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h2 style={{margin:0,fontSize:28,fontWeight:'700'}}>Leaderboard</h2>
+            </div>
+            <div style={{
+              backgroundColor:'#000',
+              borderRadius:PANEL_RADIUS,
+              overflow:'auto',
+              WebkitOverflowScrolling:'touch' as any,
+              border:BLACK_PANEL_BORDER,
+              position:'relative'
+            }}>
+              {/* Header */}
+              <div style={{
+                display:'grid',
+                gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
+                columnGap:4,
+                padding:'12px 8px',
+                backgroundColor:'#000',
+                fontWeight:'600',
+                fontSize:12,
+                color:'#94a3b8',
+                borderBottom:'1px solid rgba(148, 163, 184, 0.2)',
+                alignItems:'center',
+                minWidth:'fit-content'
+              }}>
+                <div style={{textAlign:'center',position:'sticky',left:0,backgroundColor:'#000',zIndex:2}}></div>
+                <div style={{display:'flex', alignItems:'center', gap:8}}>
+                  <span style={{width:16,display:'inline-block'}}></span>
+                  <span></span>
+                </div>
+                <div style={{textAlign:'center',fontSize:11}}>Score</div>
+                <div style={{textAlign:'center',fontSize:11}}>Grade</div>
+                <div style={{textAlign:'center',fontSize:11}}>Sessions</div>
+                {CLIMB_CATEGORY_COLUMNS.map(column => (
+                  <div
+                    key={column.key}
+                    style={{
+                      textAlign:'center',
+                      fontSize:11,
+                      fontWeight:'600',
+                      color:column.color
+                    }}
+                  >
+                    {column.label}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Rows */}
+                {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 10)).map((e:any,i:number)=> {
+                const climber = climbers.find((c:any) => c.name === e.climber);
+                const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
+                // Exclude adjustment (proxy) sessions from play count
+                const playCount = climberSessions.filter((s:any) => s.status !== 'adjustment').length;
+
+                // Get latest non-adjustment session for climb counts and leaderboard totals
+                const nonAdjSessions = climberSessions.filter((s:any) => s.status !== 'adjustment')
+                  .sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const latestNonAdjSession = nonAdjSessions.length > 0 ? nonAdjSessions[0] : null;
+                // Fallback to any latest session if no non-adjustment sessions exist
+                const latestAnySession = climberSessions.length > 0
+                  ? climberSessions.sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+                  : null;
+                const latestCounts = normalizeSessionCounts(latestNonAdjSession || latestAnySession, expiredSections);
+                // Use the non-adjustment score for leaderboard totals when available
+                const displayScore = latestNonAdjSession ? latestNonAdjSession.score : (e.total_score || 0);
+
+                const resolvedScore = typeof displayScore === 'number'
+                  ? displayScore
+                  : (typeof e.total_score === 'number' ? e.total_score : Number(e.total_score) || 0);
+                const rowGrade = getGradeForScore(resolvedScore);
+
+                const defaultRowColor = i % 2 === 0 ? '#000' : '#050505';
+                return (
+                    <div
+                      key={i}
+                      style={{
+                        display:'grid',
+                        gridTemplateColumns:'50px minmax(120px, 2fr) repeat(7, minmax(60px, 1fr))',
+                        columnGap:4,
+                        padding:'10px 8px',
+                        backgroundColor: defaultRowColor,
+                        ['--row-bg-color' as any]: defaultRowColor,
+                        borderBottom: i < (showAllLeaderboard ? leaderboard.length - 1 : Math.min(9, leaderboard.length - 1)) ? '1px solid rgba(148, 163, 184, 0.2)' : 'none',
+                        alignItems:'center',
+                        transition:'background-color 0.2s',
+                        cursor:'pointer',
+                        minWidth:'fit-content'
+                      }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = '#111';
+                      e.currentTarget.style.setProperty('--row-bg-color', '#111');
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = defaultRowColor;
+                      e.currentTarget.style.setProperty('--row-bg-color', defaultRowColor);
+                    }}
+                    onClick={() => climber && setViewingProfile(climber.id)}
+                  >
+                    {/* Rank */}
+                    <div style={{
+                      textAlign:'center',
+                      fontWeight:'700',
+                      fontSize:14,
+                      color: i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#64748b',
+                      position:'sticky',
+                      left:0,
+                      backgroundColor:'var(--row-bg-color)' as any,
+                      zIndex:1
+                    }}>
+                      #{i + 1}
+                    </div>
+                    
+                    {/* Player with flag */}
+                    <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0,overflow:'hidden'}}>
+                      <FlagEmoji countryCode={climber?.country} size={16} />
+                      <span style={{fontWeight:'600',fontSize:14,color:'#e2e8f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{e.climber}</span>
+                    </div>
+                    
+                    {/* Ranked Score (use latest non-adjustment session when available) */}
+                    <div style={{textAlign:'center',fontWeight:'700',fontSize:14,color:'#3b82f6'}}>
+                      {resolvedScore.toFixed(2)}
+                    </div>
+
+                    {/* Grade */}
+                    <div style={{display:'flex',justifyContent:'center'}}>
+                      <GradeBadge grade={rowGrade} size="sm" />
+                    </div>
+
+                    {/* Sessions */}
+                    <div style={{textAlign:'center',color:'#94a3b8',fontSize:13}}>{playCount}</div>
+                    
+                    {/* Climbs by color */}
+                    {CLIMB_CATEGORY_COLUMNS.map(column => (
+                      <div key={column.key} style={{textAlign:'center'}}>
+                        <div style={{fontSize:14,color:column.color,fontWeight:'700'}}>{latestCounts[column.key] || 0}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+              
+              {/* Show All button */}
+              {!showAllLeaderboard && leaderboard.length > 10 && (
+                <div style={{
+                  padding:16,
+                  textAlign:'center',
+                  backgroundColor:'#000',
+                  borderTop:'1px solid rgba(148, 163, 184, 0.2)'
+                }}>
+                  <button
+                    onClick={() => setShowAllLeaderboard(true)}
+                    style={{
+                      padding:'10px 32px',
+                      backgroundColor:'#3b82f6',
+                      color:'white',
+                      border:'none',
+                      borderRadius:8,
+                      fontSize:14,
+                      fontWeight:'600',
+                      cursor:'pointer',
+                      transition:'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                  >
+                    Show All ({leaderboard.length} climbers)
+                  </button>
+                </div>
+              )}
+              
+              {showAllLeaderboard && leaderboard.length > 10 && (
+                <div style={{
+                  padding:16,
+                  textAlign:'center',
+                  backgroundColor:'#000',
+                  borderTop:'1px solid rgba(148, 163, 184, 0.2)'
+                }}>
+                  <button
+                    onClick={() => setShowAllLeaderboard(false)}
+                    style={{
+                      padding:'10px 32px',
+                      backgroundColor:'#475569',
+                      color:'white',
+                      border:'none',
+                      borderRadius:8,
+                      fontSize:14,
+                      fontWeight:'600',
+                      cursor:'pointer',
+                      transition:'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#64748b'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#475569'}
+                  >
+                    Show Less
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        
+      </section>
+      
 
       <section style={{marginTop:32}}>
         
@@ -4143,7 +4160,7 @@ export default function App(){
 
       <section style={{marginTop:24}}>
         <div>
-          <button onClick={()=>{ const csv = store.exportCSV(); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bouldering.csv'; a.click(); URL.revokeObjectURL(url); }}>Export CSV</button>
+          <button onClick={handleExportCSV}>Export CSV</button>
         </div>
       </section>
       
