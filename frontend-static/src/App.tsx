@@ -1678,6 +1678,8 @@ export default function App(){
   const [resetLoading, setResetLoading] = useState(false);
   const [recalculateScoresLoading, setRecalculateScoresLoading] = useState(false);
 
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   // Build responsive image sources to prefer AVIF/WEBP at ~1200px with fallback
   const buildImageSources = (path: string) => {
     const url = path.startsWith('http') ? path : `${API_URL}${path}`;
@@ -2507,7 +2509,7 @@ export default function App(){
               value={date}
               onChange={e=>setDate(e.target.value)}
               style={{
-                width:'100%',
+                width: isIOS ? 'calc(100% - 10px)' : '100%',
                 maxWidth:'100%',
                 minWidth:0,
                 boxSizing:'border-box',
