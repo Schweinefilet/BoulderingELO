@@ -268,12 +268,12 @@ export async function changePassword(req: AuthRequest, res: Response) {
 const GENERIC_RESET_MESSAGE = { message: 'If that email is registered, a password reset link has been sent.' };
 
 /**
- * Request a password reset token for local accounts
+ * Request a password reset token for an account
  */
 export async function forgotPassword(req: AuthRequest, res: Response) {
   try {
     // TODO: Add rate limiting middleware here (per IP and per email) when available in the project
-    const email = (req.body.email || '').toLowerCase();
+    const email = (req.body.email || '').trim().toLowerCase();
 
     if (!email) {
       return sendSuccess(res, GENERIC_RESET_MESSAGE);
@@ -281,7 +281,7 @@ export async function forgotPassword(req: AuthRequest, res: Response) {
 
     const climber = await db.getClimberByUsername(email);
 
-    if (climber && climber.password) {
+    if (climber) {
       const token = crypto.randomBytes(32).toString('base64url');
       const expiresAt = new Date(Date.now() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000);
 
@@ -289,11 +289,11 @@ export async function forgotPassword(req: AuthRequest, res: Response) {
       await db.createPasswordResetToken(climber.id!, token, expiresAt);
 
       const resetUrl = buildResetUrl(token);
-      await sendPasswordResetEmail(email, resetUrl, climber.name || climber.username);
+      await sendPasswordResetEmail(climber.username, resetUrl, climber.name || climber.username);
 
       console.info('Password reset requested', { climberId: climber.id, username: climber.username });
     } else {
-      console.info('Password reset requested for non-local account', { email });
+      console.info('Password reset requested for unknown account', { email });
     }
 
     return sendSuccess(res, GENERIC_RESET_MESSAGE);
