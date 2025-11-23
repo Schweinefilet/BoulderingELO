@@ -73,7 +73,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions to Rende
 ## Features
 
 - **Wall Section Tracking** - Separate counts for overhang, mid wall, and side wall
-- **Video Evidence** - Required for red/black climbs
+- **Video Evidence** - Required for black climbs
 - **Live Preview** - Real-time score calculation with marginal gains
 - **Leaderboard** - Latest session scores for all climbers
 - **Analytics** - Score trends, sends by color, and wall section breakdowns
@@ -89,7 +89,7 @@ This guide walks a typical user through the site: how to add climbers and sessio
    - **Add / select a climber:** Use the "Add climber" button or the climber dropdown to create or select the person you're recording for.
    - **Create a new session:** Click "New session" (or similar). Set the session date/time and optional `notes`.
    - **Record climbs by color & section:** For each color grade (green → black) enter the number of successful sends. You can break the counts down by wall sections (overhang / midWall / sideWall) if you want more detail — these are combined into the session total for scoring.
-   - **Attach video evidence (when required):** For the higher grades (red/black) the app may require video; use the upload control inside the session form to attach short clips. The frontend validates file size and type before upload.
+   - **Attach video evidence (when required):** Black climbs require a clip; use the upload control inside the session form to attach short clips. The frontend validates file size and type before upload.
    - **Live preview:** While you edit counts the score preview updates in real-time so you can see how each additional send affects the total.
    - **Save session:** Click "Save" (or "Submit session"). The session is stored in the backend and will appear on the leaderboard and in your session history.
 
@@ -97,7 +97,7 @@ This guide walks a typical user through the site: how to add climbers and sessio
    - **Counts by color:** Enter integer sends for each color. Leave zero for colors not climbed.
    - **Wall sections:** Optional breakdown that helps analytics but gets merged into the counts for scoring.
    - **Notes:** Any free-form text you want to keep with the session.
-   - **Video upload:** Required by default for the hardest grades; optional otherwise.
+   - **Video upload:** Required by default for black climbs; optional otherwise.
 
 - **Leaderboards & analytics:**
    - **Leaderboard:** Shows recent sessions (or aggregated top sessions) sorted by score. Use the date filters to restrict to a specific range.
