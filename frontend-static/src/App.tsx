@@ -2200,9 +2200,9 @@ export default function App(){
       return;
     }
 
-    // Require video evidence for red or black
-    if ((dropdownColor === 'red' || dropdownColor === 'black') && !videoUrl.trim()) {
-      alert('Video evidence required for red and black climbs!');
+    // Require video evidence for black climbs
+    if (dropdownColor === 'black' && !videoUrl.trim()) {
+      alert('Video evidence required for black climbs!');
       return;
     }
     
@@ -2333,14 +2333,14 @@ export default function App(){
     setLoading(true);
     setError(null);
     try {
-      // Exclude red/black climbs that have pending videos from the score
+      // Exclude black climbs that have pending videos from the score
       // They will be added when admin approves the video
       const adjustedWallCounts = JSON.parse(JSON.stringify(countsToUse)); // Deep copy
 
       customPendingVideos.forEach(video => {
-        if (video.color === 'red' || video.color === 'black') {
+        if (video.color === 'black') {
           const wall = video.wall as 'overhang' | 'midWall' | 'sideWall';
-          const color = video.color as 'red' | 'black';
+          const color = video.color as 'black';
           if (adjustedWallCounts[wall] && adjustedWallCounts[wall][color] > 0) {
             adjustedWallCounts[wall][color] -= 1;
           }
@@ -2350,7 +2350,7 @@ export default function App(){
       const session = await api.addSession({
         climberId: selectedClimber,
         date,
-        wallCounts: adjustedWallCounts, // Submit WITHOUT pending red/black climbs
+        wallCounts: adjustedWallCounts, // Submit WITHOUT pending black climbs
         notes: customSessionNotes
       });
 
@@ -2681,7 +2681,7 @@ export default function App(){
                     <ul style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:6,fontSize:13}}>
                       <li>Tap on any climber&apos;s name on the leaderboard to see their full profile.</li>
                       <li>Your stats save so you do not need to reenter all the climbs you have done.</li>
-                      <li>Black and Red climbs wait for review before they count toward the leaderboard.</li>
+                      <li>Black clears require video evidence.</li>
                     </ul>
                   </div>
                 </div>
@@ -3011,13 +3011,13 @@ export default function App(){
                   </div>
                 )}
               </div>
-              {(dropdownColor === 'red' || dropdownColor === 'black') && (
+              {dropdownColor === 'black' && (
                 <div style={{marginBottom:16,padding:16,backgroundColor:'#7f1d1d',borderRadius:6,border:'1px solid #991b1b'}}>
                   <label style={{display:'block',marginBottom:8,fontWeight:'bold',fontSize:14}}>⚠️ Video Evidence Required</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter video URL (required for red/black)" 
-                    value={videoUrl} 
+                  <input
+                    type="text"
+                    placeholder="Enter video URL (required for black)"
+                    value={videoUrl}
                     onChange={e=>setVideoUrl(e.target.value)}
                     style={{width:'100%',padding:'10px 12px',borderRadius:6,border:'1px solid #991b1b',backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                   />
