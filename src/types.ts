@@ -32,6 +32,17 @@ export type Climber = {
   bio?: string;
   instagram_handle?: string;
   hidden?: boolean;
+  password_changed_at?: Date;
+  created_at?: Date;
+};
+
+export type PasswordResetToken = {
+  id?: number;
+  climber_id: number;
+  token: string;
+  expires_at: Date;
+  used: boolean;
+  used_at?: Date;
   created_at?: Date;
 };
 

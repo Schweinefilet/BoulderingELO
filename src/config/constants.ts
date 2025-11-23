@@ -16,6 +16,10 @@ export const DEFAULT_SEED_PASSWORD = process.env.DEFAULT_SEED_PASSWORD || 'bould
 
 export const PORT = process.env.PORT || 3000;
 
+export const APP_BASE_URL = (process.env.APP_BASE_URL || process.env.FRONTEND_BASE_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+export const RESET_TOKEN_EXPIRY_MINUTES = Number(process.env.RESET_TOKEN_EXPIRY_MINUTES || '60');
+
 // Render's free tier kills services that don't start listening quickly. Allow
 // overriding the timeout used before we start the server without a DB.
 export const RENDER_BOOT_TIMEOUT_MS = Number(process.env.RENDER_BOOT_TIMEOUT_MS || '45000');

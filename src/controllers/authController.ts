@@ -1,11 +1,13 @@
 import { Response } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import * as db from '../db';
 import { AuthRequest } from '../middleware/auth';
-import { JWT_SECRET, GOOGLE_CLIENT_ID } from '../config/constants';
+import { JWT_SECRET, GOOGLE_CLIENT_ID, RESET_TOKEN_EXPIRY_MINUTES } from '../config/constants';
 import { sendSuccess, sendError, handleControllerError } from '../utils/response';
+import { buildResetUrl, sendPasswordResetEmail } from '../utils/email';
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -255,8 +257,106 @@ export async function changePassword(req: AuthRequest, res: Response) {
     
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.updateClimberPassword(climber.id!, hashedPassword);
-    
+    await db.invalidateResetTokensForUser(climber.id!);
+
     return sendSuccess(res, { message: 'Password updated successfully' });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+const GENERIC_RESET_MESSAGE = { message: 'If that email is registered, a password reset link has been sent.' };
+
+/**
+ * Request a password reset token for local accounts
+ */
+export async function forgotPassword(req: AuthRequest, res: Response) {
+  try {
+    // TODO: Add rate limiting middleware here (per IP and per email) when available in the project
+    const email = (req.body.email || '').toLowerCase();
+
+    if (!email) {
+      return sendSuccess(res, GENERIC_RESET_MESSAGE);
+    }
+
+    const climber = await db.getClimberByUsername(email);
+
+    if (climber && climber.password) {
+      const token = crypto.randomBytes(32).toString('base64url');
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000);
+
+      await db.invalidateResetTokensForUser(climber.id!);
+      await db.createPasswordResetToken(climber.id!, token, expiresAt);
+
+      const resetUrl = buildResetUrl(token);
+      await sendPasswordResetEmail(email, resetUrl, climber.name || climber.username);
+
+      console.info('Password reset requested', { climberId: climber.id, username: climber.username });
+    } else {
+      console.info('Password reset requested for non-local account', { email });
+    }
+
+    return sendSuccess(res, GENERIC_RESET_MESSAGE);
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Validate reset token for SPA flows
+ */
+export async function validateResetToken(req: AuthRequest, res: Response) {
+  try {
+    const token = (req.query.token || req.body.token || '') as string;
+
+    if (!token) {
+      return sendError(res, 'Invalid or expired token', 400);
+    }
+
+    const resetToken = await db.findPasswordResetToken(token);
+    if (!resetToken || resetToken.used || new Date(resetToken.expires_at) < new Date()) {
+      return sendError(res, 'Invalid or expired token', 400);
+    }
+
+    return sendSuccess(res, { valid: true });
+  } catch (err: any) {
+    return handleControllerError(res, err);
+  }
+}
+
+/**
+ * Complete password reset
+ */
+export async function resetPassword(req: AuthRequest, res: Response) {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return sendError(res, 'token and newPassword required', 400);
+    }
+
+    if (newPassword.length < 6) {
+      return sendError(res, 'New password must be at least 6 characters', 400);
+    }
+
+    const resetToken = await db.findPasswordResetToken(token);
+    if (!resetToken || resetToken.used || new Date(resetToken.expires_at) < new Date()) {
+      return sendError(res, 'Invalid or expired token', 400);
+    }
+
+    const climber = await db.getClimberById(resetToken.climber_id);
+    if (!climber || !climber.password) {
+      return sendError(res, 'Invalid or expired token', 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.updateClimberPassword(climber.id!, hashedPassword);
+    await db.markResetTokenUsed(token);
+    await db.invalidateResetTokensForUser(climber.id!);
+
+    console.info('Password reset completed', { climberId: climber.id, username: climber.username });
+
+    return sendSuccess(res, { message: 'Password reset successful' });
   } catch (err: any) {
     return handleControllerError(res, err);
   }

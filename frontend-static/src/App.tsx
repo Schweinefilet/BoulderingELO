@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google'
 import { computeWeeklyScore, marginalGain, ORDER, BASE, combineCounts, getGradeForScore, getGradeColor, GRADE_BOUNDS, type Counts, type WallCounts } from './lib/scoring'
 import * as store from './lib/storage'
@@ -252,6 +252,9 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authView, setAuthView] = useState<'auth' | 'forgot'>('auth');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
   
   // Google sign-up name confirmation state
   const [showGoogleNamePrompt, setShowGoogleNamePrompt] = useState(false);
@@ -363,7 +366,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       const result = await api.register(username, password, name);
       api.setToken(result.token);
@@ -371,6 +374,22 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       onLogin();
     } catch (err: any) {
       setError(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setForgotMessage('');
+
+    try {
+      const response = await api.requestPasswordReset(forgotEmail);
+      setForgotMessage(response.message || 'If that email is registered, a password reset link has been sent.');
+    } catch (err: any) {
+      setForgotMessage('If that email is registered, a password reset link has been sent.');
     } finally {
       setLoading(false);
     }
@@ -393,174 +412,269 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             <span className="dm-serif-text">ELO</span>
           </h1>
         
-        <div style={{display:'flex',gap:8,marginBottom:24}}>
-          <button
-            onClick={() => setMode('login')}
-            style={{
-              flex:1,
-              padding:8,
-              backgroundColor:mode === 'login' ? '#3b82f6' : '#475569',
-              color:'white',
-              border:'none',
-              borderRadius:6,
-              fontSize:14,
-              fontWeight:'600',
-              cursor:'pointer'
-            }}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setMode('register')}
-            style={{
-              flex:1,
-              padding:8,
-              backgroundColor:mode === 'register' ? '#3b82f6' : '#475569',
-              color:'white',
-              border:'none',
-              borderRadius:6,
-              fontSize:14,
-              fontWeight:'600',
-              cursor:'pointer'
-            }}
-          >
-            Register
-          </button>
-        </div>
-
-                              {/* (removed stray admin adjustment block that caused runtime error in Login modal) */}
-
-        <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
-          <div style={{marginBottom:16}}>
-            <label style={{display:'block',marginBottom:8,fontSize:14}}>Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              style={{
-                width:'100%',
-                padding:12,
-                borderRadius:6,
-                border:'1px solid #475569',
-                backgroundColor:'#0f172a',
-                color:'white',
-                fontSize:16
-              }}
-              placeholder="Enter username"
-              autoFocus
-            />
-          </div>
-          <div style={{marginBottom:16}}>
-            <label style={{display:'block',marginBottom:8,fontSize:14}}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={{
-                width:'100%',
-                padding:12,
-                borderRadius:6,
-                border:'1px solid #475569',
-                backgroundColor:'#0f172a',
-                color:'white',
-                fontSize:16
-              }}
-              placeholder="Enter password"
-            />
-          </div>
-          {mode === 'register' && (
-            <div style={{marginBottom:16}}>
-              <label style={{display:'block',marginBottom:8,fontSize:14}}>Full Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={{
-                  width:'100%',
-                  padding:12,
-                  borderRadius:6,
-                  border:'1px solid #475569',
-                  backgroundColor:'#0f172a',
-                  color:'white',
-                  fontSize:16
-                }}
-                placeholder="Enter your name"
-              />
-            </div>
-          )}
-          {error && (
-            <div style={{
-              backgroundColor:'#dc2626',
-              color:'white',
-              padding:12,
-              borderRadius:6,
-              marginBottom:16,
-              fontSize:14
-            }}>
-              {error}
-            </div>
-          )}
-          <button
-            type="submit"
-            disabled={loading || !username || !password || (mode === 'register' && !name)}
-            style={{
-              width:'100%',
-              padding:'12px 16px',
-              backgroundColor:loading || !username || !password || (mode === 'register' && !name) ? '#475569' : '#3b82f6',
-              color:'white',
-              border:'none',
-              borderRadius:8,
-              fontSize:16,
-              fontWeight:'600',
-              cursor:loading || !username || !password || (mode === 'register' && !name) ? 'not-allowed' : 'pointer',
-              transition:'background-color 0.2s'
-            }}
-          >
-            {loading ? (mode === 'login' ? 'Logging in...' : 'Creating account...') : (mode === 'login' ? 'Login' : 'Create Account')}
-          </button>
-        </form>
-
-        {isGoogleConfigured && (
+        {authView === 'auth' ? (
           <>
-            <div style={{
-              margin:'24px 0',
-              textAlign:'center',
-              position:'relative'
-            }}>
-              <div style={{
-                position:'absolute',
-                top:'50%',
-                left:0,
-                right:0,
-                height:'1px',
-                backgroundColor:'#475569'
-              }}></div>
-              <span style={{
-                position:'relative',
-                backgroundColor:'#1e293b',
-                padding:'0 16px',
-                fontSize:14,
-                color:'#94a3b8'
-              }}>OR</span>
+            <div style={{display:'flex',gap:8,marginBottom:24}}>
+              <button
+                onClick={() => { setMode('login'); setAuthView('auth'); }}
+                style={{
+                  flex:1,
+                  padding:8,
+                  backgroundColor:mode === 'login' ? '#3b82f6' : '#475569',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  fontSize:14,
+                  fontWeight:'600',
+                  cursor:'pointer'
+                }}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => { setMode('register'); setAuthView('auth'); }}
+                style={{
+                  flex:1,
+                  padding:8,
+                  backgroundColor:mode === 'register' ? '#3b82f6' : '#475569',
+                  color:'white',
+                  border:'none',
+                  borderRadius:6,
+                  fontSize:14,
+                  fontWeight:'600',
+                  cursor:'pointer'
+                }}
+              >
+                Register
+              </button>
             </div>
-            
-            <div style={{
-              display:'flex',
-              justifyContent:'center'
-            }}>
-              <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
-                <GoogleLogin
-                  onSuccess={handleGoogleLogin}
-                  onError={() => {
-                    setError(`Google ${mode === 'login' ? 'login' : 'sign up'} failed. Please try again.`);
+
+                                {/* (removed stray admin adjustment block that caused runtime error in Login modal) */}
+
+            <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontSize:14}}>Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:12,
+                    borderRadius:6,
+                    border:'1px solid #475569',
+                    backgroundColor:'#0f172a',
+                    color:'white',
+                    fontSize:16
                   }}
-                  theme="filled_blue"
-                  size="large"
-                  width="400"
-                  shape="pill"
-                  text={mode === 'login' ? 'signin_with' : 'signup_with'}
+                  placeholder="Enter username"
+                  autoFocus
                 />
               </div>
+              <div style={{marginBottom:8}}>
+                <label style={{display:'block',marginBottom:8,fontSize:14}}>Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:12,
+                    borderRadius:6,
+                    border:'1px solid #475569',
+                    backgroundColor:'#0f172a',
+                    color:'white',
+                    fontSize:16
+                  }}
+                  placeholder="Enter password"
+                />
+              </div>
+              {mode === 'login' && (
+                <div style={{textAlign:'right', marginBottom:16}}>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthView('forgot'); setForgotEmail(username); setForgotMessage(''); setError(''); }}
+                    style={{
+                      background:'none',
+                      border:'none',
+                      color:'#93c5fd',
+                      cursor:'pointer',
+                      fontSize:13,
+                      textDecoration:'underline'
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+              {mode === 'register' && (
+                <div style={{marginBottom:16}}>
+                  <label style={{display:'block',marginBottom:8,fontSize:14}}>Full Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                      backgroundColor:'#0f172a',
+                      color:'white',
+                      fontSize:16
+                    }}
+                    placeholder="Enter your name"
+                  />
+                </div>
+              )}
+              {error && (
+                <div style={{
+                  backgroundColor:'#dc2626',
+                  color:'white',
+                  padding:12,
+                  borderRadius:6,
+                  marginBottom:16,
+                  fontSize:14
+                }}>
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loading || !username || !password || (mode === 'register' && !name)}
+                style={{
+                  width:'100%',
+                  padding:'12px 16px',
+                  backgroundColor:loading || !username || !password || (mode === 'register' && !name) ? '#475569' : '#3b82f6',
+                  color:'white',
+                  border:'none',
+                  borderRadius:8,
+                  fontSize:16,
+                  fontWeight:'600',
+                  cursor:loading || !username || !password || (mode === 'register' && !name) ? 'not-allowed' : 'pointer',
+                  transition:'background-color 0.2s'
+                }}
+              >
+                {loading ? (mode === 'login' ? 'Logging in...' : 'Creating account...') : (mode === 'login' ? 'Login' : 'Create Account')}
+              </button>
+            </form>
+
+            {isGoogleConfigured && (
+              <>
+                <div style={{
+                  margin:'24px 0',
+                  textAlign:'center',
+                  position:'relative'
+                }}>
+                  <div style={{
+                    position:'absolute',
+                    top:'50%',
+                    left:0,
+                    right:0,
+                    height:'1px',
+                    backgroundColor:'#475569'
+                  }}></div>
+                  <span style={{
+                    position:'relative',
+                    backgroundColor:'#1e293b',
+                    padding:'0 16px',
+                    fontSize:14,
+                    color:'#94a3b8'
+                  }}>OR</span>
+                </div>
+
+                <div style={{
+                  display:'flex',
+                  justifyContent:'center'
+                }}>
+                  <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleLogin}
+                      onError={() => {
+                        setError(`Google ${mode === 'login' ? 'login' : 'sign up'} failed. Please try again.`);
+                      }}
+                      theme="filled_blue"
+                      size="large"
+                      width="400"
+                      shape="pill"
+                      text={mode === 'login' ? 'signin_with' : 'signup_with'}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <h3 style={{marginTop:0, marginBottom:12}}>Forgot Password</h3>
+            <p style={{color:'#cbd5e1', fontSize:14, marginBottom:16}}>
+              Enter the email or username you use to sign in. If it matches a local account, we will send reset instructions.
+            </p>
+            <form onSubmit={handleForgotPassword}>
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontSize:14}}>Email or Username</label>
+                <input
+                  type="text"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:12,
+                    borderRadius:6,
+                    border:'1px solid #475569',
+                    backgroundColor:'#0f172a',
+                    color:'white',
+                    fontSize:16
+                  }}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              {forgotMessage && (
+                <div style={{
+                  backgroundColor:'#0ea5e9',
+                  color:'white',
+                  padding:12,
+                  borderRadius:6,
+                  marginBottom:16,
+                  fontSize:14
+                }}>
+                  {forgotMessage}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loading || !forgotEmail}
+                style={{
+                  width:'100%',
+                  padding:'12px 16px',
+                  backgroundColor:loading || !forgotEmail ? '#475569' : '#3b82f6',
+                  color:'white',
+                  border:'none',
+                  borderRadius:8,
+                  fontSize:16,
+                  fontWeight:'600',
+                  cursor:loading || !forgotEmail ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? 'Sending reset link...' : 'Send reset link'}
+              </button>
+            </form>
+            <div style={{marginTop:16, textAlign:'center'}}>
+              <button
+                type="button"
+                onClick={() => { setAuthView('auth'); setForgotEmail(''); setForgotMessage(''); setError(''); }}
+                style={{
+                  background:'none',
+                  border:'none',
+                  color:'#93c5fd',
+                  cursor:'pointer',
+                  fontSize:14,
+                  textDecoration:'underline'
+                }}
+              >
+                Back to login
+              </button>
             </div>
           </>
         )}
@@ -718,6 +832,199 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ResetPasswordModal({ token, onClose, onReset }: { token: string | null; onClose: () => void; onReset?: () => void }) {
+  const [status, setStatus] = useState<'validating' | 'ready' | 'submitting'>('validating');
+  const [error, setError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function validate() {
+      if (!token) {
+        setError('Invalid or expired reset link');
+        setStatus('ready');
+        return;
+      }
+
+      setStatus('validating');
+      try {
+        await api.validateResetToken(token);
+        setError(null);
+        setStatus('ready');
+      } catch (err: any) {
+        setError(err.message || 'Invalid or expired reset link');
+        setStatus('ready');
+      }
+    }
+
+    validate();
+  }, [token]);
+
+  useEffect(() => {
+    if (successMessage && onReset) {
+      onReset();
+    }
+  }, [successMessage, onReset]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) {
+      setError('Invalid or expired reset link');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setStatus('submitting');
+    setError(null);
+
+    try {
+      const response = await api.resetPassword(token, newPassword);
+      setSuccessMessage(response.message || 'Password reset successful');
+    } catch (err: any) {
+      setError(err.message || 'Unable to reset password. Please request a new link.');
+    } finally {
+      setStatus('ready');
+    }
+  };
+
+  return (
+    <div style={{
+      backgroundColor:'#1e293b',
+      padding:24,
+      borderRadius:12,
+      border:'1px solid #334155',
+      width:420,
+      maxWidth:'100%'
+    }}>
+      <h2 style={{marginTop:0, marginBottom:12}}>Reset Password</h2>
+      {status === 'validating' && !error && (
+        <p style={{color:'#cbd5e1', fontSize:14}}>Validating your reset link...</p>
+      )}
+      {error && (
+        <div style={{
+          backgroundColor:'#dc2626',
+          color:'white',
+          padding:12,
+          borderRadius:8,
+          marginBottom:12,
+          fontSize:14
+        }}>
+          {error}
+        </div>
+      )}
+      {successMessage ? (
+        <div style={{
+          backgroundColor:'#0f766e',
+          color:'white',
+          padding:12,
+          borderRadius:8,
+          marginBottom:16,
+          fontSize:14
+        }}>
+          {successMessage}
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:600}}>New password</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              style={{
+                width:'100%',
+                padding:12,
+                borderRadius:6,
+                border:'1px solid #475569',
+                backgroundColor:'#0f172a',
+                color:'white'
+              }}
+              placeholder="Enter a new password"
+              disabled={status !== 'ready'}
+            />
+          </div>
+          <div style={{marginBottom:16}}>
+            <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:600}}>Confirm password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              style={{
+                width:'100%',
+                padding:12,
+                borderRadius:6,
+                border:'1px solid #475569',
+                backgroundColor:'#0f172a',
+                color:'white'
+              }}
+              placeholder="Re-enter your password"
+              disabled={status !== 'ready'}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={status !== 'ready'}
+            style={{
+              width:'100%',
+              padding:12,
+              backgroundColor: status !== 'ready' ? '#475569' : '#3b82f6',
+              color:'white',
+              border:'none',
+              borderRadius:8,
+              fontWeight:700,
+              cursor: status !== 'ready' ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {status === 'submitting' ? 'Updating password...' : 'Update password'}
+          </button>
+        </form>
+      )}
+      <div style={{marginTop:12, display:'flex', gap:8}}>
+        <button
+          onClick={onClose}
+          style={{
+            flex:1,
+            padding:10,
+            borderRadius:6,
+            backgroundColor:'#475569',
+            color:'white',
+            border:'none',
+            cursor:'pointer'
+          }}
+        >
+          Close
+        </button>
+        {successMessage && (
+          <button
+            onClick={() => { if (onReset) onReset(); onClose(); }}
+            style={{
+              flex:1,
+              padding:10,
+              borderRadius:6,
+              backgroundColor:'#16a34a',
+              color:'white',
+              border:'none',
+              cursor:'pointer'
+            }}
+          >
+            Go to login
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -898,6 +1205,11 @@ export default function App(){
   const [isAuthenticated, setIsAuthenticated] = useState(validateAuth());
   const [user, setUser] = useState<api.User | null>(api.getUser());
   const [showLoginScreen, setShowLoginScreen] = useState(false); // Don't show login modal by default
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [pendingGoogleLinkFocus, setPendingGoogleLinkFocus] = useState(false);
+  const [highlightGoogleLink, setHighlightGoogleLink] = useState(false);
+  const googleLinkSectionRef = useRef<HTMLDivElement | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
   const [climbers, setClimbers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
@@ -1073,9 +1385,19 @@ export default function App(){
     }, 0);
   };
 
-  useEffect(()=>{ 
+  useEffect(()=>{
     loadData();
   }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('token');
+    if (tokenFromUrl && (window.location.pathname.includes('reset-password') || params.has('token'))) {
+      setResetToken(tokenFromUrl);
+      setShowResetPasswordModal(true);
+      setShowLoginScreen(false);
+    }
+  }, []);
   
   // Reload wallTotals when page becomes visible (fixes mobile sync issues)
   // Load wallTotals from API on mount
@@ -1252,6 +1574,23 @@ export default function App(){
     }
   }, [user, climbers, isGoogleConfigured]);
 
+  useEffect(() => {
+    if (showSettings && pendingGoogleLinkFocus) {
+      setTimeout(() => {
+        googleLinkSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setHighlightGoogleLink(true);
+      }, 50);
+      setPendingGoogleLinkFocus(false);
+    }
+  }, [showSettings, pendingGoogleLinkFocus]);
+
+  useEffect(() => {
+    if (highlightGoogleLink) {
+      const timer = setTimeout(() => setHighlightGoogleLink(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightGoogleLink]);
+
   const handleExportCSV = useCallback(async () => {
     try {
       const csv = await store.exportCSV(
@@ -1382,6 +1721,17 @@ export default function App(){
     setIsAuthenticated(false);
     setUser(null);
     setShowLoginScreen(true);
+  }
+
+  function closeResetPasswordModal() {
+    setShowResetPasswordModal(false);
+    setResetToken(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    if (url.pathname.includes('reset-password')) {
+      url.pathname = '/';
+    }
+    window.history.replaceState({}, document.title, url.toString());
   }
 
   async function handlePasswordChange(e?: React.FormEvent) {
@@ -4608,13 +4958,18 @@ export default function App(){
                 if (hasGoogleLinked) return null;
                 
                 return (
-                  <div style={{
-                    backgroundColor:'#0f172a',
-                    padding:16,
-                    borderRadius:8,
-                    border:'1px solid #475569',
-                    marginTop:16
-                  }}>
+                  <div
+                    ref={googleLinkSectionRef}
+                    style={{
+                      backgroundColor:'#0f172a',
+                      padding:16,
+                      borderRadius:8,
+                      border:'1px solid #475569',
+                      marginTop:16,
+                      boxShadow: highlightGoogleLink ? '0 0 0 2px #3b82f6' : undefined,
+                      transition:'box-shadow 0.3s ease'
+                    }}
+                  >
                     <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600'}}>Link Google Account</h3>
                     {isGoogleConfigured ? (
                       <>
@@ -4842,6 +5197,7 @@ export default function App(){
                   <button
                     onClick={() => {
                       setShowGoogleLinkReminder(false);
+                      setPendingGoogleLinkFocus(true);
                       setShowSettings(true);
                     }}
                     style={{
@@ -6695,9 +7051,37 @@ export default function App(){
         </div>
       )}
 
+      {/* Reset Password Modal */}
+      {showResetPasswordModal && (
+        <div
+          onClick={closeResetPasswordModal}
+          style={{
+            position:'fixed',
+            top:0,
+            left:0,
+            right:0,
+            bottom:0,
+            backgroundColor:'rgba(0,0,0,0.8)',
+            display:'flex',
+            justifyContent:'center',
+            alignItems:'center',
+            zIndex:2001,
+            padding:20
+          }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{width:'100%', maxWidth:520}}>
+            <ResetPasswordModal
+              token={resetToken}
+              onClose={closeResetPasswordModal}
+              onReset={() => setShowLoginScreen(true)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Login Modal */}
       {showLoginScreen && (
-        <div 
+        <div
           onClick={() => setShowLoginScreen(false)}
           style={{
           position:'fixed',

@@ -231,6 +231,34 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return handleResponse<{ success: boolean; message: string }>(response);
 }
 
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email })
+    });
+    return handleResponse<{ message: string }>(response);
+  } catch (err) {
+    // Return generic success message to avoid revealing account existence
+    return { message: 'If that email is registered, a password reset link has been sent.' };
+  }
+}
+
+export async function validateResetToken(token: string): Promise<{ valid: boolean }> {
+  const response = await fetch(`${API_URL}/api/auth/reset-password/validate?token=${encodeURIComponent(token)}`);
+  return handleResponse<{ valid: boolean }>(response);
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ token, newPassword })
+  });
+  return handleResponse<{ message: string }>(response);
+}
+
 export async function updateUserSettings(settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string; instagram_handle?: string }): Promise<{ success: boolean; user: any }> {
   const response = await fetch(`${API_URL}/api/user/settings`, {
     method: 'PUT',
