@@ -400,7 +400,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       fontFamily:'"Red Hat Text", sans-serif'
     }}>
       <div style={{
-        backgroundColor:'#1e293b',
+        backgroundColor:'#000',
         padding:40,
         borderRadius:8,
         border:'1px solid #475569',
@@ -2526,7 +2526,7 @@ export default function App(){
                 cursor:'pointer'
               }}
             >
-              Login
+              Login/Sign up
             </button>
           )}
         </div>
