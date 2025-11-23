@@ -23,14 +23,15 @@ export function computeWeeklyScore(counts: Counts, r = DEFAULT_RATIO): number {
   return s;
 }
 
-export function marginalGain(counts: Counts, color: keyof Counts, addCount = 1, r = 0.95) {
-  let m = 0;
-  for (const c of ORDER) {
-    if (c === color) break;
-    m += (counts as any)[c] || 0;
-  }
-  m += (counts as any)[color] || 0;
-  return BASE[color] * Math.pow(r, m) * wSum(addCount, r);
+export function marginalGain(counts: Counts, color: keyof Counts, addCount = 1, r = DEFAULT_RATIO) {
+  const baseScore = computeWeeklyScore(counts, r);
+  const updatedCounts: Counts = {
+    ...counts,
+    [color]: ((counts as any)[color] || 0) + addCount
+  } as Counts;
+
+  const newScore = computeWeeklyScore(updatedCounts, r);
+  return newScore - baseScore;
 }
 
 export function combineCounts(wallCounts: WallCounts): Counts {
