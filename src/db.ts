@@ -224,11 +224,23 @@ export async function initDB() {
       updated_at TIMESTAMP DEFAULT NOW()
     )
   `);
-  
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id SERIAL PRIMARY KEY,
+      climber_id INTEGER REFERENCES climbers(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      used BOOLEAN DEFAULT FALSE,
+      used_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   // Add columns if they don't exist (migration-safe)
   await pool.query(`
-    DO $$ 
-    BEGIN 
+    DO $$
+    BEGIN
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='username') THEN
         ALTER TABLE climbers ADD COLUMN username TEXT UNIQUE;
       END IF;
@@ -252,6 +264,9 @@ export async function initDB() {
       END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='bio') THEN
         ALTER TABLE climbers ADD COLUMN bio TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='password_changed_at') THEN
+        ALTER TABLE climbers ADD COLUMN password_changed_at TIMESTAMP;
       END IF;
     END $$;
   `);
@@ -485,6 +500,11 @@ export async function deleteClimber(id: number) {
 }
 
 // User authentication functions
+export async function getClimberById(id: number) {
+  const result = await pool.query('SELECT * FROM climbers WHERE id = $1', [id]);
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
 export async function getClimberByUsername(username: string) {
   const result = await pool.query('SELECT * FROM climbers WHERE username = $1', [username]);
   return result.rows.length > 0 ? result.rows[0] : null;
@@ -496,7 +516,27 @@ export async function getClimberByGoogleId(googleId: string) {
 }
 
 export async function updateClimberPassword(climberId: number, password: string) {
-  await pool.query('UPDATE climbers SET password = $1 WHERE id = $2', [password, climberId]);
+  await pool.query('UPDATE climbers SET password = $1, password_changed_at = NOW() WHERE id = $2', [password, climberId]);
+}
+
+export async function invalidateResetTokensForUser(climberId: number) {
+  await pool.query('UPDATE password_reset_tokens SET used = TRUE, used_at = NOW() WHERE climber_id = $1 AND used = FALSE', [climberId]);
+}
+
+export async function createPasswordResetToken(climberId: number, token: string, expiresAt: Date) {
+  await pool.query(
+    'INSERT INTO password_reset_tokens (climber_id, token, expires_at) VALUES ($1, $2, $3)',
+    [climberId, token, expiresAt]
+  );
+}
+
+export async function findPasswordResetToken(token: string) {
+  const result = await pool.query('SELECT * FROM password_reset_tokens WHERE token = $1', [token]);
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+export async function markResetTokenUsed(token: string) {
+  await pool.query('UPDATE password_reset_tokens SET used = TRUE, used_at = NOW() WHERE token = $1', [token]);
 }
 
 export async function updateUserSettings(climberId: number, settings: { username?: string; name?: string; country?: string; started_bouldering?: string; bio?: string; instagram_handle?: string }) {

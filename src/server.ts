@@ -32,7 +32,9 @@ app.get('/', (req, res) => {
       auth: {
         POST: '/api/auth/login',
         POST_register: '/api/auth/register',
-        POST_changePassword: '/api/auth/change-password'
+        POST_changePassword: '/api/auth/change-password',
+        POST_forgotPassword: '/api/auth/forgot-password',
+        POST_resetPassword: '/api/auth/reset-password'
       },
       climbers: {
         GET: '/api/climbers',

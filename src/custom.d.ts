@@ -9,6 +9,7 @@ declare module 'jsonwebtoken';
 declare module 'google-auth-library';
 declare module 'multer';
 declare module 'sharp';
+declare module 'nodemailer';
 
 // Augment Express Request to include `file` (used by multer middleware in routes)
 declare namespace Express {
