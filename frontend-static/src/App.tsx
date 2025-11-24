@@ -4292,7 +4292,7 @@ export default function App(){
               <Legend />
               {(() => {
                 // Get top 10 climbers by current score
-                const top10Climbers = climbers
+                const topClimbersSorted = climbers
                   .map((c:any) => {
                     const latestSession = sessions
                       .filter((s:any) => s.climberId === c.id)
@@ -4303,7 +4303,7 @@ export default function App(){
                   .slice(0, 10)
                   .map(item => item.climber);
                 
-                // Distinct colors for up to 10 climbers
+                // Distinct colors (reused if more than 10)
                 const colors = [
                   '#3b82f6', // blue
                   '#ef4444', // red
@@ -4317,13 +4317,13 @@ export default function App(){
                   '#84cc16'  // lime
                 ];
                 
-                return top10Climbers.map((c:any,i:number)=>(
+                return topClimbersSorted.map((c:any,i:number)=>(
                   <Line 
                     key={c.id} 
                     type="monotone" 
                     dataKey={c.name}
                     name={c.name}
-                    stroke={colors[i]}
+                    stroke={colors[i % colors.length]}
                     strokeWidth={2}
                     dot={false}
                     connectNulls
@@ -4404,7 +4404,6 @@ export default function App(){
                   c.name.toLowerCase().includes(comparisonSearchQuery.toLowerCase()) &&
                   !selectedClimbersForComparison.includes(c.id)
                 )
-                .slice(0, 10) // Show max 10 results
                 .map((c:any) => {
                   const canSelect = selectedClimbersForComparison.length < 5;
                   return (
