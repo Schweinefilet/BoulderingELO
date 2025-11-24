@@ -1213,6 +1213,8 @@ export default function App(){
   const [highlightGoogleLink, setHighlightGoogleLink] = useState(false);
   const googleLinkSectionRef = useRef<HTMLDivElement | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [climbers, setClimbers] = useState<any[]>([])
   const [imageViewer, setImageViewer] = useState<{ src: string; alt: string } | null>(null)
   const [viewerTransform, setViewerTransform] = useState({ scale: 1, x: 0, y: 0 })
@@ -1224,6 +1226,28 @@ export default function App(){
     setViewerTransform({ scale: 1, x: 0, y: 0 });
     setIsDraggingImage(false);
   }, [imageViewer]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUserMenuOpen(false);
+    }
+  }, [isAuthenticated]);
   const navItems = useMemo(() => ([
     { name: 'New Session', link: '#new-session' },
     { name: 'Leaderboard', link: '#leaderboard' },
@@ -2539,30 +2563,119 @@ export default function App(){
           </a>
         </div>
         <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
-          <button
-            type="button"
-            aria-pressed={backgroundEnabled}
-            onClick={() => setBackgroundEnabled(prev => !prev)}
-            style={{
-              padding:'8px 16px',
-              backgroundColor: backgroundEnabled ? 'rgba(59,130,246,0.18)' : '#1e293b',
-              color:'#bfdbfe',
-              border:'1px solid rgba(148,163,184,0.6)',
-              borderRadius:999,
-              fontWeight:600,
-              textTransform:'uppercase',
-              letterSpacing:0.5,
-              transition:'background-color 0.2s ease, color 0.2s ease',
-              minWidth:160
-            }}
-          >
-            {backgroundEnabled ? 'Hide Background' : 'Show Background'}
-          </button>
           {isAuthenticated && user && (
-            <>
-              <span style={{color:'#94a3b8'}}>
-                {user.username} {user.role === 'admin' && <span style={{color:'#fbbf24'}}>(Admin)</span>}
-              </span>
+            <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+              <div style={{position:'relative'}} ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(prev => !prev)}
+                  style={{
+                    padding:'8px 16px',
+                    backgroundColor:'#0f172a',
+                    color:'#e2e8f0',
+                    border:'1px solid rgba(148,163,184,0.6)',
+                    borderRadius:999,
+                    fontWeight:600,
+                    display:'inline-flex',
+                    alignItems:'center',
+                    gap:8,
+                    cursor:'pointer',
+                    minWidth:160
+                  }}
+                >
+                  <span style={{color:'#94a3b8', display:'inline-flex', alignItems:'center', gap:6}}>
+                    {user.username}
+                    {user.role === 'admin' && <span style={{color:'#fbbf24'}}>(Admin)</span>}
+                  </span>
+                  <span aria-hidden="true" style={{fontSize:12, color:'#94a3b8'}}>
+                    {userMenuOpen ? '▲' : '▼'}
+                  </span>
+                </button>
+                {userMenuOpen && (
+                  <div
+                    style={{
+                      position:'absolute',
+                      top:'calc(100% + 8px)',
+                      right:0,
+                      backgroundColor:'#0b1224',
+                      border:'1px solid rgba(148,163,184,0.35)',
+                      borderRadius:10,
+                      boxShadow:'0 12px 30px rgba(0,0,0,0.35)',
+                      minWidth:220,
+                      zIndex:20,
+                      overflow:'hidden'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={backgroundEnabled}
+                      onClick={() => setBackgroundEnabled(prev => !prev)}
+                      style={{
+                        width:'100%',
+                        textAlign:'left',
+                        padding:'10px 14px',
+                        background:'none',
+                        border:'none',
+                        color:'#e2e8f0',
+                        fontWeight:600,
+                        display:'flex',
+                        justifyContent:'space-between',
+                        alignItems:'center',
+                        cursor:'pointer'
+                      }}
+                    >
+                      <span>{backgroundEnabled ? 'Hide Background' : 'Show Background'}</span>
+                      <span style={{fontSize:12,color:'#94a3b8'}}>{backgroundEnabled ? 'On' : 'Off'}</span>
+                    </button>
+                    <div style={{height:1,backgroundColor:'rgba(148,163,184,0.2)'}} />
+                    <button
+                      onClick={() => {
+                        const currentClimber = climbers.find(c => c.id === user?.climberId);
+                        if (currentClimber) {
+                          setSettingsUsername(user?.username || '');
+                          setSettingsName(currentClimber.name || '');
+                          setSettingsCountry(currentClimber.country || '');
+                          setSettingsStarted(currentClimber.started_bouldering || '');
+                          setSettingsBio(currentClimber.bio || '');
+                          setSettingsInstagram(currentClimber.instagram_handle || '');
+                        }
+                        setShowSettings(true);
+                        setUserMenuOpen(false);
+                      }}
+                      style={{
+                        width:'100%',
+                        textAlign:'left',
+                        padding:'10px 14px',
+                        background:'none',
+                        border:'none',
+                        color:'#e2e8f0',
+                        fontWeight:600,
+                        cursor:'pointer'
+                      }}
+                    >
+                      Settings
+                    </button>
+                    <div style={{height:1,backgroundColor:'rgba(148,163,184,0.2)'}} />
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setUserMenuOpen(false);
+                      }}
+                      style={{
+                        width:'100%',
+                        textAlign:'left',
+                        padding:'10px 14px',
+                        background:'none',
+                        border:'none',
+                        color:'#ef4444',
+                        fontWeight:700,
+                        cursor:'pointer'
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
               {user.role === 'admin' && (
                 <button
                   onClick={() => setShowAdminPanel(true)}
@@ -2579,45 +2692,7 @@ export default function App(){
                   Admin Panel
                 </button>
               )}
-              <button
-                onClick={() => {
-                  // Load current settings when opening modal
-                  const currentClimber = climbers.find(c => c.id === user?.climberId);
-                  if (currentClimber) {
-                    setSettingsUsername(user?.username || '');
-                    setSettingsName(currentClimber.name || '');
-                    setSettingsCountry(currentClimber.country || '');
-                    setSettingsStarted(currentClimber.started_bouldering || '');
-                    setSettingsBio(currentClimber.bio || '');
-                    setSettingsInstagram(currentClimber.instagram_handle || '');
-                  }
-                  setShowSettings(true);
-                }}
-                style={{
-                  padding:'8px 16px',
-                  backgroundColor:'#10b981',
-                  color:'white',
-                  border:'none',
-                  borderRadius:6,
-                  cursor:'pointer'
-                }}
-              >
-                Settings
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding:'8px 16px',
-                  backgroundColor:'#475569',
-                  color:'white',
-                  border:'none',
-                  borderRadius:6,
-                  cursor:'pointer'
-                }}
-              >
-                Logout
-              </button>
-            </>
+            </div>
           )}
           {!isAuthenticated && (
             <button
