@@ -107,7 +107,7 @@ export const FloatingNav = ({
         }
       });
 
-      if (hasInteracted && closestId && closestId !== activeSection) {
+      if (closestId && closestId !== activeSection) {
         setActiveSection(closestId);
       }
     };

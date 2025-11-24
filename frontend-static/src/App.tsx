@@ -1218,6 +1218,12 @@ export default function App(){
   const [viewerTransform, setViewerTransform] = useState({ scale: 1, x: 0, y: 0 })
   const [isDraggingImage, setIsDraggingImage] = useState(false)
   const dragStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const clampPan = (val: number) => Math.max(Math.min(val, 800), -800)
+  useEffect(() => {
+    // Reset zoom/pan whenever a new image is opened
+    setViewerTransform({ scale: 1, x: 0, y: 0 });
+    setIsDraggingImage(false);
+  }, [imageViewer]);
   const navItems = useMemo(() => ([
     { name: 'New Session', link: '#new-session' },
     { name: 'Leaderboard', link: '#leaderboard' },
@@ -2425,8 +2431,8 @@ export default function App(){
             cursor:'zoom-out'
           }}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
+            <div
+              onClick={(e) => e.stopPropagation()}
             style={{position:'relative',maxWidth:'90vw',maxHeight:'90vh',overflow:'hidden'}}
           >
             <img
@@ -2439,7 +2445,11 @@ export default function App(){
               }}
               onPointerMove={(e) => {
                 if (!isDraggingImage) return;
-                setViewerTransform(prev => ({ ...prev, x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }));
+                setViewerTransform(prev => {
+                  const nextX = clampPan(e.clientX - dragStart.current.x);
+                  const nextY = clampPan(e.clientY - dragStart.current.y);
+                  return { ...prev, x: nextX, y: nextY };
+                });
               }}
               onPointerUp={(e) => {
                 setIsDraggingImage(false);
@@ -2450,7 +2460,7 @@ export default function App(){
                 const delta = -e.deltaY * 0.0015;
                 setViewerTransform(prev => {
                   const nextScale = Math.min(4, Math.max(1, prev.scale + delta));
-                  return { ...prev, scale: nextScale };
+                  return { ...prev, scale: nextScale, x: clampPan(prev.x), y: clampPan(prev.y) };
                 });
               }}
               style={{
@@ -3020,121 +3030,127 @@ export default function App(){
               
               <div style={{marginBottom:16}}>
                 {/* Display admin-uploaded wall section reference images - moved above buttons */}
-                {wallSectionImages[dropdownWall] && wallSectionImages[dropdownWall].length > 0 && (
-                  <div style={{
-                    marginBottom:12,
-                    border:'2px solid #3b82f6',
-                    borderRadius:8,
-                    overflow:'hidden',
-                    backgroundColor:'#000',
-                    position:'relative'
-                  }}>
+                {(() => {
+                  const images = wallSectionImages[dropdownWall] || [];
+                  if (images.length === 0) return null;
+                  const safeIndex = Math.min(currentImageIndex, images.length - 1);
+                  const sources = buildImageSources(images[safeIndex]);
+                  return (
                     <div style={{
-                      backgroundColor:BLACK_ROW_BG,
-                      padding:'8px 12px',
-                      borderBottom:'1px solid #3b82f6',
-                      fontSize:12,
-                      color:'#3b82f6',
-                      fontWeight:'600',
-                      display:'flex',
-                      justifyContent:'space-between',
-                      alignItems:'center'
+                      marginBottom:12,
+                      border:'2px solid #3b82f6',
+                      borderRadius:8,
+                      overflow:'hidden',
+                      backgroundColor:'#000',
+                      position:'relative'
                     }}>
-                      <span>📍 Wall Section Reference ({formatWallSectionName(dropdownWall)})</span>
-                      {wallSectionImages[dropdownWall].length > 1 && (
-                        <span style={{fontSize:11,color:'#94a3b8'}}>
-                          {currentImageIndex + 1} / {wallSectionImages[dropdownWall].length}
-                        </span>
-                      )}
+                      <div style={{
+                        backgroundColor:BLACK_ROW_BG,
+                        padding:'8px 12px',
+                        borderBottom:'1px solid #3b82f6',
+                        fontSize:12,
+                        color:'#3b82f6',
+                        fontWeight:'600',
+                        display:'flex',
+                        justifyContent:'space-between',
+                        alignItems:'center'
+                      }}>
+                        <span>📍 Wall Section Reference ({formatWallSectionName(dropdownWall)})</span>
+                        {images.length > 1 && (
+                          <span style={{fontSize:11,color:'#94a3b8'}}>
+                            {safeIndex + 1} / {images.length}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{position:'relative'}}>
+                          <picture>
+                            <source
+                              type="image/avif"
+                              srcSet={sources.avif}
+                            />
+                            <source
+                              type="image/webp"
+                              srcSet={sources.webp}
+                            />
+                            <img
+                              src={sources.fallback}
+                              alt={`${dropdownWall} wall reference ${safeIndex + 1}`}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              width={1200}
+                              height={900}
+                              style={{
+                                width:'100%',
+                                height:'auto',
+                                maxWidth:1200,
+                                maxHeight:250,
+                                objectFit:'contain',
+                                display:'block',
+                                cursor:'zoom-in'
+                              }}
+                              onError={referenceImageErrorHandler}
+                              onClick={() => setImageViewer({
+                                src: sources.fallback,
+                                alt: `${dropdownWall} wall reference ${safeIndex + 1}`
+                              })}
+                            />
+                          </picture>
+                        {images.length > 1 && (
+                          <>
+                            <button
+                              onClick={() => setCurrentImageIndex((prev) => 
+                                prev === 0 ? images.length - 1 : prev - 1
+                              )}
+                              style={{
+                                position:'absolute',
+                                left:8,
+                                top:'50%',
+                                transform:'translateY(-50%)',
+                                backgroundColor:'rgba(0,0,0,0.7)',
+                                color:'white',
+                                border:'none',
+                                borderRadius:'50%',
+                                width:36,
+                                height:36,
+                                fontSize:18,
+                                cursor:'pointer',
+                                display:'flex',
+                                alignItems:'center',
+                                justifyContent:'center'
+                              }}
+                            >
+                              ‹
+                            </button>
+                            <button
+                              onClick={() => setCurrentImageIndex((prev) => 
+                                prev === images.length - 1 ? 0 : prev + 1
+                              )}
+                              style={{
+                                position:'absolute',
+                                right:8,
+                                top:'50%',
+                                transform:'translateY(-50%)',
+                                backgroundColor:'rgba(0,0,0,0.7)',
+                                color:'white',
+                                border:'none',
+                                borderRadius:'50%',
+                                width:36,
+                                height:36,
+                                fontSize:18,
+                                cursor:'pointer',
+                                display:'flex',
+                                alignItems:'center',
+                                justifyContent:'center'
+                              }}
+                            >
+                              ›
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div style={{position:'relative'}}>
-                        <picture>
-                          <source
-                            type="image/avif"
-                            srcSet={buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).avif}
-                          />
-                          <source
-                            type="image/webp"
-                            srcSet={buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).webp}
-                          />
-                          <img
-                            src={buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).fallback}
-                            alt={`${dropdownWall} wall reference ${currentImageIndex + 1}`}
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            width={1200}
-                            height={900}
-                            style={{
-                              width:'100%',
-                              height:'auto',
-                              maxWidth:1200,
-                              maxHeight:250,
-                              objectFit:'contain',
-                              display:'block',
-                              cursor:'zoom-in'
-                            }}
-                            onError={referenceImageErrorHandler}
-                            onClick={() => setImageViewer({
-                              src: buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).fallback,
-                              alt: `${dropdownWall} wall reference ${currentImageIndex + 1}`
-                            })}
-                          />
-                        </picture>
-                      {wallSectionImages[dropdownWall].length > 1 && (
-                        <>
-                          <button
-                            onClick={() => setCurrentImageIndex((prev) => 
-                              prev === 0 ? wallSectionImages[dropdownWall].length - 1 : prev - 1
-                            )}
-                            style={{
-                              position:'absolute',
-                              left:8,
-                              top:'50%',
-                              transform:'translateY(-50%)',
-                              backgroundColor:'rgba(0,0,0,0.7)',
-                              color:'white',
-                              border:'none',
-                              borderRadius:'50%',
-                              width:36,
-                              height:36,
-                              fontSize:18,
-                              cursor:'pointer',
-                              display:'flex',
-                              alignItems:'center',
-                              justifyContent:'center'
-                            }}
-                          >
-                            ‹
-                          </button>
-                          <button
-                            onClick={() => setCurrentImageIndex((prev) => 
-                              prev === wallSectionImages[dropdownWall].length - 1 ? 0 : prev + 1
-                            )}
-                            style={{
-                              position:'absolute',
-                              right:8,
-                              top:'50%',
-                              transform:'translateY(-50%)',
-                              backgroundColor:'rgba(0,0,0,0.7)',
-                              color:'white',
-                              border:'none',
-                              borderRadius:'50%',
-                              width:36,
-                              height:36,
-                              fontSize:18,
-                              cursor:'pointer',
-                              display:'flex',
-                              alignItems:'center',
-                              justifyContent:'center'
-                            }}
-                          >
-                            ›
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
               {dropdownColor === 'black' && (
                 <div style={{marginBottom:16,padding:16,backgroundColor:'#7f1d1d',borderRadius:6,border:'1px solid #991b1b'}}>
@@ -3335,121 +3351,131 @@ export default function App(){
                     <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600',color:'#94a3b8'}}>{displayName}</h4>
                     
                     {/* Display wall section reference images for this section */}
+                    
                     {wallSectionImages[section] && wallSectionImages[section].length > 0 && (
                       <div style={{
                         marginBottom:12,
-                      border:'2px solid #3b82f6',
-                      borderRadius:8,
-                      overflow:'hidden',
-                      backgroundColor:'#000',
-                      position:'relative'
-                    }}>
-                      <div style={{
-                        backgroundColor:BLACK_ROW_BG,
-                        padding:'8px 12px',
-                        borderBottom:'1px solid #3b82f6',
-                        fontSize:12,
-                        color:'#3b82f6',
-                          fontWeight:'600',
-                          display:'flex',
-                          justifyContent:'space-between',
-                          alignItems:'center'
-                        }}>
-                          <span>📍 Wall Section Reference ({displayName})</span>
-                          {wallSectionImages[section].length > 1 && (
-                            <span style={{fontSize:11,color:'#94a3b8'}}>
-                              {(manualModeImageIndexes[section] || 0) + 1} / {wallSectionImages[section].length}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{position:'relative'}}>
-                          <picture>
-                            <source
-                              type="image/avif"
-                              srcSet={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).avif}
-                            />
-                            <source
-                              type="image/webp"
-                            srcSet={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).webp}
-                          />
-                          <img
-                            src={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).fallback}
-                            alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`}
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              width={1200}
-                              height={900}
-                              style={{
-                              width:'100%',
-                              height:'auto',
-                              maxWidth:1200,
-                              maxHeight:250,
-                              objectFit:'contain',
-                              display:'block',
-                              cursor:'zoom-in'
-                            }}
-                            onError={referenceImageErrorHandler}
-                            onClick={() => setImageViewer({
-                              src: buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).fallback,
-                              alt: `${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`
-                            })}
-                          />
-                        </picture>
-                          {wallSectionImages[section].length > 1 && (
+                        border:'2px solid #3b82f6',
+                        borderRadius:8,
+                        overflow:'hidden',
+                        backgroundColor:'#000',
+                        position:'relative'
+                      }}>
+                        {(() => {
+                          const images = wallSectionImages[section] || [];
+                          const safeIndex = Math.min(manualModeImageIndexes[section] || 0, Math.max(images.length - 1, 0));
+                          const sources = buildImageSources(images[safeIndex]);
+                          return (
                             <>
-                              <button
-                                onClick={() => setManualModeImageIndexes(prev => ({
-                                  ...prev,
-                                  [section]: (prev[section] || 0) === 0 ? wallSectionImages[section].length - 1 : (prev[section] || 0) - 1
-                                }))}
-                                style={{
-                                  position:'absolute',
-                                  left:8,
-                                  top:'50%',
-                                  transform:'translateY(-50%)',
-                                  backgroundColor:'rgba(0,0,0,0.7)',
-                                  color:'white',
-                                  border:'none',
-                                  borderRadius:'50%',
-                                  width:36,
-                                  height:36,
-                                  fontSize:18,
-                                  cursor:'pointer',
-                                  display:'flex',
-                                  alignItems:'center',
-                                  justifyContent:'center'
-                                }}
-                              >
-                                ‹
-                              </button>
-                              <button
-                                onClick={() => setManualModeImageIndexes(prev => ({
-                                  ...prev,
-                                  [section]: (prev[section] || 0) === wallSectionImages[section].length - 1 ? 0 : (prev[section] || 0) + 1
-                                }))}
-                                style={{
-                                  position:'absolute',
-                                  right:8,
-                                  top:'50%',
-                                  transform:'translateY(-50%)',
-                                  backgroundColor:'rgba(0,0,0,0.7)',
-                                  color:'white',
-                                  border:'none',
-                                  borderRadius:'50%',
-                                  width:36,
-                                  height:36,
-                                  fontSize:18,
-                                  cursor:'pointer',
-                                  display:'flex',
-                                  alignItems:'center',
-                                  justifyContent:'center'
-                                }}
-                              >
-                                ›
-                              </button>
+                              <div style={{
+                                backgroundColor:BLACK_ROW_BG,
+                                padding:'8px 12px',
+                                borderBottom:'1px solid #3b82f6',
+                                fontSize:12,
+                                color:'#3b82f6',
+                                fontWeight:'600',
+                                display:'flex',
+                                justifyContent:'space-between',
+                                alignItems:'center'
+                              }}>
+                                <span>📍 Wall Section Reference ({displayName})</span>
+                                {wallSectionImages[section].length > 1 && (
+                                  <span style={{fontSize:11,color:'#94a3b8'}}>
+                                    {safeIndex + 1} / {wallSectionImages[section].length}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{position:'relative'}}>
+                                <picture>
+                                  <source
+                                    type="image/avif"
+                                    srcSet={sources.avif}
+                                  />
+                                  <source
+                                    type="image/webp"
+                                    srcSet={sources.webp}
+                                  />
+                                  <img
+                                    src={sources.fallback}
+                                    alt={`${section} wall reference ${safeIndex + 1}`}
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer"
+                                    width={1200}
+                                    height={900}
+                                    style={{
+                                      width:'100%',
+                                      height:'auto',
+                                      maxWidth:1200,
+                                      maxHeight:250,
+                                      objectFit:'contain',
+                                      display:'block',
+                                      cursor:'zoom-in'
+                                    }}
+                                    onError={referenceImageErrorHandler}
+                                    onClick={() => setImageViewer({
+                                      src: sources.fallback,
+                                      alt: `${section} wall reference ${safeIndex + 1}`
+                                    })}
+                                  />
+                                </picture>
+                                {wallSectionImages[section].length > 1 && (
+                                  <>
+                                    <button
+                                      onClick={() => setManualModeImageIndexes(prev => ({
+                                        ...prev,
+                                        [section]: (prev[section] || 0) === 0 ? wallSectionImages[section].length - 1 : (prev[section] || 0) - 1
+                                      }))}
+                                      style={{
+                                        position:'absolute',
+                                        left:8,
+                                        top:'50%',
+                                        transform:'translateY(-50%)',
+                                        backgroundColor:'rgba(0,0,0,0.7)',
+                                        color:'white',
+                                        border:'none',
+                                        borderRadius:'50%',
+                                        width:36,
+                                        height:36,
+                                        fontSize:18,
+                                        cursor:'pointer',
+                                        display:'flex',
+                                        alignItems:'center',
+                                        justifyContent:'center'
+                                      }}
+                                    >
+                                      {"<"}
+                                    </button>
+                                    <button
+                                      onClick={() => setManualModeImageIndexes(prev => ({
+                                        ...prev,
+                                        [section]: (prev[section] || 0) === wallSectionImages[section].length - 1 ? 0 : (prev[section] || 0) + 1
+                                      }))}
+                                      style={{
+                                        position:'absolute',
+                                        right:8,
+                                        top:'50%',
+                                        transform:'translateY(-50%)',
+                                        backgroundColor:'rgba(0,0,0,0.7)',
+                                        color:'white',
+                                        border:'none',
+                                        borderRadius:'50%',
+                                        width:36,
+                                        height:36,
+                                        fontSize:18,
+                                        cursor:'pointer',
+                                        display:'flex',
+                                        alignItems:'center',
+                                        justifyContent:'center'
+                                      }}
+                                    >
+                                      {">"}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
                     )}
                     
