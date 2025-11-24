@@ -2559,7 +2559,7 @@ export default function App(){
             onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
           >
-            ⭐ GitHub Repository
+            ⭐ GitHub Repo
           </a>
         </div>
         <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end',marginLeft:'auto'}}>
@@ -3242,8 +3242,20 @@ export default function App(){
                 <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12,flexWrap:'wrap',justifyContent:'space-between'}}>
                   <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
                     <h4 style={{margin:0,fontSize:isMobileCompact ? 14 : 16,fontWeight:'600',color:'#e2e8f0'}}>Current Progress</h4>
-                    <span style={{color:'#a5b4fc',fontWeight:800,fontSize:isMobileCompact?13:14}}>Score: {previewScore.toFixed(2)}</span>
-                    <GradeBadge grade={previewGrade} size="sm" />
+                    <div
+                      style={{
+                        display:'inline-flex',
+                        alignItems:'center',
+                        gap:8,
+                        padding:isMobileCompact ? '6px 10px' : '8px 12px',
+                        border:'1px solid #3b82f6',
+                        borderRadius:10,
+                        backgroundColor:'rgba(59, 130, 246, 0.08)'
+                      }}
+                    >
+                      <span style={{color:'#a5b4fc',fontWeight:800,fontSize:isMobileCompact?14:16}}>Score: {previewScore.toFixed(2)}</span>
+                      <GradeBadge grade={previewGrade} size="md" />
+                    </div>
                   </div>
                   <InfoTooltip
                     containerClassName="cursor-pointer"
@@ -3258,7 +3270,21 @@ export default function App(){
                       </div>
                     }
                   >
-                    <span style={{fontSize:13,color:'#a5b4fc',textDecoration:'underline'}}>View marginal gains</span>
+                    <button
+                      type="button"
+                      style={{
+                        fontSize:12,
+                        color:'#a5b4fc',
+                        textDecoration:'none',
+                        backgroundColor:'rgba(59, 130, 246, 0.12)',
+                        border:'1px solid #475569',
+                        borderRadius:999,
+                        padding:'6px 10px',
+                        cursor:'pointer'
+                      }}
+                    >
+                      View marginal gains
+                    </button>
                   </InfoTooltip>
                 </div>
                 <table style={{
@@ -6063,9 +6089,19 @@ export default function App(){
                           <h4 style={{margin:0, fontSize:16, fontWeight:'700', color:'#e2e8f0'}}>
                             Current Progress
                           </h4>
-                          <div style={{display:'flex', alignItems:'center', gap:8}}>
-                            <span style={{color:'#a5b4fc', fontWeight:800}}>{latestScoreValue.toFixed(2)}</span>
-                            <span style={{color:'#e0f2fe', fontWeight:700}}>{`<${latestGrade || 'N/A'}>`}</span>
+                          <div
+                            style={{
+                              display:'inline-flex',
+                              alignItems:'center',
+                              gap:8,
+                              padding:'8px 12px',
+                              border:'1px solid #3b82f6',
+                              borderRadius:10,
+                              backgroundColor:'rgba(59, 130, 246, 0.08)'
+                            }}
+                          >
+                            <span style={{color:'#a5b4fc', fontWeight:800, fontSize:15}}>Score: {latestScoreValue.toFixed(2)}</span>
+                            <GradeBadge grade={latestGrade || 'V0'} size="md" />
                           </div>
                           <InfoTooltip
                             containerClassName="cursor-pointer"
@@ -6080,35 +6116,104 @@ export default function App(){
                               </div>
                             }
                           >
-                            <span style={{fontSize:13, color:'#a5b4fc', textDecoration:'underline'}}>View marginal gains</span>
+                            <button
+                              type="button"
+                              style={{
+                                fontSize:12,
+                                color:'#a5b4fc',
+                                textDecoration:'none',
+                                backgroundColor:'rgba(59, 130, 246, 0.12)',
+                                border:'1px solid #475569',
+                                borderRadius:999,
+                                padding:'6px 10px',
+                                cursor:'pointer'
+                              }}
+                            >
+                              View marginal gains
+                            </button>
                           </InfoTooltip>
                         </div>
                       </div>
                       <div style={{overflowX:'auto'}}>
-                        <table style={{width:'100%', borderCollapse:'collapse', minWidth:480}}>
+                        <table style={{
+                          width:'100%',
+                          minWidth: 520,
+                          borderCollapse:'collapse',
+                          fontSize:12,
+                          tableLayout:'fixed'
+                        }}>
                           <thead>
-                            <tr>
-                              <th style={{textAlign:'left', padding:'8px 6px', borderBottom:'1px solid #475569', color:'#cbd5e1'}}>Wall Section</th>
+                            <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
+                              <th style={{textAlign:'left',padding:'8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
                               {['Green','Blue','Yellow','Orange','Red','Black'].map(color => (
-                                <th key={color} style={{textAlign:'center', padding:'8px 6px', borderBottom:'1px solid #475569', color:'#cbd5e1'}}>{color}</th>
+                                <th
+                                  key={color}
+                                  style={{
+                                    textAlign:'center',
+                                    verticalAlign:'middle',
+                                    padding:'8px 6px',
+                                    color:
+                                      color === 'Green' ? '#10b981' :
+                                      color === 'Blue' ? '#3b82f6' :
+                                      color === 'Yellow' ? '#eab308' :
+                                      color === 'Orange' ? '#f97316' :
+                                      color === 'Red' ? '#ef4444' : '#d1d5db',
+                                    fontWeight:'600',
+                                    width:'12.5%'
+                                  }}
+                                >
+                                  {color}
+                                </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
-                            {Object.keys(latestSession.wallCounts).map(section => {
-                              const counts = latestSession.wallCounts[section] || {};
-                              const totals = wallTotals[section] || {};
-                              return (
-                                <tr key={section} style={{borderBottom:'1px solid #1f2937'}}>
-                                  <td style={{padding:'8px 6px', color:'#e2e8f0', fontWeight:600}}>{formatWallSectionName(section)}</td>
-                                  {(['green','blue','yellow','orange','red','black'] as const).map(color => (
-                                    <td key={color} style={{padding:'8px 6px', textAlign:'center', color:'#cbd5e1'}}>
-                                      {(counts[color] || 0)}/{(totals[color] ?? 0)}
+                            {Object.keys(latestSession.wallCounts)
+                              .filter(section => !expiredSections.includes(section))
+                              .map((section, idx) => {
+                                const counts = latestSession.wallCounts[section] || {};
+                                const totals = wallTotals[section] || {};
+                                const displayName = formatWallSectionName(section);
+                                const rowBackground = idx % 2 === 0 ? BLACK_PANEL_BG : BLACK_ROW_BG;
+                                return (
+                                  <tr key={section} style={{borderBottom:BLACK_PANEL_BORDER, backgroundColor: rowBackground}}>
+                                    <td style={{padding:'8px 6px'}}>
+                                      <div style={{
+                                        display: 'inline-block',
+                                        padding: '4px 8px',
+                                        borderRadius: 6,
+                                        color:'#cbd5e1',
+                                        fontWeight:'500'
+                                      }}>
+                                        {displayName}
+                                      </div>
                                     </td>
-                                  ))}
-                                </tr>
-                              );
-                            })}
+                                    {(['green','blue','yellow','orange','red','black'] as const).map(color => (
+                                      <td
+                                        key={color}
+                                        style={{
+                                          textAlign:'center',
+                                          verticalAlign:'middle',
+                                          padding:'8px 6px',
+                                          fontWeight:'600'
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            color: color === 'green' ? '#10b981' :
+                                                   color === 'blue' ? '#3b82f6' :
+                                                   color === 'yellow' ? '#eab308' :
+                                                   color === 'orange' ? '#f97316' :
+                                                   color === 'red' ? '#ef4444' : '#d1d5db'
+                                          }}
+                                        >
+                                          {(counts[color] || 0)}/{(totals[color] ?? 0)}
+                                        </span>
+                                      </td>
+                                    ))}
+                                  </tr>
+                                );
+                              })}
                           </tbody>
                         </table>
                       </div>
