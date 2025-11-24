@@ -96,28 +96,16 @@ export const FloatingNav = ({
   return (
     <>
       <div ref={anchorRef} style={{ height: isFixed ? navHeight : 0 }} />
-      <AnimatePresence mode="wait">
-        <motion.div
-          ref={navRef}
-          initial={{
-            opacity: 1,
-            y: 0,
-          }}
-          animate={{
-            y: 0,
-            opacity: 1,
-          }}
-          transition={{
-            duration: 0.2,
-          }}
-          className={cn(
-            "flex max-w-fit rounded-full bg-black border border-white text-white shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] z-10 px-0 py-2 items-center justify-center gap-[10px]",
-            isFixed ? "fixed top-[10px] left-1/2 -translate-x-1/2" : "relative mx-auto",
-            className
-          )}
-          style={{ backgroundColor: "#000" }}
-        >
-          <div className="flex items-center justify-center">
+      <div
+        ref={navRef}
+        className={cn(
+          "flex max-w-fit rounded-full bg-black border border-white text-white shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] z-10 px-1 py-1.5 items-center justify-center gap-[6px]",
+          isFixed ? "fixed top-[10px] left-1/2 -translate-x-1/2" : "relative mx-auto",
+          className
+        )}
+        style={{ backgroundColor: "#000" }}
+      >
+        <div className="flex items-center justify-center flex-wrap">
           {navItems.map((navItem: any, idx: number) => {
             const id = navItem.link.replace("#", "");
             const isActive = activeSection === id;
@@ -130,13 +118,13 @@ export const FloatingNav = ({
                   handleNavClick(id);
                 }}
                 className={cn(
-                  "relative flex items-center justify-center rounded-full bg-transparent px-4 py-2 text-sm text-white no-underline min-w-[120px] text-center border-2 border-transparent overflow-visible focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 active:outline-none active:ring-0"
+                  "relative flex items-center justify-center rounded-full bg-transparent px-3 py-2 text-[13px] text-white no-underline min-w-[95px] text-center border-2 border-transparent overflow-visible focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 active:outline-none active:ring-0"
                 )}
                 style={{
                   textDecoration: "none",
                   backgroundColor: "transparent",
                   color: "#fff",
-                  marginRight: idx === navItems.length - 1 ? 0 : 10,
+                  marginRight: idx === navItems.length - 1 ? 0 : 6,
                   outline: "none",
                   boxShadow: "none",
                   borderColor: "transparent",
@@ -158,9 +146,8 @@ export const FloatingNav = ({
               </motion.button>
             );
           })}
-          </div>
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      </div>
     </>
   );
 };

@@ -10,6 +10,7 @@ import { GlowBorder } from './components/ui/glow-border'
 import { AuroraBackground } from './components/ui/aurora-background'
 import { GlowingEffect } from './components/ui/glowing-effect'
 import { FloatingNav } from './components/ui/floating-navbar'
+import { Tooltip as InfoTooltip } from './components/ui/tooltip-card'
 import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
@@ -1214,6 +1215,9 @@ export default function App(){
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
   const [climbers, setClimbers] = useState<any[]>([])
   const [imageViewer, setImageViewer] = useState<{ src: string; alt: string } | null>(null)
+  const [viewerTransform, setViewerTransform] = useState({ scale: 1, x: 0, y: 0 })
+  const [isDraggingImage, setIsDraggingImage] = useState(false)
+  const dragStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const navItems = useMemo(() => ([
     { name: 'Notifications', link: '#notifications' },
     { name: 'New Session', link: '#new-session' },
@@ -2424,12 +2428,42 @@ export default function App(){
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{position:'relative',maxWidth:'90vw',maxHeight:'90vh'}}
+            style={{position:'relative',maxWidth:'90vw',maxHeight:'90vh',overflow:'hidden'}}
           >
             <img
               src={imageViewer.src}
               alt={imageViewer.alt}
-              style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',borderRadius:10,boxShadow:'0 10px 40px rgba(0,0,0,0.5)'}}
+              onPointerDown={(e) => {
+                setIsDraggingImage(true);
+                dragStart.current = { x: e.clientX - viewerTransform.x, y: e.clientY - viewerTransform.y };
+                (e.target as HTMLElement).setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e) => {
+                if (!isDraggingImage) return;
+                setViewerTransform(prev => ({ ...prev, x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }));
+              }}
+              onPointerUp={(e) => {
+                setIsDraggingImage(false);
+                (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+              }}
+              onWheel={(e) => {
+                e.preventDefault();
+                const delta = -e.deltaY * 0.0015;
+                setViewerTransform(prev => {
+                  const nextScale = Math.min(4, Math.max(1, prev.scale + delta));
+                  return { ...prev, scale: nextScale };
+                });
+              }}
+              style={{
+                maxWidth:'100%',
+                maxHeight:'100%',
+                objectFit:'contain',
+                borderRadius:10,
+                boxShadow:'0 10px 40px rgba(0,0,0,0.5)',
+                cursor: viewerTransform.scale > 1 ? 'grab' : 'zoom-out',
+                transform: `translate(${viewerTransform.x}px, ${viewerTransform.y}px) scale(${viewerTransform.scale})`,
+                transition: isDraggingImage ? 'none' : 'transform 0.1s ease-out'
+              }}
             />
             <button
               onClick={() => setImageViewer(null)}
@@ -2447,6 +2481,23 @@ export default function App(){
               }}
             >
               ✕
+            </button>
+            <button
+              onClick={() => setViewerTransform({ scale: 1, x: 0, y: 0 })}
+              style={{
+                position:'absolute',
+                top:8,
+                left:8,
+                backgroundColor:'rgba(0,0,0,0.6)',
+                color:'white',
+                border:'1px solid rgba(255,255,255,0.3)',
+                borderRadius:999,
+                padding:'6px 10px',
+                cursor:'pointer',
+                fontWeight:700
+              }}
+            >
+              Reset
             </button>
           </div>
         </div>
@@ -3100,7 +3151,28 @@ export default function App(){
               )}
 
               <div style={{backgroundColor:BLACK_PANEL_BG,padding:'clamp(12px, 3vw, 16px)',borderRadius:8,fontSize:13,border:BLACK_PANEL_BORDER,overflowX:'auto'}}>
-                <h4 style={{marginTop:0,marginBottom:12,fontSize:isMobileCompact ? 14 : 16,fontWeight:'600'}}>Current Progress</h4>
+                <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12,flexWrap:'wrap',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                    <h4 style={{margin:0,fontSize:isMobileCompact ? 14 : 16,fontWeight:'600',color:'#e2e8f0'}}>Current Progress</h4>
+                    <span style={{color:'#a5b4fc',fontWeight:800,fontSize:isMobileCompact?13:14}}>Score: {previewScore.toFixed(2)}</span>
+                    <GradeBadge grade={previewGrade} size="sm" />
+                  </div>
+                  <InfoTooltip
+                    containerClassName="cursor-pointer"
+                    content={
+                      <div style={{display:'flex',flexDirection:'column',gap:4,backgroundColor:'#000',padding:6,borderRadius:6}}>
+                        {ORDER.map((color:any)=> (
+                          <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                            <span style={{textTransform:'capitalize',color:'#e2e8f0',fontSize:12}}>{color}</span>
+                            <span style={{color:'#0ea5e9',fontWeight:700,fontSize:12}}>+{marginalGain(totalCounts, color, 1).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  >
+                    <span style={{fontSize:13,color:'#a5b4fc',textDecoration:'underline'}}>View marginal gains</span>
+                  </InfoTooltip>
+                </div>
                 <table style={{
                   width:'100%',
                   minWidth: isMobileCompact ? undefined : 520,
@@ -3117,12 +3189,12 @@ export default function App(){
                   <thead>
                     <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
                       <th style={{textAlign:'left',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
-                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
-                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
-                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#eab308',fontWeight:'600',width:'12.5%'}}>Yellow</th>
-                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#f97316',fontWeight:'600',width:'12.5%'}}>Orange</th>
-                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#ef4444',fontWeight:'600',width:'12.5%'}}>Red</th>
-                      <th style={{textAlign:'center',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#d1d5db',fontWeight:'600',width:'12.5%'}}>Black</th>
+                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
+                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
+                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#eab308',fontWeight:'600',width:'12.5%'}}>Yellow</th>
+                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#f97316',fontWeight:'600',width:'12.5%'}}>Orange</th>
+                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#ef4444',fontWeight:'600',width:'12.5%'}}>Red</th>
+                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#d1d5db',fontWeight:'600',width:'12.5%'}}>Black</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3162,6 +3234,7 @@ export default function App(){
                             return (
                               <td key={color} style={{
                                 textAlign:'center',
+                                verticalAlign:'middle',
                                 padding: isMobileCompact ? '6px 4px' : '8px 6px',
                                 fontWeight:'600',
                                 transition: 'all 0.3s',
@@ -3211,6 +3284,7 @@ export default function App(){
 
               <div style={{margin:'16px 0',display:'flex',gap:12}}>
                 <button
+                  type="button"
                   onClick={addClimb}
                   style={{
                     flex:1,
@@ -3231,6 +3305,7 @@ export default function App(){
                 </button>
 
                 <button
+                  type="button"
                   onClick={subtractClimb}
                   style={{
                     flex:1,
@@ -3251,28 +3326,6 @@ export default function App(){
                 </button>
               </div>
 
-              {/* Live Preview - moved here for better proximity to Current Progress */}
-              <div style={{marginTop:16,backgroundColor:BLACK_PANEL_BG,padding:16,borderRadius:8,border:BLACK_PANEL_BORDER}}>
-                <h4 style={{marginTop:0,marginBottom:16,fontSize:16,fontWeight:'600'}}>Live Preview</h4>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,marginBottom:16}}>
-                  <div style={{fontSize:36,fontWeight:700,color:'#3b82f6',textAlign:'center'}}>
-                    {previewScore.toFixed(2)}
-                  </div>
-                  <GradeBadge grade={previewGrade} size="md" />
-                  <div style={{fontSize:12,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5}}>Weekly grade</div>
-                </div>
-                <div>
-                  <h5 style={{marginTop:0,marginBottom:12,fontSize:12,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal Gains</h5>
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(2, 1fr)',gap:8}}>
-                    {ORDER.map((color:any)=> (
-                      <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',backgroundColor:BLACK_ROW_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
-                        <div style={{textTransform:'capitalize',fontSize:13,fontWeight:'500'}}>{color}</div>
-                        <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:13}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           ) : (
             // Manual mode
@@ -3468,31 +3521,7 @@ export default function App(){
 
         {/* Live Preview - only show in manual mode since dropdown mode has it integrated */}
         {manualMode && (
-          <div style={{width:350}}>
-        
-          <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER}}>
-            <h2 style={{marginTop:0,marginBottom:16,fontSize:20,fontWeight:'600'}}>Live Preview</h2>
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,marginBottom:20}}>
-              <div style={{fontSize:48,fontWeight:700,color:'#3b82f6',textAlign:'center'}}>
-                {previewScore.toFixed(2)}
-              </div>
-              <GradeBadge grade={previewGrade} size="lg" />
-              <div style={{fontSize:13,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5}}>Weekly grade</div>
-            </div>
-            <div>
-              <h4 style={{marginTop:0,marginBottom:12,fontSize:14,fontWeight:'600',color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>Marginal</h4>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                {ORDER.map((color:any)=> (
-                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',backgroundColor:BLACK_ROW_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
-                    <div style={{textTransform:'capitalize',fontSize:14,fontWeight:'500'}}>{color}</div>
-                    <div style={{color:'#0ea5e9',fontWeight:'700',fontSize:14}}>+{marginalGain(totalCounts,color,1).toFixed(2)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        
-          </div>
+          <div style={{width:350}} />
         )}
         </section>
       )}
@@ -5938,7 +5967,32 @@ export default function App(){
                   )}
                   {latestSession && latestSession.wallCounts && (
                     <div style={{marginTop:16, backgroundColor:'#000', padding:16, borderRadius:12, border:'1px solid #fff'}}>
-                      <h4 style={{margin:0, marginBottom:8, fontSize:16, fontWeight:'700', color:'#94a3b8'}}>CURRENT PROGRESS</h4>
+                      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:12}}>
+                        <div style={{display:'flex', alignItems:'center', gap:12, flexWrap:'wrap'}}>
+                          <h4 style={{margin:0, fontSize:16, fontWeight:'700', color:'#e2e8f0'}}>
+                            Current Progress
+                          </h4>
+                          <div style={{display:'flex', alignItems:'center', gap:8}}>
+                            <span style={{color:'#a5b4fc', fontWeight:800}}>{latestScoreValue.toFixed(2)}</span>
+                            <span style={{color:'#e0f2fe', fontWeight:700}}>{`<${latestGrade || 'N/A'}>`}</span>
+                          </div>
+                          <InfoTooltip
+                            containerClassName="cursor-pointer"
+                            content={
+                              <div style={{display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:8}}>
+                                {ORDER.map((color:any)=> (
+                                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 8px',backgroundColor:'#0f172a',borderRadius:6,border:'1px solid #475569'}}>
+                                    <span style={{textTransform:'capitalize'}}>{color}</span>
+                                    <span style={{color:'#0ea5e9',fontWeight:700}}>+{marginalGain(currentClimbs, color, 1).toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            }
+                          >
+                            <span style={{fontSize:13, color:'#a5b4fc', textDecoration:'underline'}}>View marginal gains</span>
+                          </InfoTooltip>
+                        </div>
+                      </div>
                       <div style={{overflowX:'auto'}}>
                         <table style={{width:'100%', borderCollapse:'collapse', minWidth:480}}>
                           <thead>
