@@ -2536,7 +2536,7 @@ export default function App(){
         </div>
       )}
       
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+      <div style={{display:'flex',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <div style={{display:'flex',flexDirection:'column'}}>
             <h1 className="mrs-saint-delafield-regular" style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>
@@ -2559,17 +2559,17 @@ export default function App(){
             onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
           >
-            ⭐ GitHub Repository (please give it a star!)
+            ⭐ GitHub Repository
           </a>
         </div>
-        <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
+        <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end',marginLeft:'auto'}}>
           {isAuthenticated && user && (
             <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
               <div style={{position:'relative'}} ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(prev => !prev)}
                   style={{
-                    padding:'8px 16px',
+                    padding:'8px 12px',
                     backgroundColor:'#0f172a',
                     color:'#e2e8f0',
                     border:'1px solid rgba(148,163,184,0.6)',
@@ -2577,14 +2577,12 @@ export default function App(){
                     fontWeight:600,
                     display:'inline-flex',
                     alignItems:'center',
-                    gap:8,
-                    cursor:'pointer',
-                    minWidth:160
+                    gap:6,
+                    cursor:'pointer'
                   }}
                 >
                   <span style={{color:'#94a3b8', display:'inline-flex', alignItems:'center', gap:6}}>
                     {user.username}
-                    {user.role === 'admin' && <span style={{color:'#fbbf24'}}>(Admin)</span>}
                   </span>
                   <span aria-hidden="true" style={{fontSize:12, color:'#94a3b8'}}>
                     {userMenuOpen ? '▲' : '▼'}
