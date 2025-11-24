@@ -105,7 +105,7 @@ export const FloatingNav = ({
         )}
         style={{ backgroundColor: "#000" }}
       >
-        <div className="flex items-center justify-center flex-wrap">
+        <div className="flex items-center justify-center gap-[6px]">
           {navItems.map((navItem: any, idx: number) => {
             const id = navItem.link.replace("#", "");
             const isActive = activeSection === id;

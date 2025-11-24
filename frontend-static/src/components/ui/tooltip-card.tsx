@@ -19,6 +19,7 @@ export const Tooltip = ({
     x: 0,
     y: 0,
   });
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -27,6 +28,12 @@ export const Tooltip = ({
       setHeight(contentRef.current.scrollHeight);
     }
   }, [isVisible, content]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsTouchDevice(window.matchMedia("(hover: none)").matches);
+    }
+  }, []);
 
   const calculatePosition = (mouseX: number, mouseY: number) => {
     if (!contentRef.current || !containerRef.current)
@@ -44,8 +51,8 @@ export const Tooltip = ({
     const absoluteX = containerRect.left + mouseX;
     const absoluteY = containerRect.top + mouseY;
 
-    // Prefer showing to the left of the cursor to avoid covering the trigger
-    let finalX = mouseX - tooltipWidth - 12;
+    // Prefer showing to the left on desktop, right on touch
+    let finalX = isTouchDevice ? mouseX + 12 : mouseX - tooltipWidth - 12;
     let finalY = mouseY + 12;
 
     // If left overflow, fallback to right side

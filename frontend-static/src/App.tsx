@@ -1219,7 +1219,6 @@ export default function App(){
   const [isDraggingImage, setIsDraggingImage] = useState(false)
   const dragStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const navItems = useMemo(() => ([
-    { name: 'Notifications', link: '#notifications' },
     { name: 'New Session', link: '#new-session' },
     { name: 'Leaderboard', link: '#leaderboard' },
     { name: 'Analytics', link: '#analytics' }
@@ -3180,12 +3179,6 @@ export default function App(){
                   fontSize:isMobileCompact ? 11 : 12,
                   tableLayout:'fixed'
                 }}>
-                  <colgroup>
-                    <col style={{width:'25%'}} />
-                    {Array.from({ length: 6 }).map((_, idx) => (
-                      <col key={idx} style={{width:'12.5%'}} />
-                    ))}
-                  </colgroup>
                   <thead>
                     <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
                       <th style={{textAlign:'left',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
