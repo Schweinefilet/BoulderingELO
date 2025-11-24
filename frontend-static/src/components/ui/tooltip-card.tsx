@@ -112,14 +112,6 @@ export const Tooltip = ({
     setIsVisible(true);
   };
 
-  const handleTouchEnd = () => {
-    setTimeout(() => {
-      setIsVisible(false);
-      setMouse({ x: 0, y: 0 });
-      setPosition({ x: 0, y: 0 });
-    }, 2000);
-  };
-
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(hover: none)").matches) {
       e.preventDefault();
@@ -144,6 +136,28 @@ export const Tooltip = ({
     }
   }, [isVisible, height, mouse.x, mouse.y]);
 
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      if (!containerRef.current) return;
+
+      if (!containerRef.current.contains(event.target as Node)) {
+        setIsVisible(false);
+        setMouse({ x: 0, y: 0 });
+        setPosition({ x: 0, y: 0 });
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [isVisible]);
+
   return (
     <div
       ref={containerRef}
@@ -152,7 +166,6 @@ export const Tooltip = ({
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       onClick={handleClick}
     >
       {children}
