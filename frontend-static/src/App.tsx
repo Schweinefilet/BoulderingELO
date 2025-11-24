@@ -9,6 +9,7 @@ import { BackgroundBeams } from './components/ui/background-beams'
 import { GlowBorder } from './components/ui/glow-border'
 import { AuroraBackground } from './components/ui/aurora-background'
 import { GlowingEffect } from './components/ui/glowing-effect'
+import { FloatingNav } from './components/ui/floating-navbar'
 import { FlagEmoji, COUNTRY_CODES, COUNTRY_NAMES } from './components/ui/flag-emoji'
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
@@ -47,11 +48,11 @@ const gradeBadgeSizing = {
   lg: { fontSize: 16, padding: '6px 16px' }
 } as const;
 
-const BLACK_PANEL_BG = 'rgba(0, 0, 0, 0.55)';
+const BLACK_PANEL_BG = '#000';
 const BLACK_PANEL_BORDER_COLOR = 'rgba(255, 255, 255, 0.45)';
 const BLACK_PANEL_BORDER = `1px solid ${BLACK_PANEL_BORDER_COLOR}`;
-const BLACK_ROW_BG = 'rgba(0, 0, 0, 0.35)';
-const BLACK_HOVER_BG = 'rgba(0, 0, 0, 0.65)';
+const BLACK_ROW_BG = '#000';
+const BLACK_HOVER_BG = '#000';
 const PANEL_RADIUS = 10;
 
 const GradeBadge = ({ grade, size = 'md' }: { grade: GradeName; size?: 'sm' | 'md' | 'lg' }) => {
@@ -993,7 +994,7 @@ function ResetPasswordModal({ token, onClose, onReset }: { token: string | null;
           </button>
         </form>
       )}
-      <div style={{marginTop:12, display:'flex', gap:8}}>
+                <div style={{marginTop:12, display:'flex', gap:8}}>
         <button
           onClick={onClose}
           style={{
@@ -1212,6 +1213,13 @@ export default function App(){
   const googleLinkSectionRef = useRef<HTMLDivElement | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
   const [climbers, setClimbers] = useState<any[]>([])
+  const [imageViewer, setImageViewer] = useState<{ src: string; alt: string } | null>(null)
+  const navItems = useMemo(() => ([
+    { name: 'Notifications', link: '#notifications' },
+    { name: 'New Session', link: '#new-session' },
+    { name: 'Leaderboard', link: '#leaderboard' },
+    { name: 'Analytics', link: '#analytics' }
+  ]), [])
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [selectedClimber, setSelectedClimber] = useState<number|undefined>(undefined)
@@ -1225,7 +1233,21 @@ export default function App(){
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // Track current image in carousel for dropdown mode
   const [manualModeImageIndexes, setManualModeImageIndexes] = useState<Record<string, number>>({}); // Track current image index per section in manual mode
   const [expiredSections, setExpiredSections] = useState<string[]>([]) // Track expired wall sections
-  
+
+  useEffect(() => {
+    if (!imageViewer) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setImageViewer(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [imageViewer]);
+
   // Helper function to format wall section names properly
   const formatWallSectionName = (section: string): string => {
     // Handle special cases first
@@ -2385,25 +2407,48 @@ export default function App(){
   return (
     <div style={{fontFamily:'"Red Hat Text", sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
       {backgroundEnabled && <BackgroundBeams />}
-      
-      {/* Toast Notification */}
-      {toast && (
-        <div style={{
-          position:'fixed',
-          top:20,
-          right:20,
-          backgroundColor: toast.type === 'success' ? '#10b981' : '#ef4444',
-          color:'white',
-          padding:'12px 20px',
-          borderRadius:8,
-          boxShadow:'0 4px 12px rgba(0,0,0,0.3)',
-          zIndex:9999,
-          fontWeight:'600',
-          fontSize:14,
-          maxWidth:'90%',
-          animation:'slideIn 0.3s ease-out'
-        }}>
-          {toast.message}
+      {imageViewer && (
+        <div
+          onClick={() => setImageViewer(null)}
+          style={{
+            position:'fixed',
+            inset:0,
+            backgroundColor:'rgba(0,0,0,0.88)',
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'center',
+            padding:20,
+            zIndex:10000,
+            cursor:'zoom-out'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{position:'relative',maxWidth:'90vw',maxHeight:'90vh'}}
+          >
+            <img
+              src={imageViewer.src}
+              alt={imageViewer.alt}
+              style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',borderRadius:10,boxShadow:'0 10px 40px rgba(0,0,0,0.5)'}}
+            />
+            <button
+              onClick={() => setImageViewer(null)}
+              style={{
+                position:'absolute',
+                top:8,
+                right:8,
+                backgroundColor:'rgba(0,0,0,0.6)',
+                color:'white',
+                border:'1px solid rgba(255,255,255,0.3)',
+                borderRadius:999,
+                padding:'6px 10px',
+                cursor:'pointer',
+                fontWeight:700
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
       
@@ -2590,6 +2635,10 @@ export default function App(){
       )}
       
       
+      <div id="notifications" style={{display:'flex', justifyContent:'center', marginBottom:16}}>
+        <FloatingNav navItems={navItems} />
+      </div>
+      
         <div style={{position:'relative', marginBottom:20}}>
           <GlowingEffect variant="white" glow blur={18} spread={36} borderWidth={1} disabled={false} />
           <div style={{backgroundColor: BLACK_PANEL_BG, padding:24, borderRadius:8, border: BLACK_PANEL_BORDER, position:'relative'}}>
@@ -2635,9 +2684,29 @@ export default function App(){
                   </div>
                 </div>
               )}
-            </div>
           </div>
         </div>
+      </div>
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position:'fixed',
+          top:20,
+          right:20,
+          backgroundColor: toast.type === 'success' ? '#10b981' : '#ef4444',
+          color:'white',
+          padding:'12px 20px',
+          borderRadius:8,
+          boxShadow:'0 4px 12px rgba(0,0,0,0.3)',
+          zIndex:9999,
+          fontWeight:'600',
+          fontSize:14,
+          maxWidth:'90%',
+          animation:'slideIn 0.3s ease-out'
+        }}>
+          {toast.message}
+        </div>
+      )}
       
 
       
@@ -2680,6 +2749,7 @@ export default function App(){
                     <div style={{fontSize:13,fontWeight:700,color:'#93c5fd',marginBottom:6}}>Notes</div>
                     <ul style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:6,fontSize:13}}>
                       <li>Tap on any climber&apos;s name on the leaderboard to see their full profile.</li>
+                      <li>Tap on the reference picture to enlarge it.</li>
                       <li>Your stats save so you do not need to reenter all the climbs you have done.</li>
                       <li>Black clears require video evidence.</li>
                     </ul>
@@ -2811,7 +2881,7 @@ export default function App(){
       
       
       {isAuthenticated && (
-        <section style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
+        <section id="new-session" style={{display:'flex',gap:20,flexWrap:'wrap',marginBottom:20}}>
           <div style={{flex:1,minWidth:0,width:'100%'}}>
             
               <div style={{padding:'clamp(12px, 4vw, 24px)', backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER, overflow:'hidden'}}>
@@ -2950,9 +3020,14 @@ export default function App(){
                               maxWidth:1200,
                               maxHeight:250,
                               objectFit:'contain',
-                              display:'block'
+                              display:'block',
+                              cursor:'zoom-in'
                             }}
                             onError={referenceImageErrorHandler}
+                            onClick={() => setImageViewer({
+                              src: buildImageSources(wallSectionImages[dropdownWall][currentImageIndex]).fallback,
+                              alt: `${dropdownWall} wall reference ${currentImageIndex + 1}`
+                            })}
                           />
                         </picture>
                       {wallSectionImages[dropdownWall].length > 1 && (
@@ -3249,26 +3324,31 @@ export default function App(){
                             />
                             <source
                               type="image/webp"
-                              srcSet={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).webp}
-                            />
-                            <img
-                              src={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).fallback}
-                              alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`}
+                            srcSet={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).webp}
+                          />
+                          <img
+                            src={buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).fallback}
+                            alt={`${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`}
                               loading="lazy"
                               referrerPolicy="no-referrer"
                               width={1200}
                               height={900}
                               style={{
-                                width:'100%',
-                                height:'auto',
-                                maxWidth:1200,
-                                maxHeight:250,
-                                objectFit:'contain',
-                                display:'block'
-                              }}
-                              onError={referenceImageErrorHandler}
-                            />
-                          </picture>
+                              width:'100%',
+                              height:'auto',
+                              maxWidth:1200,
+                              maxHeight:250,
+                              objectFit:'contain',
+                              display:'block',
+                              cursor:'zoom-in'
+                            }}
+                            onError={referenceImageErrorHandler}
+                            onClick={() => setImageViewer({
+                              src: buildImageSources(wallSectionImages[section][manualModeImageIndexes[section] || 0]).fallback,
+                              alt: `${section} wall reference ${(manualModeImageIndexes[section] || 0) + 1}`
+                            })}
+                          />
+                        </picture>
                           {wallSectionImages[section].length > 1 && (
                             <>
                               <button
@@ -3418,7 +3498,7 @@ export default function App(){
       )}
 
       {/* Leaderboard - visible to everyone */}
-      <section style={{marginBottom:20}}>
+      <section id="leaderboard" style={{marginBottom:20}}>
         
           <div style={{padding:24, backgroundColor: BLACK_PANEL_BG, borderRadius:PANEL_RADIUS, border:BLACK_PANEL_BORDER}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
@@ -4103,7 +4183,7 @@ export default function App(){
         
       </section>
 
-      <section style={{marginTop:24}}>
+      <section id="analytics" style={{marginTop:24}}>
         <h2>Analytics</h2>
         
         {/* Total Score Over Time */}
@@ -4596,19 +4676,21 @@ export default function App(){
           WebkitOverflowScrolling:'touch' as any
         }}>
           <div style={{width:500,maxWidth:'100%',maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
-            <GlowBorder glowColor="rgba(16, 185, 129, 0.5)" borderRadius={12} backgroundColor="#1e293b">
-              <div 
-                onClick={(e) => e.stopPropagation()}
-                style={{
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
                 padding:'16px',
                 overflowY:'auto',
                 WebkitOverflowScrolling:'touch' as any,
                 scrollbarWidth:'none',
                 msOverflowStyle:'none',
-                maxHeight:'90vh'
+                maxHeight:'90vh',
+                backgroundColor:'#000',
+                borderRadius:12,
+                border:'1px solid #475569'
               }}
-                className="hide-scrollbar"
-              >
+              className="hide-scrollbar"
+            >
               <h2 style={{marginTop:0,marginBottom:16,fontSize:20}}>Account Settings</h2>
               <form onSubmit={async (e) => {
                 e.preventDefault();
@@ -4644,7 +4726,7 @@ export default function App(){
                 }
               }}>
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4661,7 +4743,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
+                      backgroundColor:'#000',
                       color:'white',
                       fontSize:14,
                       boxSizing:'border-box'
@@ -4670,7 +4752,7 @@ export default function App(){
                 </div>
 
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4687,7 +4769,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
+                      backgroundColor:'#000',
                       color:'white',
                       fontSize:14,
                       boxSizing:'border-box'
@@ -4696,7 +4778,7 @@ export default function App(){
                 </div>
 
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4711,7 +4793,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
+                      backgroundColor:'#000',
                       color:'white',
                       fontSize:14
                     }}
@@ -4732,7 +4814,7 @@ export default function App(){
                 </div>
                 
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4749,7 +4831,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
+                      backgroundColor:'#000',
                       color:'white',
                       fontSize:14,
                       boxSizing:'border-box'
@@ -4758,7 +4840,7 @@ export default function App(){
                 </div>
 
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4775,7 +4857,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
+                      backgroundColor:'#000',
                       color:'white',
                       fontSize:14,
                       boxSizing:'border-box'
@@ -4787,7 +4869,7 @@ export default function App(){
                 </div>
 
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4804,7 +4886,7 @@ export default function App(){
                       padding:12,
                       borderRadius:6,
                       border:'1px solid #475569',
-                      backgroundColor:'#1e293b',
+                      backgroundColor:'#000',
                       color:'white',
                       fontSize:14,
                       boxSizing:'border-box',
@@ -4816,7 +4898,7 @@ export default function App(){
                 
                 {/* Change Password Section */}
                 <div style={{
-                  backgroundColor:'#0f172a',
+                  backgroundColor:'#000',
                   padding:12,
                   borderRadius:8,
                   border:'1px solid #475569',
@@ -4834,30 +4916,30 @@ export default function App(){
                         padding:12,
                         borderRadius:6,
                         border:'1px solid #475569',
-                        backgroundColor:'#1e293b',
-                        color:'white',
-                        fontSize:14,
-                        boxSizing:'border-box'
-                      }}
-                    />
-                  </div>
+                      backgroundColor:'#000',
+                      color:'white',
+                      fontSize:14,
+                      boxSizing:'border-box'
+                    }}
+                  />
+                </div>
                   <div style={{marginBottom:12}}>
                     <label style={{display:'block',marginBottom:6,fontSize:13,fontWeight:'600'}}>New Password</label>
                     <input
                       type="password"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
-                      style={{
-                        width:'100%',
-                        padding:12,
-                        borderRadius:6,
-                        border:'1px solid #475569',
-                        backgroundColor:'#1e293b',
+                    style={{
+                      width:'100%',
+                      padding:12,
+                      borderRadius:6,
+                      border:'1px solid #475569',
+                        backgroundColor:'#000',
                         color:'white',
                         fontSize:14,
                         boxSizing:'border-box'
-                      }}
-                      minLength={6}
+                    }}
+                    minLength={6}
                     />
                   </div>
                   <div style={{marginBottom:12}}>
@@ -4871,13 +4953,13 @@ export default function App(){
                         padding:12,
                         borderRadius:6,
                         border:'1px solid #475569',
-                        backgroundColor:'#1e293b',
-                        color:'white',
-                        fontSize:14,
-                        boxSizing:'border-box'
-                      }}
-                    />
-                  </div>
+                      backgroundColor:'#000',
+                      color:'white',
+                      fontSize:14,
+                      boxSizing:'border-box'
+                    }}
+                  />
+                </div>
                   <button
                     type="button"
                     onClick={handlePasswordChange}
@@ -4961,7 +5043,7 @@ export default function App(){
                   <div
                     ref={googleLinkSectionRef}
                     style={{
-                      backgroundColor:'#0f172a',
+                      backgroundColor:'#000',
                       padding:16,
                       borderRadius:8,
                       border:'1px solid #475569',
@@ -5156,7 +5238,6 @@ export default function App(){
                 </button>
               </div>
             </div>
-          </GlowBorder>
           </div>
         </div>
       )}
@@ -5853,6 +5934,39 @@ export default function App(){
                       border:'1px solid #475569'
                     }}>
                       No sessions yet
+                    </div>
+                  )}
+                  {latestSession && latestSession.wallCounts && (
+                    <div style={{marginTop:16, backgroundColor:'#000', padding:16, borderRadius:12, border:'1px solid #fff'}}>
+                      <h4 style={{margin:0, marginBottom:8, fontSize:16, fontWeight:'700', color:'#94a3b8'}}>CURRENT PROGRESS</h4>
+                      <div style={{overflowX:'auto'}}>
+                        <table style={{width:'100%', borderCollapse:'collapse', minWidth:480}}>
+                          <thead>
+                            <tr>
+                              <th style={{textAlign:'left', padding:'8px 6px', borderBottom:'1px solid #475569', color:'#cbd5e1'}}>Wall Section</th>
+                              {['Green','Blue','Yellow','Orange','Red','Black'].map(color => (
+                                <th key={color} style={{textAlign:'center', padding:'8px 6px', borderBottom:'1px solid #475569', color:'#cbd5e1'}}>{color}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.keys(latestSession.wallCounts).map(section => {
+                              const counts = latestSession.wallCounts[section] || {};
+                              const totals = wallTotals[section] || {};
+                              return (
+                                <tr key={section} style={{borderBottom:'1px solid #1f2937'}}>
+                                  <td style={{padding:'8px 6px', color:'#e2e8f0', fontWeight:600}}>{formatWallSectionName(section)}</td>
+                                  {(['green','blue','yellow','orange','red','black'] as const).map(color => (
+                                    <td key={color} style={{padding:'8px 6px', textAlign:'center', color:'#cbd5e1'}}>
+                                      {(counts[color] || 0)}/{(totals[color] ?? 0)}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -6828,9 +6942,14 @@ export default function App(){
                                       style={{
                                         width:'100%',
                                         height:'100%',
-                                        objectFit:'cover'
+                                        objectFit:'cover',
+                                        cursor:'zoom-in'
                                       }}
                                       onError={adminReferenceImageErrorHandler}
+                                      onClick={() => setImageViewer({
+                                        src: buildImageSources(imagePath).fallback,
+                                        alt: `${section} reference ${idx + 1}`
+                                      })}
                                     />
                                   </picture>
                                   <button
