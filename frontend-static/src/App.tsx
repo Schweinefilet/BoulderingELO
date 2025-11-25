@@ -141,6 +141,76 @@ const GuideToggleButton = ({
   </button>
 );
 
+const marginalGainsButtonStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#a5b4fc',
+  textDecoration: 'none',
+  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+  border: '1px solid #475569',
+  borderRadius: 999,
+  padding: '6px 10px',
+  cursor: 'pointer'
+};
+
+const MarginalGainsContent = ({ counts }: { counts: Counts }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, backgroundColor: '#000', padding: 6, borderRadius: 6 }}>
+    {ORDER.map((color: any) => (
+      <div key={color} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ textTransform: 'capitalize', color: '#e2e8f0', fontSize: 12 }}>{color}</span>
+        <span style={{ color: '#0ea5e9', fontWeight: 700, fontSize: 12 }}>+{marginalGain(counts, color, 1).toFixed(2)}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const MarginalGainsButton = ({
+  counts,
+  isTouchDevice,
+  label = 'View marginal gains'
+}: {
+  counts: Counts;
+  isTouchDevice: boolean;
+  label?: string;
+}) => {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isTouchDevice && open) {
+      setOpen(false);
+    }
+  }, [isTouchDevice, open]);
+
+  const buttonLabel = isTouchDevice && open ? 'Hide marginal gains' : label;
+  const button = (
+    <button
+      type="button"
+      onClick={isTouchDevice ? () => setOpen(prev => !prev) : undefined}
+      style={marginalGainsButtonStyle}
+    >
+      {buttonLabel}
+    </button>
+  );
+
+  if (isTouchDevice) {
+    return (
+      <div style={{ display: 'inline-block' }}>
+        {button}
+        {open && (
+          <div style={{ marginTop: 8 }}>
+            <MarginalGainsContent counts={counts} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <InfoTooltip containerClassName="cursor-pointer" content={<MarginalGainsContent counts={counts} />}>
+      {button}
+    </InfoTooltip>
+  );
+};
+
 const renderGradeReferenceLines = () => GRADE_REFERENCE_LINES.map(({ grade, value }) => {
   const colors = getGradeColor(grade);
   return (
@@ -1445,6 +1515,22 @@ export default function App(){
   }, [])
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const query = window.matchMedia('(hover: none)');
+    const handleChange = (event: MediaQueryListEvent) => setIsTouchDevice(event.matches);
+
+    setIsTouchDevice(query.matches);
+
+    if (typeof query.addEventListener === 'function') {
+      query.addEventListener('change', handleChange);
+      return () => query.removeEventListener('change', handleChange);
+    }
+
+    query.addListener(handleChange);
+    return () => query.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tokenFromUrl = params.get('token');
     if (tokenFromUrl && (window.location.pathname.includes('reset-password') || params.has('token'))) {
@@ -2083,6 +2169,7 @@ export default function App(){
   const [resetLoading, setResetLoading] = useState(false);
   const [recalculateScoresLoading, setRecalculateScoresLoading] = useState(false);
   const [profileSessionsExpanded, setViewingProfileSessionsExpanded] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(hover: none)').matches);
 
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isMobileCompact = typeof window !== 'undefined' && window.innerWidth <= 430;
@@ -3257,35 +3344,7 @@ export default function App(){
                       <GradeBadge grade={previewGrade} size="md" />
                     </div>
                   </div>
-                  <InfoTooltip
-                    containerClassName="cursor-pointer"
-                    content={
-                      <div style={{display:'flex',flexDirection:'column',gap:4,backgroundColor:'#000',padding:6,borderRadius:6}}>
-                        {ORDER.map((color:any)=> (
-                          <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                            <span style={{textTransform:'capitalize',color:'#e2e8f0',fontSize:12}}>{color}</span>
-                            <span style={{color:'#0ea5e9',fontWeight:700,fontSize:12}}>+{marginalGain(totalCounts, color, 1).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    }
-                  >
-                    <button
-                      type="button"
-                      style={{
-                        fontSize:12,
-                        color:'#a5b4fc',
-                        textDecoration:'none',
-                        backgroundColor:'rgba(59, 130, 246, 0.12)',
-                        border:'1px solid #475569',
-                        borderRadius:999,
-                        padding:'6px 10px',
-                        cursor:'pointer'
-                      }}
-                    >
-                      View marginal gains
-                    </button>
-                  </InfoTooltip>
+                  <MarginalGainsButton counts={totalCounts} isTouchDevice={isTouchDevice} />
                 </div>
                 <table style={{
                   width:'100%',
@@ -6103,35 +6162,7 @@ export default function App(){
                             <span style={{color:'#a5b4fc', fontWeight:800, fontSize:15}}>Score: {latestScoreValue.toFixed(2)}</span>
                             <GradeBadge grade={latestGrade || 'V0'} size="md" />
                           </div>
-                          <InfoTooltip
-                            containerClassName="cursor-pointer"
-                            content={
-                              <div style={{display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:8}}>
-                                {ORDER.map((color:any)=> (
-                                  <div key={color} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 8px',backgroundColor:'#0f172a',borderRadius:6,border:'1px solid #475569'}}>
-                                    <span style={{textTransform:'capitalize'}}>{color}</span>
-                                    <span style={{color:'#0ea5e9',fontWeight:700}}>+{marginalGain(currentClimbs, color, 1).toFixed(2)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            }
-                          >
-                            <button
-                              type="button"
-                              style={{
-                                fontSize:12,
-                                color:'#a5b4fc',
-                                textDecoration:'none',
-                                backgroundColor:'rgba(59, 130, 246, 0.12)',
-                                border:'1px solid #475569',
-                                borderRadius:999,
-                                padding:'6px 10px',
-                                cursor:'pointer'
-                              }}
-                            >
-                              View marginal gains
-                            </button>
-                          </InfoTooltip>
+                          <MarginalGainsButton counts={currentClimbs} isTouchDevice={isTouchDevice} />
                         </div>
                       </div>
                       <div style={{overflowX:'auto'}}>
