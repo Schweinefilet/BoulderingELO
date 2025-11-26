@@ -7,12 +7,14 @@ import { cn } from "@/lib/utils";
 export const FloatingNav = ({
   navItems,
   className,
+  onNavClick,
 }: {
   navItems: {
     name: string;
     link: string;
   }[];
   className?: string;
+  onNavClick?: (id: string) => void;
 }) => {
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
@@ -32,8 +34,9 @@ export const FloatingNav = ({
       setHasInteracted(true);
       setShowOutline(true);
       window.history.replaceState(null, "", `#${id}`);
+      onNavClick?.(id);
     }
-  }, []);
+  }, [onNavClick]);
 
   useEffect(() => {
     const measureNav = () => {
@@ -152,6 +155,7 @@ export const FloatingNav = ({
                   e.currentTarget.blur();
                   handleNavClick(id);
                 }}
+                data-nav-item={navItem.name}
                 className={cn(
                   "relative flex items-center justify-center rounded-full bg-transparent px-3.5 py-2 text-[13px] text-white no-underline min-w-[110px] text-center border-2 border-transparent overflow-visible focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 active:outline-none active:ring-0"
                 )}

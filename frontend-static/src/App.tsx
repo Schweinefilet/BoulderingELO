@@ -1294,6 +1294,13 @@ export default function App(){
   }, [imageViewer]);
 
   useEffect(() => {
+    const handleResize = () => setIsNarrowHeader(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
@@ -1319,6 +1326,10 @@ export default function App(){
     { name: 'Leaderboard', link: '#leaderboard' },
     { name: 'Analytics', link: '#analytics' }
   ]), [])
+  const [isNarrowHeader, setIsNarrowHeader] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 640;
+  });
   const [sessions, setSessions] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [selectedClimber, setSelectedClimber] = useState<number|undefined>(undefined)
@@ -2620,7 +2631,13 @@ export default function App(){
       )}
       
       <div style={{display:'flex',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
-        <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+        <div style={{
+          display:'flex',
+          alignItems: isNarrowHeader ? 'flex-start' : 'center',
+          gap: isNarrowHeader ? 8 : 16,
+          flexWrap:'wrap',
+          flexDirection: isNarrowHeader ? 'column' : 'row'
+        }}>
           <div style={{display:'flex',flexDirection:'column'}}>
             <h1 className="mrs-saint-delafield-regular" style={{margin:0,fontSize:'clamp(20px, 5vw, 32px)'}}>
               <span className="italianno" style={{marginRight: 6}}>Bouldering</span>
@@ -2637,7 +2654,8 @@ export default function App(){
               textDecoration:'none',
               fontWeight:'600',
               fontSize:'clamp(12px, 2.5vw, 14px)',
-              transition:'color 0.2s'
+              transition:'color 0.2s',
+              alignSelf: isNarrowHeader ? 'flex-start' : 'center'
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}
@@ -3336,17 +3354,46 @@ export default function App(){
                   fontSize:isMobileCompact ? 11 : 12,
                   tableLayout:'fixed'
                 }}>
+                  {/*
+                    On mobile, move Red right next to Black by adjusting the column order.
+                    Desktop keeps the existing order.
+                  */}
+                  {(() => {
+                    const colorOrder = isMobileCompact
+                      ? (['green', 'blue', 'yellow', 'orange', 'black', 'red'] as const)
+                      : (['green', 'blue', 'yellow', 'orange', 'red', 'black'] as const);
+                    const colorMeta: Record<typeof colorOrder[number], { label: string; color: string }> = {
+                      green: { label: 'Green', color: '#10b981' },
+                      blue: { label: 'Blue', color: '#3b82f6' },
+                      yellow: { label: 'Yellow', color: '#eab308' },
+                      orange: { label: 'Orange', color: '#f97316' },
+                      red: { label: 'Red', color: '#ef4444' },
+                      black: { label: 'Black', color: '#d1d5db' }
+                    };
+                    const columnWidth = isMobileCompact ? '11.5%' : '12.5%';
+                    return (
                   <thead>
                     <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
                       <th style={{textAlign:'left',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
-                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#10b981',fontWeight:'600',width:'12.5%'}}>Green</th>
-                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#3b82f6',fontWeight:'600',width:'12.5%'}}>Blue</th>
-                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#eab308',fontWeight:'600',width:'12.5%'}}>Yellow</th>
-                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#f97316',fontWeight:'600',width:'12.5%'}}>Orange</th>
-                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#ef4444',fontWeight:'600',width:'12.5%'}}>Red</th>
-                      <th style={{textAlign:'center',verticalAlign:'middle',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#d1d5db',fontWeight:'600',width:'12.5%'}}>Black</th>
+                      {colorOrder.map(color => (
+                        <th
+                          key={color}
+                          style={{
+                            textAlign:'center',
+                            verticalAlign:'middle',
+                            padding: isMobileCompact ? '6px 4px' : '8px 6px',
+                            color: colorMeta[color].color,
+                            fontWeight:'600',
+                            width: columnWidth
+                          }}
+                        >
+                          {colorMeta[color].label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
+                    );
+                  })()}
                   <tbody>
                     {Object.keys(wallTotals)
                       .filter(section => !expiredSections.includes(section))
