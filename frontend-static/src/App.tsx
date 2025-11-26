@@ -751,10 +751,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </>
         )}
       </div>
-      {/* UMass Ascend subtitle under the main title */}
-      <div style={{width:'100%',textAlign:'center',marginBottom:16}}>
-        <div style={{fontSize:14,color:'#94a3b8',fontWeight:600}}>UMass Ascend</div>
-      </div>
 
       {/* Google Name Confirmation Modal */}
       {showGoogleNamePrompt && (
@@ -2630,7 +2626,7 @@ export default function App(){
               <span className="italianno" style={{marginRight: 6}}>Bouldering</span>
               <span className="dm-serif-text">ELO</span>
             </h1>
-            <div style={{fontSize:12,color:'#94a3b8',fontWeight:600,marginTop:4}}>UMass Ascend</div>
+            <div style={{fontSize:12,color:'#94a3b8',fontWeight:600,marginTop:4}}>UMass RecWell Climbing Gym</div>
           </div>
           <a 
             href="https://github.com/Schweinefilet/BoulderingELO" 
@@ -2938,7 +2934,7 @@ export default function App(){
 
           <div style={{...guideSectionCardStyle, marginTop: 0}}>
             <div style={guideSectionHeaderStyle}>
-              <h4 style={guideSectionTitleStyle}>Quick start guide</h4>
+              <h4 style={guideSectionTitleStyle}>New user guide</h4>
               <GuideToggleButton
                 label="guide"
                 isOpen={showUserGuide}
@@ -2968,10 +2964,10 @@ export default function App(){
                   <div style={{padding:'12px 14px',backgroundColor:BLACK_ROW_BG,borderRadius:8,border:BLACK_PANEL_BORDER,color:'#cbd5e1',lineHeight:1.5}}>
                     <div style={{fontSize:13,fontWeight:700,color:'#93c5fd',marginBottom:6}}>Notes</div>
                     <ul style={{margin:0,paddingLeft:18,display:'flex',flexDirection:'column',gap:6,fontSize:13}}>
+                      <li>Feel free to use the navigation bar on top of the screen.</li>
                       <li>Tap on any climber&apos;s name on the leaderboard to see their full profile.</li>
                       <li>Tap on the reference picture to enlarge it.</li>
-                      <li>Your stats save so you do not need to reenter all the climbs you have done.</li>
-                      <li>Black clears require video evidence.</li>
+                      <li>Black tops require video evidence.</li>
                     </ul>
                   </div>
                 </div>
@@ -2983,14 +2979,6 @@ export default function App(){
                   >
                     Export CSV
                   </button>
-
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    style={{padding:'8px 12px',backgroundColor:BLACK_PANEL_BG,color:'#34d399',border:BLACK_PANEL_BORDER,borderRadius:6,cursor:'pointer'}}
-                  >
-                    Open Settings
-                  </button>
-
                   <div style={{fontSize:13,color:'#93c5fd',fontWeight:600,display:'flex',flexDirection:'column',gap:4}}>
                     <span>Feel free to check out analytics at the bottom of the page.</span>
                   </div>
@@ -3012,10 +3000,8 @@ export default function App(){
               <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:16}}>
                 <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start',justifyContent:'space-between'}}>
                   <div style={{flex:'1 1 260px',minWidth:220}}>
-                    <h5 style={{margin:'0 0 6px',color:'#bfdbfe',fontSize:15}}>Scoring at a glance</h5>
                     <div style={{fontSize:14,lineHeight:1.6,color:'#cbd5e1'}}>
-                      <strong>Climb harder routes to get more points.</strong> Sends are processed from Black → Green with a diminishing returns factor (r = 0.95) so earlier sends pay out more.
-                      Your weekly total is then translated into a grade band (V0 → V9+) so you can compare sessions at a glance.
+                      <strong>Climb harder routes to get more points.</strong> Tops are processed from Black → Green with a diminishing returns factor (r = 0.95).
                     </div>
                   </div>
                 </div>
@@ -3044,16 +3030,13 @@ export default function App(){
                           <strong>Base values (<InlineMath math="b_c" />):</strong> Black(108) · Red(36) · Orange(12) · Yellow(4)· Blue(1.5) · Green(0.5).
                         </li>
                         <li style={{marginBottom:6}}>
-                          <strong>Grade boundaries:</strong> Every score maps to a V-grade (see table below) so you know if your week felt like V3 or V8.
-                        </li>
-                        <li style={{marginBottom:6}}>
-                          <strong>Diminishing returns:</strong> Early climbs for each color earn more than later repeats.
+                          <strong>Diminishing returns:</strong> You won't get a lot more score if you climb a lot of the same or lower grades.
                         </li>
                         <li style={{marginBottom:6}}>
                           <InlineMath math="n_{\text{cmltve}}" /> counts all harder colors already processed; <InlineMath math="n_c" /> counts climbs of the current color.
                         </li>
                         <li>
-                          <strong>Marginal gains shrink</strong> as totals increase, encouraging steady progression across colors.
+                          <strong>Marginal gains shrink</strong> as totals increase.
                         </li>
                       </ol>
                     </div>
@@ -3075,7 +3058,7 @@ export default function App(){
             {showGradeBoundaries && (
               <>
                 <p style={{margin:'16px 0',fontSize:13,color:'#94a3b8'}}>
-                  Each weekly score S maps to a V-grade using the exact ranges below. Colors match the badges on the leaderboard and profile pages.
+                  Really arbitrary but I think it corresponds well to the rough number of routes of each grade in the gym.
                 </p>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
                   {GRADE_BOUNDS.map(bound => {
