@@ -3354,14 +3354,8 @@ export default function App(){
                   fontSize:isMobileCompact ? 11 : 12,
                   tableLayout:'fixed'
                 }}>
-                  {/*
-                    On mobile, move Red right next to Black by adjusting the column order.
-                    Desktop keeps the existing order.
-                  */}
                   {(() => {
-                    const colorOrder = isMobileCompact
-                      ? (['green', 'blue', 'yellow', 'orange', 'black', 'red'] as const)
-                      : (['green', 'blue', 'yellow', 'orange', 'red', 'black'] as const);
+                    const colorOrder = ['green', 'blue', 'yellow', 'orange', 'red', 'black'] as const;
                     const colorMeta: Record<typeof colorOrder[number], { label: string; color: string }> = {
                       green: { label: 'Green', color: '#10b981' },
                       blue: { label: 'Blue', color: '#3b82f6' },
