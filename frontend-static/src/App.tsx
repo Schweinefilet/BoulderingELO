@@ -629,7 +629,12 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   display:'flex',
                   justifyContent:'center'
                 }}>
-                  <div style={{ borderRadius: '24px', overflow: 'hidden' }}>
+                  <div style={{
+                    borderRadius: '24px',
+                    overflow: 'hidden',
+                    width: '100%',
+                    maxWidth: 360
+                  }}>
                     <GoogleLogin
                       onSuccess={handleGoogleLogin}
                       onError={() => {
@@ -637,7 +642,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                       }}
                       theme="filled_blue"
                       size="large"
-                      width="400"
+                      width="100%"
                       shape="pill"
                       text={mode === 'login' ? 'signin_with' : 'signup_with'}
                     />
