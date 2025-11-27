@@ -73,15 +73,18 @@ export const FloatingNav = ({
       const newSessionTop = (document.getElementById("new-session")?.offsetTop ?? 0);
       const leaderboardTop = (document.getElementById("leaderboard")?.offsetTop ?? 0);
       const guideFadePoint = guideTop !== null ? guideTop - 60 : Infinity;
+      const newSessionInView = currentY + window.innerHeight * 0.5 >= newSessionTop;
       const pastNewSession = currentY >= newSessionTop - 40;
       const beforeGuide = currentY < guideFadePoint;
 
+      // Always show outline when New Session is the active section and at least half in view
+      if (activeSection === "new-session") {
+        setShowOutline(newSessionInView && beforeGuide);
+        return;
+      }
+
       // Logged-out: wait until approaching leaderboard
       if (!isAuthenticated) {
-        if (activeSection === "new-session") {
-          setShowOutline(pastNewSession);
-          return;
-        }
         const atLeaderboard = currentY >= (leaderboardTop - window.innerHeight * 0.3);
         setShowOutline(atLeaderboard);
         return;
