@@ -219,7 +219,15 @@ const renderGradeReferenceLines = () => GRADE_REFERENCE_LINES.map(({ grade, valu
       y={value}
       stroke={colors.backgroundColor}
       strokeDasharray="3 3"
-      label={{ position: 'right', value: grade, fill: colors.textColor, fontSize: 10 }}
+      label={{
+        position: 'right',
+        value: grade,
+        fill: colors.textColor,
+        fontSize: 11,
+        fontWeight: 700,
+        dx: 10,
+        textAnchor: 'start'
+      }}
     />
   );
 });
@@ -324,9 +332,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [authView, setAuthView] = useState<'auth' | 'forgot'>('auth');
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotMessage, setForgotMessage] = useState('');
   
   // Google sign-up name confirmation state
   const [showGoogleNamePrompt, setShowGoogleNamePrompt] = useState(false);
@@ -451,22 +456,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     }
   }
 
-  async function handleForgotPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setForgotMessage('');
-
-    try {
-      const response = await api.requestPasswordReset(forgotEmail);
-      setForgotMessage(response.message || 'If that email is registered, a password reset link has been sent.');
-    } catch (err: any) {
-      setForgotMessage('If that email is registered, a password reset link has been sent.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div style={{
       fontFamily:'"Red Hat Text", sans-serif'
@@ -484,11 +473,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             <span className="dm-serif-text">ELO</span>
           </h1>
         
-        {authView === 'auth' ? (
-          <>
+        <>
             <div style={{display:'flex',gap:8,marginBottom:24}}>
               <button
-                onClick={() => { setMode('login'); setAuthView('auth'); }}
+                onClick={() => { setMode('login'); }}
                 style={{
                   flex:1,
                   padding:8,
@@ -504,7 +492,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                 Login
               </button>
               <button
-                onClick={() => { setMode('register'); setAuthView('auth'); }}
+                onClick={() => { setMode('register'); }}
                 style={{
                   flex:1,
                   padding:8,
@@ -561,24 +549,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   placeholder="Enter password"
                 />
               </div>
-              {mode === 'login' && (
-                <div style={{textAlign:'right', marginBottom:16}}>
-                  <button
-                    type="button"
-                    onClick={() => { setAuthView('forgot'); setForgotEmail(username); setForgotMessage(''); setError(''); }}
-                    style={{
-                      background:'none',
-                      border:'none',
-                      color:'#93c5fd',
-                      cursor:'pointer',
-                      fontSize:13,
-                      textDecoration:'underline'
-                    }}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
               {mode === 'register' && (
                 <div style={{marginBottom:16}}>
                   <label style={{display:'block',marginBottom:8,fontSize:14}}>Full Name</label>
@@ -676,80 +646,6 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
               </>
             )}
           </>
-        ) : (
-          <>
-            <h3 style={{marginTop:0, marginBottom:12}}>Forgot Password</h3>
-            <p style={{color:'#cbd5e1', fontSize:14, marginBottom:16}}>
-              Enter the email or username you use to sign in. If it matches a local account, we will send reset instructions.
-            </p>
-            <form onSubmit={handleForgotPassword}>
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',marginBottom:8,fontSize:14}}>Email or Username</label>
-                <input
-                  type="text"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  style={{
-                    width:'100%',
-                    padding:12,
-                    borderRadius:6,
-                    border:'1px solid #475569',
-                    backgroundColor:'#0f172a',
-                    color:'white',
-                    fontSize:16
-                  }}
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-              {forgotMessage && (
-                <div style={{
-                  backgroundColor:'#0ea5e9',
-                  color:'white',
-                  padding:12,
-                  borderRadius:6,
-                  marginBottom:16,
-                  fontSize:14
-                }}>
-                  {forgotMessage}
-                </div>
-              )}
-              <button
-                type="submit"
-                disabled={loading || !forgotEmail}
-                style={{
-                  width:'100%',
-                  padding:'12px 16px',
-                  backgroundColor:loading || !forgotEmail ? '#475569' : '#3b82f6',
-                  color:'white',
-                  border:'none',
-                  borderRadius:8,
-                  fontSize:16,
-                  fontWeight:'600',
-                  cursor:loading || !forgotEmail ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {loading ? 'Sending reset link...' : 'Send reset link'}
-              </button>
-            </form>
-            <div style={{marginTop:16, textAlign:'center'}}>
-              <button
-                type="button"
-                onClick={() => { setAuthView('auth'); setForgotEmail(''); setForgotMessage(''); setError(''); }}
-                style={{
-                  background:'none',
-                  border:'none',
-                  color:'#93c5fd',
-                  cursor:'pointer',
-                  fontSize:14,
-                  textDecoration:'underline'
-                }}
-              >
-                Back to login
-              </button>
-            </div>
-          </>
-        )}
       </div>
 
       {/* Google Name Confirmation Modal */}
@@ -1322,10 +1218,10 @@ export default function App(){
     }
   }, [isAuthenticated]);
   const navItems = useMemo(() => ([
-    { name: 'New Session', link: '#new-session' },
+    { name: 'New Session', link: '#new-session', disabled: !isAuthenticated },
     { name: 'Leaderboard', link: '#leaderboard' },
     { name: 'Analytics', link: '#analytics' }
-  ]), [])
+  ]), [isAuthenticated])
   const [isNarrowHeader, setIsNarrowHeader] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 640;
@@ -2870,7 +2766,7 @@ export default function App(){
       
       
       <div id="notifications" style={{display:'flex', justifyContent:'center', marginBottom:16}}>
-        <FloatingNav navItems={navItems} />
+        <FloatingNav navItems={navItems} isAuthenticated={isAuthenticated} />
       </div>
       
         <div style={{position:'relative', marginBottom:20}}>
@@ -4426,7 +4322,8 @@ export default function App(){
         <div style={{marginTop:16}}>
           <h3>Total Score Over Time - Top 10 (Last 30 Days)</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={(() => {
+            <LineChart
+              data={(() => {
               // Filter sessions to last 30 days
               const oneMonthAgo = new Date();
               oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
@@ -4475,8 +4372,10 @@ export default function App(){
               });
               
               return chartData;
-            })()}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+            })()}
+              margin={{ top: 10, right: 64, left: 0, bottom: 10 }}
+            >
+              {/* Grid removed */}
               <XAxis dataKey="date" stroke="#94a3b8" />
               <YAxis
                 stroke="#94a3b8"
@@ -4667,7 +4566,8 @@ export default function App(){
             <div style={{marginTop:24}}>
               <h3>Total Score Over Time (Comparison)</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={(() => {
+                <LineChart
+                  data={(() => {
                   // Get ALL sessions for selected climbers to build cumulative scores
                   const relevantSessions = sessions.filter((s: any) => 
                     selectedClimbersForComparison.includes(s.climberId)
@@ -4730,8 +4630,10 @@ export default function App(){
                     
                     return point;
                   });
-                })()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                })()}
+                  margin={{ top: 10, right: 64, left: 0, bottom: 10 }}
+                >
+                  {/* Grid removed */}
                   <XAxis 
                     dataKey="date" 
                     stroke="#94a3b8"
@@ -4878,7 +4780,20 @@ export default function App(){
 
       <section style={{marginTop:24}}>
         <div>
-          <button onClick={handleExportCSV}>Export CSV</button>
+          <button
+            onClick={handleExportCSV}
+            style={{
+              backgroundColor: '#000',
+              color: '#fff',
+              border: '1px solid #fff',
+              borderRadius: 8,
+              padding: '10px 16px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Export CSV
+          </button>
         </div>
       </section>
       
@@ -5350,55 +5265,6 @@ export default function App(){
                   </div>
                 );
               })()}
-              
-              {/* Delete Account Section */}
-              <div style={{
-                backgroundColor:'#7f1d1d',
-                padding:16,
-                borderRadius:8,
-                border:'1px solid #991b1b',
-                marginTop:16
-              }}>
-                <h3 style={{marginTop:0,marginBottom:12,fontSize:18,fontWeight:'600',color:'#fca5a5'}}>Danger Zone</h3>
-                <p style={{fontSize:14,color:'#fecaca',marginBottom:12}}>
-                  ⚠️ Once you delete your account, there is no going back. This will permanently delete all your data including sessions and climbs.
-                </p>
-                <button
-                  onClick={async () => {
-                    const confirmFirst = confirm('Are you sure you want to delete your account? This action cannot be undone!');
-                    if (!confirmFirst) return;
-                    
-                    const confirmSecond = confirm('This is your final warning. Type your username to confirm deletion.\n\nYour username: ' + user?.username);
-                    if (!confirmSecond) return;
-                    
-                    const typedUsername = prompt('Type your username to confirm deletion:');
-                    if (typedUsername !== user?.username) {
-                      alert('Username does not match. Account deletion cancelled.');
-                      return;
-                    }
-                    
-                    try {
-                      await api.deleteAccount();
-                      alert('Your account has been permanently deleted.');
-                      handleLogout();
-                    } catch (err: any) {
-                      setSettingsError(err.message || 'Failed to delete account');
-                    }
-                  }}
-                  style={{
-                    padding:'10px 20px',
-                    backgroundColor:'#dc2626',
-                    color:'white',
-                    border:'none',
-                    borderRadius:6,
-                    fontSize:14,
-                    fontWeight:'600',
-                    cursor:'pointer'
-                  }}
-                >
-                  Delete Account Permanently
-                </button>
-              </div>
               
               <div style={{display:'flex',gap:12,marginTop:16}}>
                 <button

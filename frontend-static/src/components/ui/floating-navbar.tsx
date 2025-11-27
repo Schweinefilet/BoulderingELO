@@ -8,13 +8,16 @@ export const FloatingNav = ({
   navItems,
   className,
   onNavClick,
+  isAuthenticated = true,
 }: {
   navItems: {
     name: string;
     link: string;
+    disabled?: boolean;
   }[];
   className?: string;
   onNavClick?: (id: string) => void;
+  isAuthenticated?: boolean;
 }) => {
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
@@ -25,7 +28,8 @@ export const FloatingNav = ({
   const [hasInteracted, setHasInteracted] = useState(false);
   const [guideTop, setGuideTop] = useState<number | null>(null);
   const sectionIds = navItems.map((item) => item.link.replace("#", ""));
-  const handleNavClick = useCallback((id: string) => {
+  const handleNavClick = useCallback((id: string, disabled?: boolean) => {
+    if (disabled) return;
     const el = document.getElementById(id);
     if (el) {
       const y = el.getBoundingClientRect().top + window.scrollY - 20;
@@ -66,10 +70,18 @@ export const FloatingNav = ({
       const anchorTop = anchorRef.current.getBoundingClientRect().top;
       setIsFixed(anchorTop <= 10);
       const currentY = window.scrollY;
-      const newSessionTop = (document.getElementById("new-session")?.offsetTop ?? Infinity);
+      const newSessionTop = (document.getElementById("new-session")?.offsetTop ?? 0);
+      const leaderboardTop = (document.getElementById("leaderboard")?.offsetTop ?? 0);
       const guideFadePoint = guideTop !== null ? guideTop - 60 : Infinity;
       const pastNewSession = currentY >= newSessionTop - 40;
       const beforeGuide = currentY < guideFadePoint;
+
+      // Logged-out: wait until approaching leaderboard
+      if (!isAuthenticated) {
+        const atLeaderboard = currentY >= (leaderboardTop - window.innerHeight * 0.3);
+        setShowOutline(atLeaderboard && beforeGuide);
+        return;
+      }
 
       const shouldShow = pastNewSession && beforeGuide;
 
@@ -147,13 +159,15 @@ export const FloatingNav = ({
           {navItems.map((navItem: any, idx: number) => {
             const id = navItem.link.replace("#", "");
             const isActive = activeSection === id;
+            const isDisabled = Boolean(navItem.disabled);
             return (
               <motion.button
                 key={`link=${idx}`}
                 type="button"
+                aria-disabled={isDisabled}
                 onClick={(e) => {
                   e.currentTarget.blur();
-                  handleNavClick(id);
+                  handleNavClick(id, isDisabled);
                 }}
                 data-nav-item={navItem.name}
                 className={cn(
@@ -162,13 +176,15 @@ export const FloatingNav = ({
                 style={{
                   textDecoration: "none",
                   backgroundColor: "transparent",
-                  color: "#fff",
+                  color: isDisabled ? "#6b7280" : "#fff",
                   marginRight: idx === navItems.length - 1 ? 0 : 6,
                   outline: "none",
                   boxShadow: "none",
                   borderColor: "transparent",
+                  cursor: isDisabled ? "not-allowed" : "pointer",
+                  opacity: isDisabled ? 0.55 : 1,
                 }}
-                whileTap={{ scale: 1 }}
+                whileTap={isDisabled ? undefined : { scale: 1 }}
                 animate={{ borderColor: "transparent" }}
                 transition={{ type: "tween", duration: 0.15, ease: "easeInOut" }}
               >
