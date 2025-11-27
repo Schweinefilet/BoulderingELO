@@ -78,8 +78,12 @@ export const FloatingNav = ({
 
       // Logged-out: wait until approaching leaderboard
       if (!isAuthenticated) {
+        if (activeSection === "new-session") {
+          setShowOutline(pastNewSession);
+          return;
+        }
         const atLeaderboard = currentY >= (leaderboardTop - window.innerHeight * 0.3);
-        setShowOutline(atLeaderboard && beforeGuide);
+        setShowOutline(atLeaderboard);
         return;
       }
 
