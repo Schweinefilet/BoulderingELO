@@ -19,10 +19,10 @@
   --input-bg: #000000;
   --input-border: rgba(255, 255, 255, 0.45);
   --card-border: rgba(255, 255, 255, 0.45);
-  --glow: 0 0 18px rgba(255,255,255,0.12);
-  --glow-strong: 0 0 28px rgba(255,255,255,0.18);
-  --glow-color: rgba(255,255,255,0.12);
-  --glow-color-40: rgba(255,255,255,0.4);
+  --glow: none;
+  --glow-strong: none;
+  --glow-color: transparent;
+  --glow-color-40: transparent;
   --panel-alt-bg: #000000;
   --radius: 0.625rem;
   --background: #000000;
@@ -209,7 +209,7 @@ h1, h2, h3, h4 {
   background: var(--panel-bg);
   color: var(--panel-text);
   border: 1px solid var(--card-border);
-  box-shadow: var(--glow);
+  box-shadow: none;
 }
 
 /* Utility surface class to apply black surface + white outline + glow */
@@ -217,20 +217,20 @@ h1, h2, h3, h4 {
   background: var(--panel-bg) !important;
   color: var(--panel-text) !important;
   border: 1px solid var(--card-border) !important;
-  box-shadow: var(--glow) !important;
+  box-shadow: none !important;
 }
 
 /* Small variant for alternate panel background */
 .surface-alt {
   background: var(--panel-alt-bg) !important;
   border: 1px solid var(--card-border) !important;
-  box-shadow: var(--glow) !important;
+  box-shadow: none !important;
 }
 
-/* Inputs and buttons focus states get a white glow */
+/* Inputs and buttons focus states: no glow */
 input:focus, select:focus, textarea:focus, button:focus {
   outline: none;
-  box-shadow: var(--glow-strong);
+  box-shadow: none;
   border-color: var(--input-border);
 }
 
@@ -239,12 +239,12 @@ input:focus, select:focus, textarea:focus, button:focus {
 *[style*="#0f172a"] {
   background-color: var(--panel-bg) !important;
   border-color: var(--card-border) !important;
-  box-shadow: var(--glow) !important;
+  box-shadow: none !important;
 }
 *[style*="#1e293b"] {
   background-color: var(--panel-alt-bg) !important;
   border-color: var(--card-border) !important;
-  box-shadow: var(--glow) !important;
+  box-shadow: none !important;
 }
 *[style*="#475569"], *[style*="#334155"] {
   border-color: var(--card-border) !important;
