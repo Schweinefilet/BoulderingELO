@@ -107,7 +107,7 @@ export const FloatingNav = ({
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleScroll);
     };
-  }, []);
+  }, [guideTop, hasInteracted, activeSection, isAuthenticated]);
 
   useEffect(() => {
     const updateActive = () => {
