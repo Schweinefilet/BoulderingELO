@@ -264,9 +264,14 @@ const normalizeSessionCounts = (session: any, expiredSections: string[] = []): C
 
 // Default wall totals structure
 const DEFAULT_wallTotals = {
-  overhang: { yellow: 7, orange: 5, red: 0, black: 0, blue: 0, green: 0 },
-  midWall: { yellow: 20, orange: 13, red: 0, black: 0, blue: 0, green: 0 },
-  sideWall: { yellow: 11, orange: 8, red: 0, black: 0, blue: 0, green: 0 }
+  'Bend': { green: 3, blue: 2, yellow: 3, orange: 3, red: 2, black: 1 },
+  'Slab': { green: 2, blue: 2, yellow: 6, orange: 4, red: 2, black: 0 },
+  'TV Wall': { green: 1, blue: 2, yellow: 6, orange: 2, red: 1, black: 0 },
+  'Overhang': { green: 1, blue: 2, yellow: 7, orange: 5, red: 4, black: 2 },
+  'UMass Logo': { green: 1, blue: 2, yellow: 4, orange: 3, red: 1, black: 1 },
+  'Garage Wall': { green: 3, blue: 1, yellow: 7, orange: 3, red: 2, black: 0 },
+  'Mini Overhang': { green: 1, blue: 1, yellow: 5, orange: 3, red: 3, black: 0 },
+  'Mini Garage Wall': { green: 2, blue: 1, yellow: 5, orange: 2, red: 1, black: 0 }
 };
 
 // Load wall totals from localStorage or use defaults
@@ -1297,8 +1302,8 @@ export default function App(){
   
   // For dropdown mode - use first available wall section
   const availableWalls = Object.keys(wallTotals);
-  const [dropdownWall, setDropdownWall] = useState<string>(availableWalls[0] || 'midWall')
-  const [dropdownColor, setDropdownColor] = useState<keyof Counts>('yellow')
+  const [dropdownWall, setDropdownWall] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
+  const [dropdownColor, setDropdownColor] = useState<keyof Counts>('green')
   const [videoUrl, setVideoUrl] = useState('')
   const [wallImage, setWallImage] = useState<string>('')
   const [sessionNotes, setSessionNotes] = useState('')
@@ -1754,6 +1759,15 @@ export default function App(){
       }
     }
   }, [selectedClimber, sessions, expiredSections]);
+
+  // Auto-select climber for all users
+  useEffect(() => {
+    if (user && user.climberId) {
+      setSelectedClimber(user.climberId);
+      // Also ensure date is set to today
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [user]);
 
   function handleLoginSuccess() {
     setIsAuthenticated(true);
@@ -3009,64 +3023,60 @@ export default function App(){
               <div style={{padding:'clamp(12px, 4vw, 24px)', backgroundColor: BLACK_PANEL_BG, borderRadius: PANEL_RADIUS, border: BLACK_PANEL_BORDER, overflow:'hidden'}}>
                 <h2 style={{marginTop:0,marginBottom:8,fontSize:'clamp(20px, 5vw, 24px)',fontWeight:'600'}}>New Session</h2>
                 <p style={{marginTop:0,marginBottom:20,fontSize:'clamp(12px, 3vw, 14px)',color:'#94a3b8'}}>
-                  Track your climbing progress by adding completed routes
+                  Add the routes you have completed. This system is based on integrity, I trust you.
                 </p>
             
-            <div style={{marginBottom:16}}>
-              <label style={{display:'block',fontWeight:'500',marginBottom:8}}>👤 Climber</label>
-              {user?.role === 'admin' ? (
-                <select 
-                  value={selectedClimber||''} 
+            {user?.role === 'admin' && (
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',fontWeight:'500',marginBottom:8}}>👤 Climber</label>
+                <select
+                  value={selectedClimber||''}
                   onChange={e=>setSelectedClimber(parseInt(e.target.value)||undefined)}
                   style={{width:'100%',padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                 >
                   <option value="">Select...</option>
                   {climbers.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                 </select>
-              ) : (
-                <div style={{padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'#94a3b8',fontSize:14}}>
-                  {climbers.find(c => c.id === user?.climberId)?.name || 'Loading...'}
-                </div>
-              )}
-              {user?.role === 'admin' && (
                 <div style={{marginTop:8,display:'flex',gap:8}}>
-                  <input 
-                    placeholder="New name" 
-                    value={newName} 
+                  <input
+                    placeholder="New name"
+                    value={newName}
                     onChange={e=>setNewName(e.target.value)}
                     style={{flex:1,padding:'10px 12px',borderRadius:6,border:BLACK_PANEL_BORDER,backgroundColor:BLACK_ROW_BG,color:'white',fontSize:14}}
                   />
-                  <button 
+                  <button
                     onClick={addClimber}
                     style={{padding:'10px 20px',borderRadius:6,backgroundColor:'#3b82f6',color:'white',border:'none',cursor:'pointer',fontWeight:'500',fontSize:14,whiteSpace:'nowrap'}}
                   >
                     Add climber
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-          <div style={{marginBottom:16}}>
-            <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e=>setDate(e.target.value)}
-              style={{
-                width: isIOS ? 'calc(100% - 30px)' : '100%',
-                maxWidth:'100%',
-                minWidth:0,
-                boxSizing:'border-box',
-                display:'block',
-                padding:'10px 12px',
-                borderRadius:6,
-                border:BLACK_PANEL_BORDER,
-                backgroundColor:BLACK_ROW_BG,
-                color:'white',
-                fontSize:14
-              }}
-            />
-          </div>
+          {user?.role === 'admin' && (
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontWeight:'500',marginBottom:8}}>Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={e=>setDate(e.target.value)}
+                style={{
+                  width: isIOS ? 'calc(100% - 30px)' : '100%',
+                  maxWidth:'100%',
+                  minWidth:0,
+                  boxSizing:'border-box',
+                  display:'block',
+                  padding:'10px 12px',
+                  borderRadius:6,
+                  border:BLACK_PANEL_BORDER,
+                  backgroundColor:BLACK_ROW_BG,
+                  color:'white',
+                  fontSize:14
+                }}
+              />
+            </div>
+          )}
 
           {user?.role === 'admin' && (
             <div style={{marginBottom:16,display:'flex',alignItems:'center',gap:8}}>
@@ -3086,10 +3096,6 @@ export default function App(){
           {!manualMode ? (
             // Dropdown mode
             <div>
-              <h3 style={{marginBottom:16,fontSize:18,fontWeight:'600',display:'flex',alignItems:'center',gap:8}}>
-                🧗 Add Climb
-              </h3>
-              
               <div style={{marginBottom:16}}>
                 {/* Display admin-uploaded wall section reference images - moved above buttons */}
                 {(() => {
@@ -3270,21 +3276,38 @@ export default function App(){
                   <thead>
                     <tr style={{borderBottom:BLACK_PANEL_BORDER}}>
                       <th style={{textAlign:'left',padding: isMobileCompact ? '6px 4px' : '8px 6px',color:'#94a3b8',fontWeight:'600',width:'25%'}}>Wall Section</th>
-                      {colorOrder.map(color => (
+                      {colorOrder.map(color => {
+                        const isSelectedColor = color === dropdownColor;
+                        return (
                         <th
                           key={color}
                           style={{
                             textAlign:'center',
                             verticalAlign:'middle',
                             padding: isMobileCompact ? '6px 4px' : '8px 6px',
-                            color: colorMeta[color].color,
                             fontWeight:'600',
                             width: columnWidth
                           }}
                         >
-                          {colorMeta[color].label}
+                          <div
+                            onClick={() => setDropdownColor(color as keyof Counts)}
+                            style={{
+                              display: 'inline-block',
+                              padding: isMobileCompact ? '3px 4px' : '4px 8px',
+                              borderRadius: 6,
+                              color: colorMeta[color].color,
+                              cursor: 'pointer',
+                              fontSize: isMobileCompact ? 10 : 12,
+                              backgroundColor: isSelectedColor ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                              border: isSelectedColor ? '2px solid #3b82f6' : '2px solid transparent',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {colorMeta[color].label}
+                          </div>
                         </th>
-                      ))}
+                        );
+                      })}
                     </tr>
                   </thead>
                     );
@@ -3305,12 +3328,15 @@ export default function App(){
                             padding: isMobileCompact ? '6px 4px' : '8px 6px',
                             transition: 'all 0.2s'
                           }}>
-                            <div style={{
+                            <div
+                              onClick={() => setDropdownWall(section)}
+                              style={{
                               display: 'inline-block',
                               padding: isMobileCompact ? '3px 6px' : '4px 8px',
                               borderRadius: 6,
                               color:'#cbd5e1',
                               fontWeight:'500',
+                              cursor: 'pointer',
                               backgroundColor: isSelectedWall ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                               border: isSelectedWall ? '2px solid #3b82f6' : '2px solid transparent',
                               transition: 'all 0.2s'
@@ -3342,15 +3368,15 @@ export default function App(){
                                   padding: '4px 8px',
                                   borderRadius: 6,
                                   cursor: 'pointer',
-                                  color: color === 'green' ? '#10b981' : 
+                                  color: color === 'green' ? '#10b981' :
                                          color === 'blue' ? '#3b82f6' :
                                          color === 'yellow' ? '#eab308' :
                                          color === 'orange' ? '#f97316' :
                                          color === 'red' ? '#ef4444' : '#d1d5db',
-                                  backgroundColor: isEdited ? 'rgba(16, 185, 129, 0.25)' : 
+                                  backgroundColor: isEdited ? 'rgba(16, 185, 129, 0.25)' :
                                                  isSelectedCell ? 'rgba(59, 130, 246, 0.2)' :
                                                  'transparent',
-                                  border: isSelectedCell ? '2px solid #3b82f6' : '2px solid transparent',
+                                  border: isSelectedCell ? '2px solid white' : '2px solid transparent',
                                   transition: 'all 0.3s'
                                 }}>
                                   {isEdited && (
