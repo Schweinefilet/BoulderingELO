@@ -1299,7 +1299,8 @@ export default function App(){
   
   const [wallCounts, setWallCounts] = useState<WallCounts>(initializeWallCounts())
   const [manualMode, setManualMode] = useState(false)
-  
+  const [hasInteractedWithTable, setHasInteractedWithTable] = useState(false)
+
   // For dropdown mode - use first available wall section
   const availableWalls = Object.keys(wallTotals);
   const [dropdownWall, setDropdownWall] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
@@ -2264,6 +2265,9 @@ export default function App(){
       return;
     }
 
+    // Stop the pulsing animation once user adds a climb
+    setHasInteractedWithTable(true);
+
     // Require video evidence for black climbs
     if (dropdownColor === 'black' && !videoUrl.trim()) {
       alert('Video evidence required for black climbs!');
@@ -2447,8 +2451,17 @@ export default function App(){
   }
 
   return (
-    <div style={{fontFamily:'"Red Hat Text", sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
-      {backgroundEnabled && <BackgroundBeams />}
+    <>
+      <style>
+        {`
+          @keyframes pulseBorder {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+        `}
+      </style>
+      <div style={{fontFamily:'"Red Hat Text", sans-serif',padding:'10px',maxWidth:1000,margin:'0 auto',position:'relative'}}>
+        {backgroundEnabled && <BackgroundBeams />}
       {imageViewer && (
         <div
           onClick={() => setImageViewer(null)}
@@ -3290,7 +3303,10 @@ export default function App(){
                           }}
                         >
                           <div
-                            onClick={() => setDropdownColor(color as keyof Counts)}
+                            onClick={() => {
+                              setHasInteractedWithTable(true);
+                              setDropdownColor(color as keyof Counts);
+                            }}
                             style={{
                               display: 'inline-block',
                               padding: isMobileCompact ? '3px 4px' : '4px 8px',
@@ -3329,7 +3345,10 @@ export default function App(){
                             transition: 'all 0.2s'
                           }}>
                             <div
-                              onClick={() => setDropdownWall(section)}
+                              onClick={() => {
+                                setHasInteractedWithTable(true);
+                                setDropdownWall(section);
+                              }}
                               style={{
                               display: 'inline-block',
                               padding: isMobileCompact ? '3px 6px' : '4px 8px',
@@ -3358,8 +3377,9 @@ export default function App(){
                                 transition: 'all 0.3s',
                                 position: 'relative' as const
                               }}>
-                                <div 
+                                <div
                                   onClick={() => {
+                                    setHasInteractedWithTable(true);
                                     setDropdownWall(section);
                                     setDropdownColor(color as keyof Counts);
                                   }}
@@ -3377,7 +3397,8 @@ export default function App(){
                                                  isSelectedCell ? 'rgba(59, 130, 246, 0.2)' :
                                                  'transparent',
                                   border: isSelectedCell ? '2px solid white' : '2px solid transparent',
-                                  transition: 'all 0.3s'
+                                  transition: 'all 0.3s',
+                                  animation: isSelectedCell && !hasInteractedWithTable ? 'pulseBorder 2s ease-in-out infinite' : 'none'
                                 }}>
                                   {isEdited && (
                                     <span style={{
@@ -7523,5 +7544,6 @@ export default function App(){
         </div>
       )}
     </div>
+    </>
   );
 }
