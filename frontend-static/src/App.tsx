@@ -1112,6 +1112,7 @@ function createWallImageErrorHandler(label: string) {
       const img = e.currentTarget;
       const src = img.src || '';
 
+      // First, try URL normalization strategies
       if (!img.dataset.retrySanitize) {
         img.dataset.retrySanitize = '1';
         const normalized = normalizeWallSectionImageUrl(src);
@@ -1133,22 +1134,22 @@ function createWallImageErrorHandler(label: string) {
         return;
       }
 
-      img.style.display = 'none';
-      const container = img.parentElement;
-      if (container && !container.querySelector(`a[data-fallback-link="${label}"]`)) {
-        const link = document.createElement('a');
-        link.href = src;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = 'Open image in new tab';
-        link.style.display = 'block';
-        link.style.padding = '12px';
-        link.style.color = '#93c5fd';
-        link.dataset.fallbackLink = label;
-        container.appendChild(link);
-      }
+      // If normalization strategies exhausted, start exponential backoff retry
+      const retryCount = parseInt(img.dataset.retryCount || '0', 10);
+      img.dataset.retryCount = String(retryCount + 1);
+
+      // Exponential backoff: 1s, 2s, 4s, 8s, 16s, then cap at 30s
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+
+      // Schedule retry by resetting the src after delay
+      setTimeout(() => {
+        // Force reload by appending cache-busting parameter
+        const cacheBust = `_retry=${Date.now()}`;
+        const separator = src.includes('?') ? '&' : '?';
+        img.src = src.split('?')[0] + separator + cacheBust;
+      }, delay);
     } catch (err) {
-      // swallow error - backup link already created
+      // Silently handle errors and let retry continue
     }
   };
 }
