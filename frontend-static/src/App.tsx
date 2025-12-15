@@ -1401,7 +1401,7 @@ export default function App(){
   
   // Sessions pagination
   const [sessionsToShow, setSessionsToShow] = useState(1)
-  const [expandedSession, setExpandedSession] = useState<number | null>(null)
+  const [expandedSession, setExpandedSession] = useState<number | string | null>(null)
 
   // Comparison charts state
   const [selectedClimbersForComparison, setSelectedClimbersForComparison] = useState<number[]>([])
