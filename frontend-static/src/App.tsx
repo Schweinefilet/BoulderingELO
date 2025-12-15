@@ -4013,7 +4013,50 @@ export default function App(){
                   });
                 }
                 
-                return { gains, losses, prevSession };
+                // Calculate score impacts properly:
+                // 1. Previous score (from prevSession)
+                // 2. Intermediate state = previous counts minus losses (before adding gains)
+                // 3. Final state = current session counts
+                // Loss impact = intermediate score - previous score
+                // Gain impact = final score - intermediate score
+                
+                let lossScoreImpact = 0;
+                let gainScoreImpact = 0;
+                
+                if (prevSession && prevSession.wallCounts && s.wallCounts) {
+                  const prevScore = prevSession.score || 0;
+                  const finalScore = s.score || 0;
+                  
+                  // Build intermediate wallCounts: previous minus losses (no gains yet)
+                  const intermediateWallCounts: Record<string, Record<string, number>> = {};
+                  
+                  // Start with previous wallCounts
+                  Object.keys(prevSession.wallCounts).forEach(section => {
+                    intermediateWallCounts[section] = { ...prevSession.wallCounts[section] };
+                  });
+                  
+                  // Apply losses (subtract from intermediate)
+                  Object.keys(losses).forEach(section => {
+                    if (!intermediateWallCounts[section]) {
+                      intermediateWallCounts[section] = {green:0,blue:0,yellow:0,orange:0,red:0,black:0};
+                    }
+                    Object.keys(losses[section]).forEach(color => {
+                      intermediateWallCounts[section][color] = Math.max(0, (intermediateWallCounts[section][color] || 0) - losses[section][color]);
+                    });
+                  });
+                  
+                  // Calculate intermediate score
+                  const intermediateCounts = combineCounts(intermediateWallCounts as WallCounts);
+                  const intermediateScore = computeWeeklyScore(intermediateCounts);
+                  
+                  // Loss impact = intermediate score - previous score (should be negative or zero)
+                  lossScoreImpact = intermediateScore - prevScore;
+                  
+                  // Gain impact = final score - intermediate score (should be positive or zero)
+                  gainScoreImpact = finalScore - intermediateScore;
+                }
+                
+                return { gains, losses, prevSession, lossScoreImpact, gainScoreImpact };
               };
               
               // Render a session row with only specific changes (gains or losses)
@@ -4099,11 +4142,10 @@ export default function App(){
               return (
                 <>
                   {datesToShow.map(([date, dateSessions]) => {
-                    // For each session, calculate gains and losses separately
+                    // For each session, calculate gains and losses separately with proper score impacts
                     const sessionsWithChanges = dateSessions.map(s => {
-                      const { gains, losses } = getSessionChanges(s);
-                      const scoreDiff = getScoreDiff(s);
-                      return { session: s, gains, losses, scoreDiff };
+                      const { gains, losses, lossScoreImpact, gainScoreImpact } = getSessionChanges(s);
+                      return { session: s, gains, losses, lossScoreImpact, gainScoreImpact };
                     });
                     
                     // Collect all gain entries (sessions that have positive changes)
@@ -4111,15 +4153,15 @@ export default function App(){
                     // Collect all loss entries (sessions that have negative changes)
                     const lossEntries: Array<{session: any, losses: Record<string, Record<string, number>>, scoreDiff: number}> = [];
                     
-                    sessionsWithChanges.forEach(({ session, gains, losses, scoreDiff }) => {
+                    sessionsWithChanges.forEach(({ session, gains, losses, lossScoreImpact, gainScoreImpact }) => {
                       const hasGains = Object.keys(gains).length > 0;
                       const hasLosses = Object.keys(losses).length > 0;
                       
-                      if (hasGains) {
-                        gainEntries.push({ session, gains, scoreDiff: Math.abs(scoreDiff) });
+                      if (hasGains && gainScoreImpact > 0.001) {
+                        gainEntries.push({ session, gains, scoreDiff: gainScoreImpact });
                       }
-                      if (hasLosses) {
-                        lossEntries.push({ session, losses, scoreDiff: scoreDiff < 0 ? scoreDiff : -Math.abs(scoreDiff) });
+                      if (hasLosses && lossScoreImpact < -0.001) {
+                        lossEntries.push({ session, losses, scoreDiff: lossScoreImpact });
                       }
                     });
                     
