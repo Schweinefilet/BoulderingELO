@@ -305,10 +305,10 @@ export async function updateClimberProfile(req: AuthRequest, res: Response) {
 
 /**
  * Reset a wall section across all sessions.
- * - Removes the wall key from each session's wall_counts JSONB
+ * - Sets the wall totals (expected routes) for this wall to all zeros
+ * - For each climber: Creates an adjustment session that zeros out their climbs on this wall
  * - Recalculates total counts and session score
- * - Updates the counts table and sessions.score
- * - Appends an explanatory note to the session's notes field describing the change
+ * - Only includes wall sections the climber actually had climbs in (not empty sections)
  */
 export async function resetWallSection(req: AuthRequest, res: Response) {
   try {
@@ -319,7 +319,14 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
     try {
       await client.query('BEGIN');
 
-      // Find all climbers who have any counts for this wall across any session
+      // Step 1: Reset wall totals (expected routes) for this wall to all zeros
+      const currentWallTotals = (await db.getSetting('wallTotals')) || {};
+      if (currentWallTotals[wall]) {
+        currentWallTotals[wall] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+        await db.setSetting('wallTotals', currentWallTotals);
+      }
+
+      // Step 2: Find all climbers who have actual climbs (non-zero counts) for this wall
       const climberRes = await client.query(
         `SELECT DISTINCT s.climber_id FROM sessions s JOIN wall_counts w ON s.id = w.session_id WHERE w.counts ? $1`,
         [wall]
@@ -334,7 +341,6 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
         const climberId = row.climber_id;
 
         // Use the climber's latest non-adjustment session's wall_counts as the baseline
-        // (summing across all sessions caused duplicated totals)
         const wcRes = await client.query(
           "SELECT w.counts FROM sessions s JOIN wall_counts w ON s.id = w.session_id WHERE s.climber_id = $1 AND s.status != 'adjustment' ORDER BY s.date DESC LIMIT 1",
           [climberId]
@@ -352,9 +358,22 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
           continue;
         }
 
-        // Build new total wallCounts by copying latest counts but zeroing the removed wall
-        const newWallCounts: any = { ...(latestCountsObj || {}) };
-        newWallCounts[wall] = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
+        // Build new wallCounts: only include sections with actual climbs (non-zero totals)
+        // This prevents empty sections from appearing in the adjustment session
+        const newWallCounts: any = {};
+        for (const section of Object.keys(latestCountsObj)) {
+          if (section === wall) {
+            // Zero out the reset wall
+            newWallCounts[wall] = { green:0, blue:0, yellow:0, orange:0, red:0, black:0 };
+          } else {
+            // Only include other sections if they have any climbs
+            const sectionCounts = latestCountsObj[section] || {};
+            const sectionSum = Object.values(sectionCounts).reduce((s:any, v:any) => s + (v || 0), 0);
+            if (sectionSum > 0) {
+              newWallCounts[section] = { ...sectionCounts };
+            }
+          }
+        }
 
         // Compute totals and new score
         const totalCounts = combineCounts(newWallCounts as any);
@@ -385,10 +404,10 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
           [newSessionId, totalCounts.green, totalCounts.blue, totalCounts.yellow, totalCounts.orange, totalCounts.red, totalCounts.black]
         );
 
-        // Insert wall_counts JSONB as the aggregated totals with the removed wall zeroed
+        // Insert wall_counts JSONB (only includes sections with actual climbs)
         await client.query('INSERT INTO wall_counts (session_id, counts) VALUES ($1, $2)', [newSessionId, JSON.stringify(newWallCounts)]);
 
-        changed.push({ climberId, newSessionId, oldScore, newScore, removedCounts });
+        changed.push({ climberId, newSessionId, oldScore, newScore, removedCounts, wall });
       }
 
       await client.query('COMMIT');
@@ -396,7 +415,6 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
       // Persist audit record
       try {
         const audits = (await db.getSetting('reset_audits')) || [];
-        const auditId = new Date().toISOString();
         const audit = {
           id: auditId,
           wall,
@@ -409,13 +427,13 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
         await db.setSetting('reset_audits', audits);
 
         return sendSuccess(res, {
-          message: `Created ${changed.length} proxy adjustment sessions for wall '${wall}'`,
+          message: `Reset wall '${wall}': totals set to 0, created ${changed.length} adjustment sessions`,
           changed,
           auditId
         });
       } catch (auditErr) {
         return sendSuccess(res, {
-          message: `Created ${changed.length} proxy adjustment sessions for wall '${wall}' (audit save failed)`,
+          message: `Reset wall '${wall}': totals set to 0, created ${changed.length} adjustment sessions (audit save failed)`,
           changed
         });
       }

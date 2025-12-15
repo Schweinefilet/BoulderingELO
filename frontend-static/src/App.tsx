@@ -2111,17 +2111,25 @@ export default function App(){
   };
 
   async function resetWallSectionAdmin(section: string) {
-    if (!confirm(`Reset all climbs in section "${section}" to 0 for all sessions? This will keep the section but set all counts to zero.`)) {
+    if (!confirm(`Reset all climbs in section "${section}" to 0 for all sessions? This will also set route totals to 0.`)) {
       return;
     }
     try {
       setResetLoading(true);
-  const result = await api.resetWallSection(section);
-  // result.changed is an array of affected sessions with old/new scores; result.auditId may be present
-  setResetResult({ message: result.message || `Reset ${section}`, changed: result.changed || [], auditId: (result as any).auditId });
+      const result = await api.resetWallSection(section);
+      // result.changed is an array of affected sessions with old/new scores; result.auditId may be present
+      setResetResult({ message: result.message || `Reset ${section}`, changed: result.changed || [], auditId: (result as any).auditId });
+      
+      // Update local wallTotals to reflect the reset (all colors to 0)
+      const updatedTotals = { ...wallTotals };
+      if (updatedTotals[section]) {
+        updatedTotals[section] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+        setWallTotals(updatedTotals);
+      }
+      
       // Reload sessions and leaderboard to reflect changes
       await loadData();
-      alert(`${result.changed?.length ?? 0} sessions updated. See details in the admin reset dialog.`);
+      alert(`Wall "${section}" reset complete. ${result.changed?.length ?? 0} climbers affected.`);
     } catch (err: any) {
       alert('Failed to reset wall section: ' + (err.message || 'Unknown error'));
     } finally {
@@ -3732,8 +3740,14 @@ export default function App(){
                 {(showAllLeaderboard ? leaderboard : leaderboard.slice(0, 10)).map((e:any,i:number)=> {
                 const climber = climbers.find((c:any) => c.name === e.climber);
                 const climberSessions = sessions.filter((s:any) => s.climberId === climber?.id);
-                // Exclude adjustment (proxy) sessions from play count
-                const playCount = climberSessions.filter((s:any) => s.status !== 'adjustment').length;
+                // Count only sessions with positive score changes (not adjustments, not losses)
+                const nonAdjClimberSessions = climberSessions.filter((s:any) => s.status !== 'adjustment')
+                  .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const playCount = nonAdjClimberSessions.filter((sess:any, idx:number) => {
+                  if (idx === 0) return sess.score > 0; // First session counts if positive
+                  const prevSess = nonAdjClimberSessions[idx - 1];
+                  return sess.score > prevSess.score; // Only count if score increased
+                }).length;
 
                 // Get latest non-adjustment session for climb counts and leaderboard totals
                 const nonAdjSessions = climberSessions.filter((s:any) => s.status !== 'adjustment')
@@ -3933,131 +3947,228 @@ export default function App(){
               const allDates = Array.from(sessionsByDate.entries());
               const datesToShow = allDates.slice(0, sessionsToShow);
               const hasMore = allDates.length > sessionsToShow;
+              
+              // Helper function to calculate score diff for a session
+              const getScoreDiff = (s: any) => {
+                const climberSessions = sessions
+                  .filter((sess:any) => sess.climberId === s.climberId)
+                  .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const sessionIndex = climberSessions.findIndex((sess:any) => sess.id === s.id);
+                let prevSession = null as any;
+                for (let idx = sessionIndex - 1; idx >= 0; idx--) {
+                  const candidate = climberSessions[idx];
+                  if (candidate && candidate.status !== 'adjustment') {
+                    prevSession = candidate;
+                    break;
+                  }
+                }
+                return prevSession ? s.score - prevSession.score : s.score;
+              };
+              
+              // Helper to get changes for a session
+              const getSessionChanges = (s: any) => {
+                const climberSessions = sessions
+                  .filter((sess:any) => sess.climberId === s.climberId)
+                  .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const sessionIndex = climberSessions.findIndex((sess:any) => sess.id === s.id);
+                let prevSession = null as any;
+                for (let idx = sessionIndex - 1; idx >= 0; idx--) {
+                  const candidate = climberSessions[idx];
+                  if (candidate && candidate.status !== 'adjustment') {
+                    prevSession = candidate;
+                    break;
+                  }
+                }
+                
+                const gains: Record<string, Record<string, number>> = {};
+                const losses: Record<string, Record<string, number>> = {};
+                
+                if (prevSession && prevSession.wallCounts && s.wallCounts) {
+                  // Check current walls
+                  Object.keys(s.wallCounts).forEach(section => {
+                    const curr = s.wallCounts[section];
+                    const prev = prevSession.wallCounts[section] || {green:0,blue:0,yellow:0,orange:0,red:0,black:0};
+                    ORDER.forEach(color => {
+                      const delta = (curr[color] || 0) - (prev[color] || 0);
+                      if (delta > 0) {
+                        if (!gains[section]) gains[section] = {};
+                        gains[section][color] = delta;
+                      } else if (delta < 0) {
+                        if (!losses[section]) losses[section] = {};
+                        losses[section][color] = Math.abs(delta);
+                      }
+                    });
+                  });
+                  // Check walls that existed before but not now
+                  Object.keys(prevSession.wallCounts).forEach(section => {
+                    if (!s.wallCounts[section]) {
+                      const prev = prevSession.wallCounts[section];
+                      ORDER.forEach(color => {
+                        if ((prev[color] || 0) > 0) {
+                          if (!losses[section]) losses[section] = {};
+                          losses[section][color] = prev[color];
+                        }
+                      });
+                    }
+                  });
+                }
+                
+                return { gains, losses, prevSession };
+              };
+              
+              // Render a session row with only specific changes (gains or losses)
+              const renderSessionRowWithChanges = (s: any, scoreDiff: number, changes: Record<string, Record<string, number>>, isLoss: boolean, uniqueKey: string) => {
+                const climber = climbers.find(c=>c.id===s.climberId);
+                const displayScore = isLoss ? scoreDiff.toFixed(2) : `+${scoreDiff.toFixed(2)}`;
+                const sessionGrade = getGradeForScore(s.score || 0);
+                
+                // Color based on score change
+                let displayColor = '#10b981';
+                if (isLoss) {
+                  displayColor = '#ef4444';
+                } else if (scoreDiff >= 40) {
+                  displayColor = '#6ee7b7';
+                } else if (scoreDiff >= 30) {
+                  displayColor = '#5eead4';
+                } else if (scoreDiff >= 20) {
+                  displayColor = '#34d399';
+                } else if (scoreDiff >= 10) {
+                  displayColor = '#10b981';
+                } else {
+                  displayColor = '#059669';
+                }
+                
+                const expandKey = `${s.id}-${isLoss ? 'loss' : 'gain'}`;
+                const isExpanded = expandedSession === expandKey;
+                
+                return (
+                  <div key={uniqueKey}>
+                    <div 
+                    onClick={() => setExpandedSession(isExpanded ? null : expandKey)}
+                    style={{
+                      display:'flex',
+                      justifyContent:'space-between',
+                      alignItems:'center',
+                      padding:'12px 16px',
+                      backgroundColor:BLACK_ROW_BG,
+                      borderRadius:6,
+                      border:BLACK_PANEL_BORDER,
+                      cursor:'pointer',
+                      transition:'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BLACK_HOVER_BG}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BLACK_ROW_BG}
+                  >
+                    <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                        <span style={{color:displayColor,fontWeight:'700',fontSize:18}}>{displayScore}</span>
+                        <GradeBadge grade={sessionGrade} size="sm" />
+                        <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▸'}</span>
+                      </div>
+                    </div>
+                    
+                    {isExpanded && Object.keys(changes).length > 0 && (
+                      <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:BLACK_PANEL_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
+                        <h5 style={{margin:'0 0 8px 0',fontSize:13,fontWeight:'600',color:'#94a3b8'}}>{isLoss ? 'Removed:' : 'Added:'}</h5>
+                        {Object.entries(changes).map(([section, colors]: [string, any]) => (
+                          <div key={section} style={{marginBottom:6,fontSize:12}}>
+                            <span style={{color:'#cbd5e1',fontWeight:'500'}}>{formatWallSectionName(section)}:</span>{' '}
+                            {ORDER.map(color => {
+                              if (colors[color]) {
+                                const colorMap: any = {green:'#10b981',blue:'#3b82f6',yellow:'#eab308',orange:'#f97316',red:'#ef4444',black:'#d1d5db'};
+                                const delta = colors[color];
+                                const sign = isLoss ? '-' : '+';
+                                return <span key={color} style={{color:colorMap[color],marginLeft:8}}>{sign}{delta} {color}</span>;
+                              }
+                              return null;
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {isExpanded && Object.keys(changes).length === 0 && (
+                      <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:BLACK_PANEL_BG,borderRadius:6,border:BLACK_PANEL_BORDER,fontSize:12,color:'#94a3b8'}}>
+                        First session - no previous data to compare
+                      </div>
+                    )}
+                  </div>
+                );
+              };
 
               return (
                 <>
-                  {datesToShow.map(([date, dateSessions]) => (
-                    <div key={date} style={{marginBottom:24,paddingBottom:24,borderBottom:BLACK_PANEL_BORDER}}>
-                      <h3 style={{fontSize:18,fontWeight:'600',marginBottom:16,color:'#3b82f6'}}>{date}</h3>
-                      <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                        {dateSessions.map(s => {
-                          const climber = climbers.find(c=>c.id===s.climberId);
-                          
-                          // Find previous non-adjustment session for this climber (so adjustments don't count as previous)
-                          const climberSessions = sessions
-                            .filter((sess:any) => sess.climberId === s.climberId)
-                            .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-                          const sessionIndex = climberSessions.findIndex((sess:any) => sess.id === s.id);
-                          let prevSession = null as any;
-                          for (let idx = sessionIndex - 1; idx >= 0; idx--) {
-                            const candidate = climberSessions[idx];
-                            if (candidate && candidate.status !== 'adjustment') {
-                              prevSession = candidate;
-                              break;
-                            }
-                          }
-                          
-                          const scoreDiff = prevSession ? s.score - prevSession.score : s.score;
-                          const displayScore = scoreDiff >= 0 ? `+${scoreDiff.toFixed(2)}` : scoreDiff.toFixed(2);
-                          const sessionGrade = getGradeForScore(s.score || 0);
-                          
-                          // Color based on score change
-                          let color = '#10b981';
-                          if (scoreDiff < 0) {
-                            color = '#ef4444';
-                          } else if (scoreDiff >= 40) {
-                            color = '#6ee7b7';
-                          } else if (scoreDiff >= 30) {
-                            color = '#5eead4';
-                          } else if (scoreDiff >= 20) {
-                            color = '#34d399';
-                          } else if (scoreDiff >= 10) {
-                            color = '#10b981';
-                          } else {
-                            color = '#059669';
-                          }
-                          
-                          const isExpanded = expandedSession === s.id;
-                          
-                          // Calculate what's new in this session
-                          const newClimbs: any = {};
-                          if (prevSession && prevSession.wallCounts && s.wallCounts) {
-                            Object.keys(s.wallCounts).forEach(section => {
-                              const curr = s.wallCounts[section];
-                              const prev = prevSession.wallCounts[section] || {green:0,blue:0,yellow:0,orange:0,red:0,black:0};
-                              const diff: any = {};
-                              let hasChanges = false;
-                              ORDER.forEach(color => {
-                                const delta = (curr[color] || 0) - (prev[color] || 0);
-                                if (delta !== 0) {
-                                  diff[color] = delta;
-                                  hasChanges = true;
-                                }
-                              });
-                              if (hasChanges) {
-                                newClimbs[section] = diff;
-                              }
-                            });
-                          }
-                          
-                          return (
-                            <div key={s.id}>
-                              <div 
-                              onClick={() => setExpandedSession(isExpanded ? null : s.id)}
-                              style={{
-                                display:'flex',
-                                justifyContent:'space-between',
-                                alignItems:'center',
-                                padding:'12px 16px',
-                                backgroundColor:BLACK_ROW_BG,
-                                borderRadius:6,
-                                border:BLACK_PANEL_BORDER,
-                                cursor:'pointer',
-                                transition:'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BLACK_HOVER_BG}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BLACK_ROW_BG}
-                            >
-                              <span style={{fontSize:16,fontWeight:'500'}}>{climber?.name}</span>
-                              <div style={{display:'flex',alignItems:'center',gap:12}}>
-                                  <span style={{color,fontWeight:'700',fontSize:18}}>{displayScore}</span>
-                                  <GradeBadge grade={sessionGrade} size="sm" />
-                                  <span style={{fontSize:12,color:'#94a3b8'}}>{isExpanded ? '▼' : '▸'}</span>
-                                </div>
-                              </div>
-                              
-                              {isExpanded && Object.keys(newClimbs).length > 0 && (
-                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:BLACK_PANEL_BG,borderRadius:6,border:BLACK_PANEL_BORDER}}>
-                                  <h5 style={{margin:'0 0 8px 0',fontSize:13,fontWeight:'600',color:'#94a3b8'}}>Changes:</h5>
-                                  {Object.entries(newClimbs).map(([section, colors]: [string, any]) => (
-                                    <div key={section} style={{marginBottom:6,fontSize:12}}>
-                                      <span style={{color:'#cbd5e1',fontWeight:'500'}}>{formatWallSectionName(section)}:</span>{' '}
-                                      {ORDER.map(color => {
-                                        if (colors[color]) {
-                                          const colorMap: any = {green:'#10b981',blue:'#3b82f6',yellow:'#eab308',orange:'#f97316',red:'#ef4444',black:'#d1d5db'};
-                                          const delta = colors[color];
-                                          const sign = delta > 0 ? '+' : '';
-                                          return <span key={color} style={{color:colorMap[color],marginLeft:8}}>{sign}{delta} {color}</span>;
-                                        }
-                                        return null;
-                                      })}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {isExpanded && Object.keys(newClimbs).length === 0 && (
-                                <div style={{marginTop:8,marginLeft:16,padding:12,backgroundColor:BLACK_PANEL_BG,borderRadius:6,border:BLACK_PANEL_BORDER,fontSize:12,color:'#94a3b8'}}>
-                                  First session - no previous data to compare
-                                </div>
+                  {datesToShow.map(([date, dateSessions]) => {
+                    // For each session, calculate gains and losses separately
+                    const sessionsWithChanges = dateSessions.map(s => {
+                      const { gains, losses } = getSessionChanges(s);
+                      const scoreDiff = getScoreDiff(s);
+                      return { session: s, gains, losses, scoreDiff };
+                    });
+                    
+                    // Collect all gain entries (sessions that have positive changes)
+                    const gainEntries: Array<{session: any, gains: Record<string, Record<string, number>>, scoreDiff: number}> = [];
+                    // Collect all loss entries (sessions that have negative changes)
+                    const lossEntries: Array<{session: any, losses: Record<string, Record<string, number>>, scoreDiff: number}> = [];
+                    
+                    sessionsWithChanges.forEach(({ session, gains, losses, scoreDiff }) => {
+                      const hasGains = Object.keys(gains).length > 0;
+                      const hasLosses = Object.keys(losses).length > 0;
+                      
+                      if (hasGains) {
+                        gainEntries.push({ session, gains, scoreDiff: Math.abs(scoreDiff) });
+                      }
+                      if (hasLosses) {
+                        lossEntries.push({ session, losses, scoreDiff: scoreDiff < 0 ? scoreDiff : -Math.abs(scoreDiff) });
+                      }
+                    });
+                    
+                    // Skip this date entirely if no entries to show
+                    if (gainEntries.length === 0 && lossEntries.length === 0) return null;
+                    
+                    return (
+                      <div key={date} style={{marginBottom:24,paddingBottom:24,borderBottom:BLACK_PANEL_BORDER}}>
+                        <h3 style={{fontSize:18,fontWeight:'600',marginBottom:16,color:'#3b82f6'}}>{date}</h3>
+                        
+                        {/* Positive gains - normal display */}
+                        {gainEntries.length > 0 && (
+                          <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom: lossEntries.length > 0 ? 16 : 0}}>
+                            {gainEntries.map(({ session, gains, scoreDiff }) => 
+                              renderSessionRowWithChanges(session, scoreDiff, gains, false, `${session.id}-gain`)
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Negative losses - collapsible */}
+                        {lossEntries.length > 0 && (
+                          <details style={{marginTop: gainEntries.length > 0 ? 0 : 0}}>
+                            <summary style={{
+                              cursor:'pointer',
+                              padding:'10px 14px',
+                              backgroundColor:'#1e1e1e',
+                              borderRadius:6,
+                              border:'1px solid #374151',
+                              color:'#f97316',
+                              fontSize:13,
+                              fontWeight:'600',
+                              display:'flex',
+                              alignItems:'center',
+                              gap:8,
+                              listStyle:'none'
+                            }}>
+                              <span style={{fontSize:11}}>▶</span>
+                              Climb Resets ({lossEntries.length})
+                            </summary>
+                            <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:10,paddingLeft:8}}>
+                              {lossEntries.map(({ session, losses, scoreDiff }) => 
+                                renderSessionRowWithChanges(session, scoreDiff, losses, true, `${session.id}-loss`)
                               )}
                             </div>
-                          );
-                        })}
+                          </details>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {hasMore && (
                     <div style={{textAlign:'center',marginTop:16}}>
@@ -6015,75 +6126,250 @@ export default function App(){
 
                 {/* Session History */}
                 <div>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                    <h3 style={{marginTop:0, marginBottom:16, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RECENT SESSIONS</h3>
-                    {profileSessions.length > 5 && (
-                      <button
-                        onClick={() => setViewingProfileSessionsExpanded(prev => !prev)}
-                        style={{padding:'6px 12px',backgroundColor:'#1e293b',color:'#94a3b8',border:'1px solid #475569',borderRadius:6,fontSize:12,cursor:'pointer'}}
-                      >
-                        {profileSessionsExpanded ? 'Show 5' : 'See All'}
-                      </button>
-                    )}
-                  </div>
-                  {profileSessions.length > 0 ? (
-                    <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                      {(profileSessionsExpanded ? profileSessions : profileSessions.slice(0, 5)).map((session:any) => (
-                        <div 
-                          key={session.id}
-                          style={{
-                            backgroundColor:'#000',
-                            padding:16,
-                            borderRadius:12,
-                            border:'1px solid #fff'
-                          }}
-                        >
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
-                            <div>
-                              <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
-                                {new Date(session.date).toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  year: 'numeric', 
-                                  month: 'short', 
-                                  day: 'numeric' 
-                                })}
-                              </div>
-                              <div style={{fontSize:14,color:'#94a3b8',marginTop:4,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                                <span>Score: {session.score.toFixed(2)}</span>
-                                <GradeBadge grade={getGradeForScore(session.score || 0)} size="sm" />
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{display:'flex',gap:16,flexWrap:'wrap',marginTop:12,fontSize:14}}>
-                            {[
-                              { key: 'green', count: session.green, color: COLOR_SWATCHES.green },
-                              { key: 'blue', count: session.blue, color: COLOR_SWATCHES.blue },
-                              { key: 'yellow', count: session.yellow, color: COLOR_SWATCHES.yellow },
-                              { key: 'orange', count: session.orange, color: COLOR_SWATCHES.orange },
-                              { key: 'red', count: session.red, color: COLOR_SWATCHES.red },
-                              { key: 'black', count: session.black, color: COLOR_SWATCHES.black }
-                            ]
-                              .filter(({ count }) => count > 0)
-                              .map(({ key, count, color }) => (
-                                <SessionColorIndicator key={key} color={color} count={count} />
-                              ))}
-                          </div>
+                  {/* Sessions with deltas split into gains and losses */}
+                  {(() => {
+                    const regularSessions = profileSessions.filter((s:any) => s.status !== 'adjustment');
+                    const adjustmentSessions = profileSessions.filter((s:any) => s.status === 'adjustment');
+                    
+                    // Calculate deltas for each regular session by comparing wallCounts to previous session
+                    const sessionsWithDeltas = regularSessions.map((session: any, idx: number) => {
+                      const prevSession = regularSessions[idx + 1]; // Previous in time (sessions are sorted newest first)
+                      const gains: Array<{wall: string, color: string, count: number}> = [];
+                      const losses: Array<{wall: string, color: string, count: number}> = [];
+                      
+                      if (session.wallCounts) {
+                        const currentWalls = session.wallCounts;
+                        const prevWalls = prevSession?.wallCounts || {};
+                        
+                        // Check all walls in current session
+                        Object.keys(currentWalls).forEach(wall => {
+                          const currentCounts = currentWalls[wall] || {};
+                          const prevCounts = prevWalls[wall] || {};
+                          
+                          ['green', 'blue', 'yellow', 'orange', 'red', 'black'].forEach(color => {
+                            const current = currentCounts[color] || 0;
+                            const prev = prevCounts[color] || 0;
+                            const delta = current - prev;
+                            
+                            if (delta > 0) {
+                              gains.push({ wall, color, count: delta });
+                            } else if (delta < 0) {
+                              losses.push({ wall, color, count: Math.abs(delta) });
+                            }
+                          });
+                        });
+                        
+                        // Check walls that existed in prev but not in current (full wall losses)
+                        Object.keys(prevWalls).forEach(wall => {
+                          if (!currentWalls[wall]) {
+                            const prevCounts = prevWalls[wall] || {};
+                            ['green', 'blue', 'yellow', 'orange', 'red', 'black'].forEach(color => {
+                              const prev = prevCounts[color] || 0;
+                              if (prev > 0) {
+                                losses.push({ wall, color, count: prev });
+                              }
+                            });
+                          }
+                        });
+                      }
+                      
+                      return { session, gains, losses };
+                    });
+                    
+                    // Group gains by wall for display
+                    const groupByWall = (items: Array<{wall: string, color: string, count: number}>) => {
+                      const grouped: Record<string, Array<{color: string, count: number}>> = {};
+                      items.forEach(item => {
+                        if (!grouped[item.wall]) grouped[item.wall] = [];
+                        grouped[item.wall].push({ color: item.color, count: item.count });
+                      });
+                      return grouped;
+                    };
+                    
+                    // Collect all losses across sessions for the collapsible section
+                    const allLosses: Array<{session: any, wall: string, items: Array<{color: string, count: number}>}> = [];
+                    sessionsWithDeltas.forEach(({ session, losses }) => {
+                      const grouped = groupByWall(losses);
+                      Object.entries(grouped).forEach(([wall, items]) => {
+                        allLosses.push({ session, wall, items });
+                      });
+                    });
+                    
+                    // Also add adjustment sessions to losses
+                    adjustmentSessions.forEach((session: any) => {
+                      const wallMatch = session.notes?.match(/reset wall '([^']+)'/i);
+                      const wallName = wallMatch ? wallMatch[1] : 'Wall Reset';
+                      const removedMatch = session.notes?.match(/removedCounts=(\{[^}]+\})/);
+                      let removedCounts: any = null;
+                      if (removedMatch) {
+                        try { removedCounts = JSON.parse(removedMatch[1]); } catch {}
+                      }
+                      if (removedCounts) {
+                        const items = Object.entries(removedCounts)
+                          .filter(([_, count]) => (count as number) > 0)
+                          .map(([color, count]) => ({ color, count: count as number }));
+                        if (items.length > 0) {
+                          allLosses.push({ session, wall: wallName, items });
+                        }
+                      }
+                    });
+                    
+                    return (
+                      <>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                          <h3 style={{marginTop:0, marginBottom:16, fontSize:18, fontWeight:'600', color:'#94a3b8'}}>RECENT SESSIONS</h3>
+                          {regularSessions.length > 5 && (
+                            <button
+                              onClick={() => setViewingProfileSessionsExpanded(prev => !prev)}
+                              style={{padding:'6px 12px',backgroundColor:'#1e293b',color:'#94a3b8',border:'1px solid #475569',borderRadius:6,fontSize:12,cursor:'pointer'}}
+                            >
+                              {profileSessionsExpanded ? 'Show 5' : 'See All'}
+                            </button>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{
-                      textAlign:'center',
-                      padding:32,
-                      color:'#64748b',
-                      fontSize:16,
-                      backgroundColor:'#0f172a',
-                      borderRadius:8,
-                      border:'1px solid #475569'
-                    }}>
-                      No sessions yet
-                    </div>
-                  )}
+                        {regularSessions.length > 0 ? (
+                          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                            {(profileSessionsExpanded ? sessionsWithDeltas : sessionsWithDeltas.slice(0, 5)).map(({ session, gains }) => {
+                              const groupedGains = groupByWall(gains);
+                              const hasGains = Object.keys(groupedGains).length > 0;
+                              
+                              return (
+                                <div 
+                                  key={session.id}
+                                  style={{
+                                    backgroundColor:'#000',
+                                    padding:16,
+                                    borderRadius:12,
+                                    border:'1px solid #fff'
+                                  }}
+                                >
+                                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:8}}>
+                                    <div>
+                                      <div style={{fontSize:16,fontWeight:'600',color:'white'}}>
+                                        {new Date(session.date).toLocaleDateString('en-US', { 
+                                          weekday: 'short', 
+                                          year: 'numeric', 
+                                          month: 'short', 
+                                          day: 'numeric' 
+                                        })}
+                                      </div>
+                                      <div style={{fontSize:14,color:'#94a3b8',marginTop:4,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                                        <span>Score: {session.score.toFixed(2)}</span>
+                                        <GradeBadge grade={getGradeForScore(session.score || 0)} size="sm" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {/* Show gains grouped by wall */}
+                                  {hasGains ? (
+                                    <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:12}}>
+                                      {Object.entries(groupedGains).map(([wall, colors]) => (
+                                        <div key={wall} style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',fontSize:13}}>
+                                          <span style={{color:'#10b981',fontWeight:'600'}}>{wall}:</span>
+                                          {colors.map(({ color, count }) => (
+                                            <span key={color} style={{
+                                              color: color === 'green' ? '#10b981' :
+                                                     color === 'blue' ? '#3b82f6' :
+                                                     color === 'yellow' ? '#eab308' :
+                                                     color === 'orange' ? '#f97316' :
+                                                     color === 'red' ? '#ef4444' : '#d1d5db'
+                                            }}>
+                                              +{count} {color}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div style={{marginTop:12,fontSize:13,color:'#64748b',fontStyle:'italic'}}>
+                                      No new climbs recorded
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{
+                            textAlign:'center',
+                            padding:32,
+                            color:'#64748b',
+                            fontSize:16,
+                            backgroundColor:'#0f172a',
+                            borderRadius:8,
+                            border:'1px solid #475569'
+                          }}>
+                            No sessions yet
+                          </div>
+                        )}
+
+                        {/* Wall Losses/Resets - Collapsible */}
+                        {allLosses.length > 0 && (
+                          <details style={{marginTop:16}}>
+                            <summary style={{
+                              cursor:'pointer',
+                              padding:'12px 16px',
+                              backgroundColor:'#1e1e1e',
+                              borderRadius:8,
+                              border:'1px solid #374151',
+                              color:'#f97316',
+                              fontSize:14,
+                              fontWeight:'600',
+                              display:'flex',
+                              alignItems:'center',
+                              gap:8,
+                              listStyle:'none'
+                            }}>
+                              <span style={{fontSize:12}}>▶</span>
+                              WALL RESETS & LOSSES ({allLosses.length})
+                            </summary>
+                            <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:8,paddingLeft:8}}>
+                              {allLosses.map((loss, idx) => (
+                                <div 
+                                  key={`${loss.session.id}-${loss.wall}-${idx}`}
+                                  style={{
+                                    backgroundColor:'#1a1a1a',
+                                    padding:12,
+                                    borderRadius:8,
+                                    border:'1px solid #f97316',
+                                    borderLeftWidth:3
+                                  }}
+                                >
+                                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:4}}>
+                                    <div>
+                                      <div style={{fontSize:14,fontWeight:'600',color:'#f97316'}}>
+                                        {loss.wall}
+                                      </div>
+                                      <div style={{fontSize:12,color:'#94a3b8',marginTop:2}}>
+                                        {new Date(loss.session.date).toLocaleDateString('en-US', { 
+                                          weekday: 'short', 
+                                          year: 'numeric', 
+                                          month: 'short', 
+                                          day: 'numeric' 
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8,fontSize:12}}>
+                                    {loss.items.map(({ color, count }) => (
+                                      <span key={color} style={{
+                                        color: color === 'green' ? '#10b981' :
+                                               color === 'blue' ? '#3b82f6' :
+                                               color === 'yellow' ? '#eab308' :
+                                               color === 'orange' ? '#f97316' :
+                                               color === 'red' ? '#ef4444' : '#d1d5db'
+                                      }}>
+                                        -{count} {color}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </>
+                    );
+                  })()}
                   {latestSession && latestSession.wallCounts && (
                     <div style={{marginTop:16, backgroundColor:'#000', padding:16, borderRadius:12, border:'1px solid #fff'}}>
                       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:12}}>
