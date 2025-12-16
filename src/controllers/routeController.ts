@@ -84,7 +84,7 @@ export async function createRoute(req: AuthRequest, res: Response) {
 export async function updateRoute(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { section_number, color, position_order, label_x, label_y, label_positions, notes, dropbox_link } = req.body;
+    const { section_number, color, position_order, label_x, label_y, label_positions, route_drawings, notes, dropbox_link } = req.body;
 
     const updates: any = {};
     if (section_number !== undefined) updates.section_number = section_number;
@@ -93,6 +93,7 @@ export async function updateRoute(req: AuthRequest, res: Response) {
     if (label_x !== undefined) updates.label_x = label_x;
     if (label_y !== undefined) updates.label_y = label_y;
     if (label_positions !== undefined) updates.label_positions = label_positions;
+    if (route_drawings !== undefined) updates.route_drawings = route_drawings;
     if (notes !== undefined) updates.notes = notes;
     if (dropbox_link !== undefined) updates.dropbox_link = dropbox_link;
 

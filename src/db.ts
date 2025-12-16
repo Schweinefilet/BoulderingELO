@@ -274,6 +274,12 @@ export async function initDB() {
       ) THEN
         ALTER TABLE routes ADD COLUMN label_positions JSONB;
       END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'routes' AND column_name = 'route_drawings'
+      ) THEN
+        ALTER TABLE routes ADD COLUMN route_drawings JSONB;
+      END IF;
     END $$;
   `);
 
@@ -994,6 +1000,7 @@ export async function updateRoute(id: number, updates: {
   label_x?: number;
   label_y?: number;
   label_positions?: Record<number, { x: number; y: number }>;
+  route_drawings?: Record<number, any[]>;
   notes?: string;
   dropbox_link?: string;
 }) {
@@ -1029,6 +1036,11 @@ export async function updateRoute(id: number, updates: {
   if (updates.label_positions !== undefined) {
     fields.push(`label_positions = $${paramIndex}`);
     values.push(JSON.stringify(updates.label_positions));
+    paramIndex++;
+  }
+  if (updates.route_drawings !== undefined) {
+    fields.push(`route_drawings = $${paramIndex}`);
+    values.push(JSON.stringify(updates.route_drawings));
     paramIndex++;
   }
   if (updates.notes !== undefined) {
