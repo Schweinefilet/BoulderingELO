@@ -78,3 +78,40 @@ export type ApiResponse<T = any> = {
   error?: string;
   message?: string;
 };
+
+export type Route = {
+  id?: number;
+  wall_section: string;
+  section_number: number;
+  global_number: number;
+  color: Color;
+  position_order: number;
+  label_x?: number;
+  label_y?: number;
+  notes?: string;
+  active?: boolean;
+  created_at?: Date;
+  archived_at?: Date;
+};
+
+export type RouteCompletion = {
+  id?: number;
+  session_id: number;
+  route_id: number;
+  completed_at?: Date;
+};
+
+export type RouteSet = {
+  id?: number;
+  wall_section: string;
+  set_date: string;
+  removed_date?: string;
+  notes?: string;
+  created_by?: number;
+  created_at?: Date;
+};
+
+export type RouteSession = Session & {
+  uses_route_tracking: true;
+  routes?: Array<Route & { completed_at: Date }>;
+};

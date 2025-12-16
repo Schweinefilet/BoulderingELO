@@ -368,7 +368,7 @@ export async function resetWallSection(req: AuthRequest, res: Response) {
           } else {
             // Only include other sections if they have any climbs
             const sectionCounts = latestCountsObj[section] || {};
-            const sectionSum = Object.values(sectionCounts).reduce((s:any, v:any) => s + (v || 0), 0);
+            const sectionSum = Object.values(sectionCounts).reduce((s:any, v:any) => s + (v || 0), 0) as number;
             if (sectionSum > 0) {
               newWallCounts[section] = { ...sectionCounts };
             }

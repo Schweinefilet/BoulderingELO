@@ -7,6 +7,7 @@ import adminRoutes from './adminRoutes';
 import userRoutes from './userRoutes';
 import leaderboardRoutes from './leaderboardRoutes';
 import settingsRoutes from './settingsRoutes';
+import routeRoutes from './routeRoutes';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/admin', adminRoutes);
 router.use('/user', userRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/routes', routeRoutes);
 
 export default router;

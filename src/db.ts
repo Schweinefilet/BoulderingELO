@@ -237,6 +237,65 @@ export async function initDB() {
     )
   `);
 
+  // Routes table for individual route tracking
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS routes (
+      id SERIAL PRIMARY KEY,
+      wall_section TEXT NOT NULL,
+      section_number INTEGER NOT NULL,
+      global_number INTEGER NOT NULL UNIQUE,
+      color TEXT NOT NULL,
+      position_order INTEGER NOT NULL,
+      label_x DECIMAL(5,2),
+      label_y DECIMAL(5,2),
+      notes TEXT,
+      active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      archived_at TIMESTAMP,
+      UNIQUE(wall_section, section_number)
+    )
+  `);
+
+  // Create indexes for routes table
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_routes_wall_color ON routes(wall_section, color) WHERE active = TRUE
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_routes_global ON routes(global_number) WHERE active = TRUE
+  `);
+
+  // Route completions table
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS route_completions (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      route_id INTEGER NOT NULL REFERENCES routes(id),
+      completed_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(session_id, route_id)
+    )
+  `);
+
+  // Create indexes for route_completions table
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_route_completions_session ON route_completions(session_id)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_route_completions_route ON route_completions(route_id)
+  `);
+
+  // Route sets table for tracking wall resets
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS route_sets (
+      id SERIAL PRIMARY KEY,
+      wall_section TEXT NOT NULL,
+      set_date DATE NOT NULL,
+      removed_date DATE,
+      notes TEXT,
+      created_by INTEGER REFERENCES climbers(id),
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   // Add columns if they don't exist (migration-safe)
   await pool.query(`
     DO $$
@@ -267,6 +326,9 @@ export async function initDB() {
       END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='climbers' AND column_name='password_changed_at') THEN
         ALTER TABLE climbers ADD COLUMN password_changed_at TIMESTAMP;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessions' AND column_name='uses_route_tracking') THEN
+        ALTER TABLE sessions ADD COLUMN uses_route_tracking BOOLEAN DEFAULT FALSE;
       END IF;
     END $$;
   `);
@@ -782,11 +844,243 @@ export async function getSetting(key: string): Promise<any | null> {
 
 export async function setSetting(key: string, value: any): Promise<void> {
   await pool.query(
-    `INSERT INTO settings (key, value, updated_at) 
-     VALUES ($1, $2, NOW()) 
-     ON CONFLICT (key) 
+    `INSERT INTO settings (key, value, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (key)
      DO UPDATE SET value = $2, updated_at = NOW()`,
     [key, JSON.stringify(value)]
   );
+}
+
+// Route CRUD functions
+
+export async function createRoute(route: {
+  wall_section: string;
+  section_number: number;
+  global_number: number;
+  color: string;
+  position_order: number;
+  label_x?: number;
+  label_y?: number;
+  notes?: string;
+}) {
+  const result = await pool.query(
+    `INSERT INTO routes (wall_section, section_number, global_number, color, position_order, label_x, label_y, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [route.wall_section, route.section_number, route.global_number, route.color, route.position_order, route.label_x || null, route.label_y || null, route.notes || null]
+  );
+  return result.rows[0];
+}
+
+export async function getRoutes(filter?: { wall_section?: string; color?: string; active?: boolean }) {
+  let query = 'SELECT * FROM routes WHERE 1=1';
+  const params: any[] = [];
+  let paramIndex = 1;
+
+  if (filter?.wall_section) {
+    query += ` AND wall_section = $${paramIndex}`;
+    params.push(filter.wall_section);
+    paramIndex++;
+  }
+
+  if (filter?.color) {
+    query += ` AND color = $${paramIndex}`;
+    params.push(filter.color);
+    paramIndex++;
+  }
+
+  if (filter?.active !== undefined) {
+    query += ` AND active = $${paramIndex}`;
+    params.push(filter.active);
+    paramIndex++;
+  } else {
+    // Default to active routes only
+    query += ' AND active = TRUE';
+  }
+
+  query += ' ORDER BY wall_section, color, position_order';
+
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
+export async function getRouteById(id: number) {
+  const result = await pool.query('SELECT * FROM routes WHERE id = $1', [id]);
+  return result.rows[0] || null;
+}
+
+export async function updateRoute(id: number, updates: {
+  section_number?: number;
+  color?: string;
+  position_order?: number;
+  label_x?: number;
+  label_y?: number;
+  notes?: string;
+}) {
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramIndex = 1;
+
+  if (updates.section_number !== undefined) {
+    fields.push(`section_number = $${paramIndex}`);
+    values.push(updates.section_number);
+    paramIndex++;
+  }
+  if (updates.color !== undefined) {
+    fields.push(`color = $${paramIndex}`);
+    values.push(updates.color);
+    paramIndex++;
+  }
+  if (updates.position_order !== undefined) {
+    fields.push(`position_order = $${paramIndex}`);
+    values.push(updates.position_order);
+    paramIndex++;
+  }
+  if (updates.label_x !== undefined) {
+    fields.push(`label_x = $${paramIndex}`);
+    values.push(updates.label_x);
+    paramIndex++;
+  }
+  if (updates.label_y !== undefined) {
+    fields.push(`label_y = $${paramIndex}`);
+    values.push(updates.label_y);
+    paramIndex++;
+  }
+  if (updates.notes !== undefined) {
+    fields.push(`notes = $${paramIndex}`);
+    values.push(updates.notes);
+    paramIndex++;
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id);
+  const query = `UPDATE routes SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+  const result = await pool.query(query, values);
+  return result.rows[0] || null;
+}
+
+export async function archiveRoute(id: number) {
+  const result = await pool.query(
+    'UPDATE routes SET active = FALSE, archived_at = NOW() WHERE id = $1 RETURNING *',
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+export async function getNextSectionNumber(wallSection: string): Promise<number> {
+  const result = await pool.query(
+    'SELECT MAX(section_number) as max FROM routes WHERE wall_section = $1 AND active = TRUE',
+    [wallSection]
+  );
+  return (result.rows[0]?.max || 0) + 1;
+}
+
+export async function getNextGlobalNumber(): Promise<number> {
+  const result = await pool.query('SELECT MAX(global_number) as max FROM routes WHERE active = TRUE');
+  return (result.rows[0]?.max || 0) + 1;
+}
+
+export async function addRouteCompletion(sessionId: number, routeId: number) {
+  const result = await pool.query(
+    'INSERT INTO route_completions (session_id, route_id) VALUES ($1, $2) ON CONFLICT (session_id, route_id) DO NOTHING RETURNING *',
+    [sessionId, routeId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function getRouteCompletions(sessionId: number) {
+  const result = await pool.query(
+    `SELECT rc.*, r.*
+     FROM route_completions rc
+     JOIN routes r ON rc.route_id = r.id
+     WHERE rc.session_id = $1
+     ORDER BY r.wall_section, r.section_number`,
+    [sessionId]
+  );
+  return result.rows;
+}
+
+export async function addRouteSession(session: {
+  climberId: number;
+  date: string;
+  routeIds: number[];
+  notes?: string;
+}) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Import the combineCounts function
+    const { computeWeeklyScore, combineCounts } = require('./score');
+
+    // 1. Fetch route details for aggregation
+    const routesResult = await client.query(
+      'SELECT id, color, wall_section FROM routes WHERE id = ANY($1)',
+      [session.routeIds]
+    );
+    const routes = routesResult.rows;
+
+    // 2. Aggregate into wallCounts
+    const wallCounts: Record<string, Counts> = {};
+    for (const route of routes) {
+      if (!wallCounts[route.wall_section]) {
+        wallCounts[route.wall_section] = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+      }
+      const color = route.color as keyof Counts;
+      wallCounts[route.wall_section][color]++;
+    }
+
+    // 3. Combine into total counts
+    const totalCounts = combineCounts(wallCounts);
+
+    // 4. Compute score
+    const score = computeWeeklyScore(totalCounts);
+
+    // 5. Create session record
+    const sessionResult = await client.query(
+      `INSERT INTO sessions (climber_id, date, score, notes, uses_route_tracking)
+       VALUES ($1, $2, $3, $4, TRUE)
+       RETURNING *`,
+      [session.climberId, session.date, score, session.notes || null]
+    );
+    const sessionId = sessionResult.rows[0].id;
+
+    // 6. Insert route completions
+    for (const routeId of session.routeIds) {
+      await client.query(
+        'INSERT INTO route_completions (session_id, route_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [sessionId, routeId]
+      );
+    }
+
+    // 7. Insert wall_counts (for backward compatibility)
+    await client.query(
+      'INSERT INTO wall_counts (session_id, counts) VALUES ($1, $2)',
+      [sessionId, JSON.stringify(wallCounts)]
+    );
+
+    // 8. Insert total counts (for scoring)
+    await client.query(
+      `INSERT INTO counts (session_id, green, blue, yellow, orange, red, black)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [sessionId, totalCounts.green, totalCounts.blue, totalCounts.yellow, totalCounts.orange, totalCounts.red, totalCounts.black]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      id: sessionId,
+      ...sessionResult.rows[0],
+      wallCounts,
+      routes
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 

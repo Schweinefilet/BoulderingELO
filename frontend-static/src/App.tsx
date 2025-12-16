@@ -6875,48 +6875,6 @@ export default function App(){
                     <div style={{display:'flex',gap:8}}>
                       <button
                         onClick={async () => {
-                          if (!confirm('Merge all duplicate sessions (same climber + same date)? This will combine their climb counts.')) return;
-                          try {
-                            setLoading(true);
-                            const result = await api.mergeDuplicateSessions();
-                            alert(result.message);
-                            await loadData();
-                          } catch (err: any) {
-                            alert('Merge failed: ' + err.message);
-                          } finally {
-                            setLoading(false);
-                          }
-                        }}
-                        style={{
-                          padding:'8px 16px',
-                          backgroundColor:'#10b981',
-                          color:'white',
-                          border:'none',
-                          borderRadius:6,
-                          cursor:'pointer',
-                          fontSize:14,
-                          fontWeight:'600'
-                        }}
-                      >
-                        Merge Duplicates
-                      </button>
-                      <button
-                        onClick={migrateOldWallNames}
-                        style={{
-                          padding:'8px 16px',
-                          backgroundColor:'#8b5cf6',
-                          color:'white',
-                          border:'none',
-                          borderRadius:6,
-                          cursor:'pointer',
-                          fontSize:14,
-                          fontWeight:'600'
-                        }}
-                      >
-                        Migrate Old Wall Names
-                      </button>
-                      <button
-                        onClick={async () => {
                           if (!confirm('Recalculate every session score with the latest scoring system?')) return;
                           try {
                             setRecalculateScoresLoading(true);
