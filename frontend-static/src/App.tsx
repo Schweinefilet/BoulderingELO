@@ -4054,8 +4054,15 @@ export default function App(){
                                 onClick={() => {
                                   const newMode = !positionEditMode;
                                   setPositionEditMode(newMode);
-                                  if (newMode && nextRoute) {
-                                    setRouteToPosition(nextRoute.id!);
+                                  // Ensure drawing mode is off when positioning routes
+                                  if (newMode) {
+                                    setDrawingEditMode(false);
+                                    setDrawingRouteId(null);
+                                    setSelectedDrawingId(null);
+                                    setDrawingLineStart(null);
+                                    if (nextRoute) {
+                                      setRouteToPosition(nextRoute.id!);
+                                    }
                                   } else {
                                     setRouteToPosition(null);
                                   }
@@ -4612,6 +4619,42 @@ export default function App(){
                             const snappedX = Number(x.toFixed(2));
                             const snappedY = Number(y.toFixed(2));
 
+                            // Handle position edit mode clicks first (higher priority than drawing mode)
+                            if (positionEditMode && user?.role === 'admin') {
+                              const targetRoute = routeToPosition
+                                ? routesForWall.find(r => r.id === routeToPosition)
+                                : routesForWall.find(r => !getRoutePositionForImage(r, safeIndex));
+
+                              if (!targetRoute) {
+                                setToast({message: 'All routes positioned on this image. Click a marker to reposition or switch images.', type: 'error'});
+                                setTimeout(() => setToast(null), 3000);
+                                return;
+                              }
+
+                              const updatedPositions = normalizeRoutePositions(targetRoute, safeIndex, snappedX, snappedY);
+
+                              api.updateRoute(targetRoute.id!, { label_positions: updatedPositions, label_x: snappedX, label_y: snappedY })
+                                .then(() => {
+                                  setAvailableRoutes(prev => prev.map(r =>
+                                    r.id === targetRoute.id
+                                      ? {...r, label_positions: updatedPositions, label_x: snappedX, label_y: snappedY}
+                                      : r
+                                  ));
+                                  // Auto-advance to next route without position on this image
+                                  const nextUnpositioned = routesForWall.find(r =>
+                                    r.id !== targetRoute.id && !getRoutePositionForImage(r, safeIndex)
+                                  );
+                                  setRouteToPosition(nextUnpositioned?.id || null);
+                                  setToast({message: `Route #${targetRoute.section_number} position set`, type: 'success'});
+                                  setTimeout(() => setToast(null), 3000);
+                                })
+                                .catch(err => {
+                                  setToast({message: err.message, type: 'error'});
+                                  setTimeout(() => setToast(null), 3000);
+                                });
+                              return;
+                            }
+
                             // Handle drawing mode clicks
                             if (drawingEditMode && drawingRouteId && user?.role === 'admin') {
                               if (drawingTool === 'circle') {
@@ -4773,6 +4816,7 @@ export default function App(){
                                   e.stopPropagation();
                                   if (positionEditMode && user?.role === 'admin') {
                                     // In edit mode, select this route to reposition on next image click
+                                    setDrawingEditMode(false);
                                     setRouteToPosition(route.id!);
                                     setToast({message: `Click on the image to reposition Route #${route.section_number}`, type: 'success'});
                                     setTimeout(() => setToast(null), 2500);
