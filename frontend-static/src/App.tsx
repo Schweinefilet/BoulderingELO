@@ -1624,6 +1624,15 @@ export default function App(){
     }
   }, [routeMode]);
 
+  // Load routes when admin opens route-mgmt tab
+  useEffect(() => {
+    if (adminTab === 'route-mgmt' && user?.role === 'admin') {
+      api.getRoutes(routeFilter)
+        .then(allRoutes => setRoutes(allRoutes))
+        .catch(err => console.error('Failed to load routes:', err));
+    }
+  }, [adminTab, routeFilter, user]);
+
   // Auto-expiry feature REMOVED - keeping useEffect stub to prevent issues
   useEffect(() => {
     // Feature removed
