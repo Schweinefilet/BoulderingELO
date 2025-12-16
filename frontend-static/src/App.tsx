@@ -1341,15 +1341,14 @@ export default function App(){
         ...(shouldClearLegacy ? { label_x: null, label_y: null } : {})
       });
 
-      setAvailableRoutes(prev => prev.map(r =>
-        r.id === route.id
-          ? {
-              ...r,
-              label_positions: Object.keys(updated).length > 0 ? updated : null,
-              ...(shouldClearLegacy ? { label_x: null, label_y: null } : {})
-            }
-          : r
-      ));
+      // Re-fetch the route to avoid any stale local state and ensure the marker disappears immediately
+      const refreshed = await api.getRoute(route.id!);
+      setAvailableRoutes(prev => prev.map(r => (r.id === route.id ? refreshed : r)));
+      // Also clear any selection that might keep the overlay/marker visible
+      setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+      if (overlayRouteId === route.id) {
+        setOverlayRouteId(null);
+      }
 
       setToast({message: `Position cleared for Route #${route.section_number}`, type: 'success'});
       setTimeout(() => setToast(null), 2000);
@@ -4041,6 +4040,7 @@ export default function App(){
                     const safeIndex = Math.min(currentImageIndex, images.length - 1);
                     const sources = buildImageSources(images[safeIndex]);
                     const baseImageOpacity = overlayRouteId ? 0.7 : 1;
+                    const baseImageBrightness = overlayRouteId ? 0.8 : 1; // auto-darken reference when a route is active
 
                     return (
                       <div>
@@ -4226,6 +4226,8 @@ export default function App(){
                                             loadRouteDrawings(route, safeIndex);
                                             setSelectedDrawingId(null);
                                             setDrawingLineStart(null);
+                                            // Auto-pick the route color for drawing strokes
+                                            setDrawingStrokeColor(colorStyles[route.color] || '#ff0000');
                                           }}
                                           style={{
                                             padding:'4px 10px',
@@ -4757,7 +4759,8 @@ export default function App(){
                                 borderRadius:8,
                                 display:'block',
                                 opacity: baseImageOpacity,
-                                transition:'opacity 0.25s ease'
+                                filter: `brightness(${baseImageBrightness})`,
+                                transition:'opacity 0.25s ease, filter 0.25s ease'
                               }}
                               onLoad={(e) => {
                                 // Store image dimensions for calculating click positions
@@ -4785,8 +4788,9 @@ export default function App(){
                                   objectFit:'contain',
                                   borderRadius:8,
                                   opacity:0.95,
+                                  filter: `brightness(${baseImageBrightness})`,
                                   pointerEvents:'none',
-                                  transition:'opacity 0.25s ease'
+                                  transition:'opacity 0.25s ease, filter 0.25s ease'
                                 }}
                               />
                             );
@@ -4951,8 +4955,10 @@ export default function App(){
                                       height:'auto',
                                       aspectRatio:'1',
                                       borderRadius:'50%',
-                                      backgroundColor:`rgba(255, 255, 255, ${drawing.intensity * 0.5})`,
-                                      pointerEvents:'none'
+                                      background:`radial-gradient(circle, rgba(255,255,255, ${Math.min(1, drawing.intensity)}) 0%, rgba(255,255,255,0) 70%)`,
+                                      mixBlendMode:'screen',
+                                      pointerEvents:'none',
+                                      zIndex: 3
                                     }}
                                   />
                                 );
@@ -4970,8 +4976,10 @@ export default function App(){
                                       height:'auto',
                                       aspectRatio:'1',
                                       borderRadius:'50%',
-                                      backgroundColor:`rgba(0, 0, 0, ${drawing.intensity * 0.5})`,
-                                      pointerEvents:'none'
+                                      background:`radial-gradient(circle, rgba(0,0,0, ${Math.min(1, drawing.intensity)}) 0%, rgba(0,0,0,0) 70%)`,
+                                      mixBlendMode:'multiply',
+                                      pointerEvents:'none',
+                                      zIndex: 3
                                     }}
                                   />
                                 );
@@ -5187,8 +5195,10 @@ export default function App(){
                                     height:'auto',
                                     aspectRatio:'1',
                                     borderRadius:'50%',
-                                    backgroundColor:`rgba(255, 255, 255, ${drawing.intensity * 0.5})`,
+                                    background:`radial-gradient(circle, rgba(255,255,255, ${Math.min(1, drawing.intensity)}) 0%, rgba(255,255,255,0) 70%)`,
+                                    mixBlendMode:'screen',
                                     cursor: drawingTool === 'select' && isSelected ? 'move' : (drawingTool === 'select' ? 'pointer' : 'default'),
+                                    zIndex: 3,
                                     ...selectionStyle
                                   }}
                                 />
@@ -5227,8 +5237,10 @@ export default function App(){
                                     height:'auto',
                                     aspectRatio:'1',
                                     borderRadius:'50%',
-                                    backgroundColor:`rgba(0, 0, 0, ${drawing.intensity * 0.5})`,
+                                    background:`radial-gradient(circle, rgba(0,0,0, ${Math.min(1, drawing.intensity)}) 0%, rgba(0,0,0,0) 70%)`,
+                                    mixBlendMode:'multiply',
                                     cursor: drawingTool === 'select' && isSelected ? 'move' : (drawingTool === 'select' ? 'pointer' : 'default'),
+                                    zIndex: 3,
                                     ...selectionStyle
                                   }}
                                 />
