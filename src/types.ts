@@ -88,6 +88,7 @@ export type Route = {
   position_order: number;
   label_x?: number;
   label_y?: number;
+  label_positions?: Record<number, { x: number; y: number }>;
   notes?: string;
   dropbox_link?: string;
   active?: boolean;

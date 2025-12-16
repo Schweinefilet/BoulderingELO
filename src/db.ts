@@ -248,6 +248,7 @@ export async function initDB() {
       position_order INTEGER NOT NULL,
       label_x DECIMAL(5,2),
       label_y DECIMAL(5,2),
+      label_positions JSONB,
       notes TEXT,
       dropbox_link TEXT,
       active BOOLEAN DEFAULT TRUE,
@@ -266,6 +267,12 @@ export async function initDB() {
         WHERE table_name = 'routes' AND column_name = 'dropbox_link'
       ) THEN
         ALTER TABLE routes ADD COLUMN dropbox_link TEXT;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'routes' AND column_name = 'label_positions'
+      ) THEN
+        ALTER TABLE routes ADD COLUMN label_positions JSONB;
       END IF;
     END $$;
   `);
@@ -930,14 +937,15 @@ export async function createRoute(route: {
   position_order: number;
   label_x?: number;
   label_y?: number;
+  label_positions?: Record<number, { x: number; y: number }>;
   notes?: string;
   dropbox_link?: string;
 }) {
   const result = await pool.query(
-    `INSERT INTO routes (wall_section, section_number, global_number, color, position_order, label_x, label_y, notes, dropbox_link)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO routes (wall_section, section_number, global_number, color, position_order, label_x, label_y, label_positions, notes, dropbox_link)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
-    [route.wall_section, route.section_number, route.global_number, route.color, route.position_order, route.label_x || null, route.label_y || null, route.notes || null, route.dropbox_link || null]
+    [route.wall_section, route.section_number, route.global_number, route.color, route.position_order, route.label_x || null, route.label_y || null, route.label_positions || null, route.notes || null, route.dropbox_link || null]
   );
   return result.rows[0];
 }
@@ -985,6 +993,7 @@ export async function updateRoute(id: number, updates: {
   position_order?: number;
   label_x?: number;
   label_y?: number;
+  label_positions?: Record<number, { x: number; y: number }>;
   notes?: string;
   dropbox_link?: string;
 }) {
@@ -1015,6 +1024,11 @@ export async function updateRoute(id: number, updates: {
   if (updates.label_y !== undefined) {
     fields.push(`label_y = $${paramIndex}`);
     values.push(updates.label_y);
+    paramIndex++;
+  }
+  if (updates.label_positions !== undefined) {
+    fields.push(`label_positions = $${paramIndex}`);
+    values.push(JSON.stringify(updates.label_positions));
     paramIndex++;
   }
   if (updates.notes !== undefined) {

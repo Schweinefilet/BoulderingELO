@@ -1308,6 +1308,29 @@ export default function App(){
     };
     return map[name] || null;
   };
+
+  const getRoutePositionForImage = (route: api.Route, imageIndex: number) => {
+    if (route.label_positions && route.label_positions[imageIndex]) {
+      return route.label_positions[imageIndex];
+    }
+    if (!route.label_positions && imageIndex === 0 && route.label_x !== undefined && route.label_y !== undefined) {
+      return { x: route.label_x, y: route.label_y };
+    }
+    return null;
+  };
+
+  const normalizeRoutePositions = (route: api.Route, imageIndex: number, x: number, y: number) => {
+    const existing = route.label_positions || {};
+    return {
+      ...existing,
+      [imageIndex]: { x, y }
+    } as Record<number, { x: number; y: number }>;
+  };
+
+  const getDropboxDisplayUrl = (link?: string) => {
+    if (!link) return '';
+    return link.replace('dl=0', 'raw=1');
+  };
   
   // Initialize wallCounts dynamically based on wallTotals
   const initializeWallCounts = () => {
@@ -1335,6 +1358,8 @@ export default function App(){
   const [routeWallFilter, setRouteWallFilter] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
   const [dropdownWall, setDropdownWall] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
   const [dropdownColor, setDropdownColor] = useState<keyof Counts>('green')
+  const [routeToPosition, setRouteToPosition] = useState<number|null>(null)
+  const [overlayRouteId, setOverlayRouteId] = useState<number|null>(null)
   const [videoUrl, setVideoUrl] = useState('')
   const [wallImage, setWallImage] = useState<string>('')
   const [sessionNotes, setSessionNotes] = useState('')
@@ -3621,13 +3646,17 @@ export default function App(){
 
                     const safeIndex = Math.min(currentImageIndex, images.length - 1);
                     const sources = buildImageSources(images[safeIndex]);
+                    const baseImageOpacity = overlayRouteId ? 0.7 : 1;
 
                     return (
                       <div>
                         {/* Position Edit Mode Toggle */}
                         {user?.role === 'admin' && (
                           <button
-                            onClick={() => setPositionEditMode(!positionEditMode)}
+                            onClick={() => {
+                              setPositionEditMode(!positionEditMode);
+                              setRouteToPosition(null);
+                            }}
                             style={{
                               padding:'8px 16px',
                               backgroundColor: positionEditMode ? '#10b981' : '#3b82f6',
@@ -3652,28 +3681,38 @@ export default function App(){
                         <div
                           style={{position:'relative',marginBottom:16,cursor:positionEditMode?'crosshair':'default'}}
                           onClick={(e) => {
-                            if (!positionEditMode || user?.role !== 'admin') return;
+                            if (positionEditMode && user?.role === 'admin') {
+                              const div = e.currentTarget;
+                              const img = div.querySelector('img');
+                              if (!img) return;
 
-                            const div = e.currentTarget;
-                            const img = div.querySelector('img');
-                            if (!img) return;
+                              const rect = img.getBoundingClientRect();
+                              const x = ((e.clientX - rect.left) / rect.width) * 100;
+                              const y = ((e.clientY - rect.top) / rect.height) * 100;
+                              const snappedX = Number(x.toFixed(2));
+                              const snappedY = Number(y.toFixed(2));
 
-                            const rect = img.getBoundingClientRect();
-                            const x = ((e.clientX - rect.left) / rect.width) * 100;
-                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+                              const targetRoute = routeToPosition
+                                ? routesForWall.find(r => r.id === routeToPosition)
+                                : routesForWall.find(r => !getRoutePositionForImage(r, safeIndex));
 
-                            // Find route without position or ask which route to update
-                            const routeWithoutPos = routesForWall.find(r => !r.label_x || !r.label_y);
-                            if (routeWithoutPos) {
-                              // Auto-assign to first route without position
-                              api.updateRoute(routeWithoutPos.id!, { label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2)) })
+                              if (!targetRoute) {
+                                setToast({message: 'Select a route marker to reposition.', type: 'error'});
+                                setTimeout(() => setToast(null), 3000);
+                                return;
+                              }
+
+                              const updatedPositions = normalizeRoutePositions(targetRoute, safeIndex, snappedX, snappedY);
+
+                              api.updateRoute(targetRoute.id!, { label_positions: updatedPositions, label_x: snappedX, label_y: snappedY })
                                 .then(() => {
                                   setAvailableRoutes(prev => prev.map(r =>
-                                    r.id === routeWithoutPos.id
-                                      ? {...r, label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2))}
+                                    r.id === targetRoute.id
+                                      ? {...r, label_positions: updatedPositions, label_x: snappedX, label_y: snappedY}
                                       : r
                                   ));
-                                  setToast({message: `Route #${routeWithoutPos.section_number} position set`, type: 'success'});
+                                  setRouteToPosition(null);
+                                  setToast({message: `Route #${targetRoute.section_number} position set`, type: 'success'});
                                   setTimeout(() => setToast(null), 3000);
                                 })
                                 .catch(err => {
@@ -3681,8 +3720,9 @@ export default function App(){
                                   setTimeout(() => setToast(null), 3000);
                                 });
                             } else {
-                              setToast({message: 'All routes have positions. Click a marker to reposition it.', type: 'error'});
-                              setTimeout(() => setToast(null), 3000);
+                              // Normal mode: clicking outside markers clears overlay highlight
+                              setOverlayRouteId(null);
+                              setSelectedRoutes([]);
                             }
                           }}
                         >
@@ -3696,7 +3736,9 @@ export default function App(){
                                 width:'100%',
                                 height:'auto',
                                 borderRadius:8,
-                                display:'block'
+                                display:'block',
+                                opacity: baseImageOpacity,
+                                transition:'opacity 0.25s ease'
                               }}
                               onLoad={(e) => {
                                 // Store image dimensions for calculating click positions
@@ -3707,10 +3749,37 @@ export default function App(){
                             />
                           </picture>
 
+                          {/* Route-specific overlay image */}
+                          {overlayRouteId && (() => {
+                            const route = availableRoutes.find(r => r.id === overlayRouteId);
+                            const overlaySrc = getDropboxDisplayUrl(route?.dropbox_link);
+                            if (!route || !overlaySrc) return null;
+                            return (
+                              <img
+                                src={overlaySrc}
+                                alt={`Route ${route.section_number} reference`}
+                                style={{
+                                  position:'absolute',
+                                  inset:0,
+                                  width:'100%',
+                                  height:'100%',
+                                  objectFit:'contain',
+                                  borderRadius:8,
+                                  opacity:0.95,
+                                  pointerEvents:'none',
+                                  transition:'opacity 0.25s ease'
+                                }}
+                              />
+                            );
+                          })()}
+
                           {/* Route Markers Overlay */}
                           {routesForWall.map(route => {
-                            if (!route.label_x || !route.label_y) return null;
+                            const position = getRoutePositionForImage(route, safeIndex);
+                            if (!position) return null;
                             const isSelected = selectedRoutes.includes(route.id!);
+                            const isActiveOverlay = overlayRouteId === route.id;
+                            const isPendingPosition = routeToPosition === route.id;
 
                             const colorStyles: Record<string, string> = {
                               green: '#10b981',
@@ -3727,52 +3796,24 @@ export default function App(){
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (positionEditMode && user?.role === 'admin') {
-                                    // In edit mode, clicking marker allows repositioning
-                                    const confirmed = confirm(`Click OK, then click on the image to set new position for Route #${route.section_number} (${route.color})`);
-                                    if (confirmed) {
-                                      const handler = (clickEvent: Event) => {
-                                        const div = document.querySelector('[style*="cursor:crosshair"]');
-                                        if (!div) return;
-                                        const img = div.querySelector('img');
-                                        if (!img) return;
-
-                                        const rect = img.getBoundingClientRect();
-                                        const me = clickEvent as MouseEvent;
-                                        const x = ((me.clientX - rect.left) / rect.width) * 100;
-                                        const y = ((me.clientY - rect.top) / rect.height) * 100;
-
-                                        api.updateRoute(route.id!, { label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2)) })
-                                          .then(() => {
-                                            setAvailableRoutes(prev => prev.map(r =>
-                                              r.id === route.id
-                                                ? {...r, label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2))}
-                                                : r
-                                            ));
-                                            setToast({message: `Route #${route.section_number} repositioned`, type: 'success'});
-                                            setTimeout(() => setToast(null), 3000);
-                                            div.removeEventListener('click', handler);
-                                          })
-                                          .catch(err => {
-                                            setToast({message: err.message, type: 'error'});
-                                            setTimeout(() => setToast(null), 3000);
-                                            div.removeEventListener('click', handler);
-                                          });
-                                      };
-                                      document.querySelector('[style*="cursor:crosshair"]')?.addEventListener('click', handler, { once: true });
-                                    }
+                                    // In edit mode, select this route to position on next image click
+                                    setRouteToPosition(route.id!);
+                                    setToast({message: `Click on the image to set a new position for Route #${route.section_number}`, type: 'success'});
+                                    setTimeout(() => setToast(null), 2500);
                                   } else {
                                     // Normal selection mode
+                                    setOverlayRouteId(route.id!);
                                     if (isSelected) {
-                                      setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+                                      setSelectedRoutes([]);
                                     } else {
-                                      setSelectedRoutes(prev => [...prev, route.id!]);
+                                      setSelectedRoutes([route.id!]);
                                     }
                                   }
                                 }}
                                 style={{
                                   position:'absolute',
-                                  left:`${route.label_x}%`,
-                                  top:`${route.label_y}%`,
+                                  left:`${position.x}%`,
+                                  top:`${position.y}%`,
                                   transform:'translate(-50%, -50%)',
                                   width:40,
                                   height:40,
@@ -3787,7 +3828,9 @@ export default function App(){
                                   alignItems:'center',
                                   justifyContent:'center',
                                   transition:'all 0.2s',
-                                  boxShadow: isSelected ? `0 0 12px ${colorStyles[route.color]}` : '0 2px 4px rgba(0,0,0,0.5)'
+                                  boxShadow: isSelected ? `0 0 12px ${colorStyles[route.color]}` : '0 2px 4px rgba(0,0,0,0.5)',
+                                  opacity: isActiveOverlay ? 1 : (overlayRouteId ? 0.6 : 1),
+                                  borderStyle: isPendingPosition ? 'dashed' : 'solid'
                                 }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.2)';
