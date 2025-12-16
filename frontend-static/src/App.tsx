@@ -3651,30 +3651,51 @@ export default function App(){
                     return (
                       <div>
                         {/* Position Edit Mode Toggle */}
-                        {user?.role === 'admin' && (
-                          <button
-                            onClick={() => {
-                              setPositionEditMode(!positionEditMode);
-                              setRouteToPosition(null);
-                            }}
-                            style={{
-                              padding:'8px 16px',
-                              backgroundColor: positionEditMode ? '#10b981' : '#3b82f6',
-                              color:'white',
-                              border:'none',
-                              borderRadius:6,
-                              cursor:'pointer',
-                              fontSize:14,
-                              fontWeight:'600',
-                              marginBottom:12
-                            }}
-                          >
-                            {positionEditMode ? '✓ Position Edit Mode (Click to Exit)' : 'Edit Route Positions'}
-                          </button>
-                        )}
+                        {user?.role === 'admin' && (() => {
+                          const routesNeedingPositions = routesForWall.filter(r => !getRoutePositionForImage(r, safeIndex));
+                          const nextRoute = routesNeedingPositions[0];
+                          return (
+                            <div>
+                              <button
+                                onClick={() => {
+                                  const newMode = !positionEditMode;
+                                  setPositionEditMode(newMode);
+                                  if (newMode && nextRoute) {
+                                    setRouteToPosition(nextRoute.id!);
+                                  } else {
+                                    setRouteToPosition(null);
+                                  }
+                                }}
+                                style={{
+                                  padding:'8px 16px',
+                                  backgroundColor: positionEditMode ? '#10b981' : '#3b82f6',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600',
+                                  marginBottom:8
+                                }}
+                              >
+                                {positionEditMode ? '✓ Position Edit Mode (Click to Exit)' : 'Edit Route Positions'}
+                              </button>
+                              {routesNeedingPositions.length > 0 && (
+                                <div style={{fontSize:12,color:'#94a3b8',marginBottom:8}}>
+                                  {routesNeedingPositions.length} route{routesNeedingPositions.length > 1 ? 's' : ''} need{routesNeedingPositions.length === 1 ? 's' : ''} position on this image
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
-                          {positionEditMode ? 'Click on the image where you want to place a route marker' : 'Click on routes in the image to select them'}
+                          {positionEditMode ? (() => {
+                            const nextRoute = routeToPosition ? routesForWall.find(r => r.id === routeToPosition) : null;
+                            return nextRoute 
+                              ? `Click to place Route #${nextRoute.section_number} (${nextRoute.color})`
+                              : 'Click on a route marker to reposition it, or click here to exit';
+                          })() : 'Click on routes in the image to select them'}
                         </div>
 
                         {/* Image Container with Route Markers */}
@@ -3697,7 +3718,7 @@ export default function App(){
                                 : routesForWall.find(r => !getRoutePositionForImage(r, safeIndex));
 
                               if (!targetRoute) {
-                                setToast({message: 'Select a route marker to reposition.', type: 'error'});
+                                setToast({message: 'All routes positioned on this image. Click a marker to reposition or switch images.', type: 'error'});
                                 setTimeout(() => setToast(null), 3000);
                                 return;
                               }
@@ -3711,7 +3732,11 @@ export default function App(){
                                       ? {...r, label_positions: updatedPositions, label_x: snappedX, label_y: snappedY}
                                       : r
                                   ));
-                                  setRouteToPosition(null);
+                                  // Auto-advance to next route without position on this image
+                                  const nextUnpositioned = routesForWall.find(r => 
+                                    r.id !== targetRoute.id && !getRoutePositionForImage(r, safeIndex)
+                                  );
+                                  setRouteToPosition(nextUnpositioned?.id || null);
                                   setToast({message: `Route #${targetRoute.section_number} position set`, type: 'success'});
                                   setTimeout(() => setToast(null), 3000);
                                 })
@@ -3792,9 +3817,9 @@ export default function App(){
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (positionEditMode && user?.role === 'admin') {
-                                    // In edit mode, select this route to position on next image click
+                                    // In edit mode, select this route to reposition on next image click
                                     setRouteToPosition(route.id!);
-                                    setToast({message: `Click on the image to set a new position for Route #${route.section_number}`, type: 'success'});
+                                    setToast({message: `Click on the image to reposition Route #${route.section_number}`, type: 'success'});
                                     setTimeout(() => setToast(null), 2500);
                                   } else {
                                     // Normal selection mode
