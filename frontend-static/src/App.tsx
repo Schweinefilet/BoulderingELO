@@ -1409,8 +1409,15 @@ export default function App(){
     setSelectedDrawingId(null);
   };
 
-  const updateDrawingObject = (id: string, updates: Partial<api.DrawingObject>) => {
-    setPendingDrawings(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  type DrawingUpdate = Partial<
+    Omit<api.DrawingCircle, 'type'> &
+    Omit<api.DrawingLine, 'type'> &
+    Omit<api.DrawingBrighten, 'type'> &
+    Omit<api.DrawingDarken, 'type'>
+  >;
+
+  const updateDrawingObject = (id: string, updates: DrawingUpdate) => {
+    setPendingDrawings(prev => prev.map(d => d.id === id ? ({ ...d, ...updates } as api.DrawingObject) : d));
   };
 
   const updateDrawingColor = (id: string, color: string) => {
@@ -4349,11 +4356,11 @@ export default function App(){
                                                   <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Color:</label>
                                                   <input
                                                     type="color"
-                                                    value={selectedObj.stroke || '#ef4444'}
+                                                    value={selectedObj.strokeColor || '#ef4444'}
                                                     onChange={(e) => {
                                                       setPendingDrawings(prev => prev.map(d => 
                                                         d.id === selectedDrawingId 
-                                                          ? {...d, stroke: e.target.value}
+                                                          ? ({...d, strokeColor: e.target.value} as api.DrawingObject)
                                                           : d
                                                       ));
                                                     }}
