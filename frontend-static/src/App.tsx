@@ -1409,6 +1409,25 @@ export default function App(){
     setSelectedDrawingId(null);
   };
 
+  const updateDrawingObject = (id: string, updates: Partial<api.DrawingObject>) => {
+    setPendingDrawings(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  };
+
+  const updateDrawingColor = (id: string, color: string) => {
+    setPendingDrawings(prev => prev.map(d => {
+      if (d.id === id) {
+        if (d.type === 'circle' || d.type === 'line') {
+          return { ...d, strokeColor: color };
+        }
+      }
+      return d;
+    }));
+  };
+
+  // Route mode states (must be declared before routeModeScore useMemo)
+  const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
+  const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
+
   // Calculate route mode score based on selected routes
   const routeModeScore = useMemo(() => {
     const counts: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
@@ -1449,8 +1468,6 @@ export default function App(){
   // Route mode states
   const [routeMode, setRouteMode] = useState(false)
   const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid' | 'image'>('grid')
-  const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
-  const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
   const [sessionRoutes, setSessionRoutes] = useState<Record<number, any[]>>({}) // sessionId -> routes[]
   const [routeNumberInput, setRouteNumberInput] = useState('')
   const [routeWallFilter, setRouteWallFilter] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
@@ -1478,6 +1495,12 @@ export default function App(){
   const [drawingStrokeWidth, setDrawingStrokeWidth] = useState(3)
   const [drawingRadius, setDrawingRadius] = useState(5)
   const [drawingIntensity, setDrawingIntensity] = useState(0.5)
+
+  // Drag and interaction state for drawing objects
+  const [isDraggingDrawing, setIsDraggingDrawing] = useState(false)
+  const [drawingDragOperation, setDrawingDragOperation] = useState<'move' | 'resize' | 'reshape-start' | 'reshape-end' | null>(null)
+  const [drawingDragStart, setDrawingDragStart] = useState<{x: number; y: number} | null>(null)
+  const [draggedObjectOriginal, setDraggedObjectOriginal] = useState<any>(null) // Store original object state
 
   // Track last edited cell for highlighting
   const [lastEditedCell, setLastEditedCell] = useState<{wall: string, color: string} | null>(null)
@@ -1798,6 +1821,26 @@ export default function App(){
   useEffect(() => {
     // Feature removed
   }, []);
+  
+  // Keyboard shortcuts for drawing mode
+  useEffect(() => {
+    if (!drawingRouteId) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete/Backspace to delete selected object
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedDrawingId) {
+        e.preventDefault();
+        deleteDrawingObject(selectedDrawingId);
+      }
+      // Escape to deselect
+      if (e.key === 'Escape' && selectedDrawingId) {
+        setSelectedDrawingId(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [drawingRouteId, selectedDrawingId]);
   
   // Auto-select climber for non-admin users
   useEffect(() => {
@@ -4281,6 +4324,129 @@ export default function App(){
                                       )}
                                     </div>
 
+                                    {/* Selected Object Editor */}
+                                    {selectedDrawingId && (() => {
+                                      const selectedObj = pendingDrawings.find(d => d.id === selectedDrawingId);
+                                      if (!selectedObj) return null;
+                                      
+                                      return (
+                                        <div style={{
+                                          marginBottom:12,
+                                          padding:10,
+                                          backgroundColor:'rgba(139, 92, 246, 0.1)',
+                                          border:'1px solid #8b5cf6',
+                                          borderRadius:6
+                                        }}>
+                                          <div style={{fontSize:11,color:'#8b5cf6',fontWeight:'600',marginBottom:8}}>
+                                            Selected: {selectedObj.type.toUpperCase()}
+                                          </div>
+                                          
+                                          <div style={{display:'flex',gap:12,flexWrap:'wrap',alignItems:'flex-end'}}>
+                                            {/* Color picker for circles and lines */}
+                                            {(selectedObj.type === 'circle' || selectedObj.type === 'line') && (
+                                              <>
+                                                <div>
+                                                  <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Color:</label>
+                                                  <input
+                                                    type="color"
+                                                    value={selectedObj.stroke || '#ef4444'}
+                                                    onChange={(e) => {
+                                                      setPendingDrawings(prev => prev.map(d => 
+                                                        d.id === selectedDrawingId 
+                                                          ? {...d, stroke: e.target.value}
+                                                          : d
+                                                      ));
+                                                    }}
+                                                    style={{width:40,height:28,cursor:'pointer',border:'none',borderRadius:4}}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Width: {selectedObj.strokeWidth || 3}px</label>
+                                                  <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="10"
+                                                    value={selectedObj.strokeWidth || 3}
+                                                    onChange={(e) => {
+                                                      setPendingDrawings(prev => prev.map(d => 
+                                                        d.id === selectedDrawingId 
+                                                          ? {...d, strokeWidth: Number(e.target.value)}
+                                                          : d
+                                                      ));
+                                                    }}
+                                                    style={{width:80}}
+                                                  />
+                                                </div>
+                                              </>
+                                            )}
+                                            
+                                            {/* Radius for circles */}
+                                            {selectedObj.type === 'circle' && (
+                                              <div>
+                                                <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Radius: {selectedObj.radius.toFixed(1)}%</label>
+                                                <input
+                                                  type="range"
+                                                  min="1"
+                                                  max="20"
+                                                  step="0.5"
+                                                  value={selectedObj.radius}
+                                                  onChange={(e) => {
+                                                    setPendingDrawings(prev => prev.map(d => 
+                                                      d.id === selectedDrawingId 
+                                                        ? {...d, radius: Number(e.target.value)}
+                                                        : d
+                                                    ));
+                                                  }}
+                                                  style={{width:80}}
+                                                />
+                                              </div>
+                                            )}
+                                            
+                                            {/* Radius and intensity for brighten/darken */}
+                                            {(selectedObj.type === 'brighten' || selectedObj.type === 'darken') && (
+                                              <>
+                                                <div>
+                                                  <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Radius: {selectedObj.radius.toFixed(1)}%</label>
+                                                  <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="20"
+                                                    step="0.5"
+                                                    value={selectedObj.radius}
+                                                    onChange={(e) => {
+                                                      setPendingDrawings(prev => prev.map(d => 
+                                                        d.id === selectedDrawingId 
+                                                          ? {...d, radius: Number(e.target.value)}
+                                                          : d
+                                                      ));
+                                                    }}
+                                                    style={{width:80}}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Intensity: {((selectedObj.intensity || 0.5) * 100).toFixed(0)}%</label>
+                                                  <input
+                                                    type="range"
+                                                    min="10"
+                                                    max="100"
+                                                    value={(selectedObj.intensity || 0.5) * 100}
+                                                    onChange={(e) => {
+                                                      setPendingDrawings(prev => prev.map(d => 
+                                                        d.id === selectedDrawingId 
+                                                          ? {...d, intensity: Number(e.target.value) / 100}
+                                                          : d
+                                                      ));
+                                                    }}
+                                                    style={{width:80}}
+                                                  />
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+
                                     {/* Action Buttons */}
                                     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                                       <button
@@ -4341,13 +4507,14 @@ export default function App(){
                                     </div>
 
                                     {/* Drawing Status */}
-                                    <div style={{marginTop:8,fontSize:11,color:'#94a3b8'}}>
+                                    <div style={{marginTop:8,fontSize:11,color:'#94a3b8',lineHeight:'1.5'}}>
                                       {drawingTool === 'line' && drawingLineStart && 'Click to set line end point'}
                                       {drawingTool === 'line' && !drawingLineStart && 'Click to set line start point'}
                                       {drawingTool === 'circle' && 'Click to place a circle'}
                                       {drawingTool === 'brighten' && 'Click to add a bright spot'}
                                       {drawingTool === 'darken' && 'Click to add a dark spot'}
-                                      {drawingTool === 'select' && 'Click on a drawing to select it for deletion'}
+                                      {drawingTool === 'select' && !selectedDrawingId && 'Click on a drawing to select • Drag to move • Drag handles to resize/reshape'}
+                                      {drawingTool === 'select' && selectedDrawingId && 'Press Delete/Backspace to remove • Press Escape to deselect • Drag to move • Edit properties above'}
                                       {pendingDrawings.length > 0 && ` • ${pendingDrawings.length} drawing(s)`}
                                     </div>
                                   </>
@@ -4376,6 +4543,57 @@ export default function App(){
                         {/* Image Container with Route Markers */}
                         <div
                           style={{position:'relative',marginBottom:16,cursor:positionEditMode ? 'crosshair' : (drawingEditMode && drawingRouteId && drawingTool !== 'select') ? 'crosshair' : 'default'}}
+                          onMouseMove={(e) => {
+                            if (isDraggingDrawing && drawingDragStart && draggedObjectOriginal && selectedDrawingId) {
+                              const div = e.currentTarget;
+                              const img = div.querySelector('img');
+                              if (!img) return;
+
+                              const rect = img.getBoundingClientRect();
+                              const x = ((e.clientX - rect.left) / rect.width) * 100;
+                              const y = ((e.clientY - rect.top) / rect.height) * 100;
+                              const dx = x - drawingDragStart.x;
+                              const dy = y - drawingDragStart.y;
+
+                              if (drawingDragOperation === 'move') {
+                                // Move object
+                                const newX = Math.max(0, Math.min(100, draggedObjectOriginal.x + dx));
+                                const newY = Math.max(0, Math.min(100, draggedObjectOriginal.y + dy));
+                                updateDrawingObject(selectedDrawingId, { x: Number(newX.toFixed(2)), y: Number(newY.toFixed(2)) });
+                              } else if (drawingDragOperation === 'resize' && draggedObjectOriginal.type === 'circle') {
+                                // Resize circle
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                const newRadius = Math.max(1, Math.min(20, draggedObjectOriginal.radius + distance));
+                                updateDrawingObject(selectedDrawingId, { radius: Number(newRadius.toFixed(2)) });
+                              } else if (drawingDragOperation === 'reshape-start' && draggedObjectOriginal.type === 'line') {
+                                // Move line start point
+                                const newX1 = Math.max(0, Math.min(100, draggedObjectOriginal.x1 + dx));
+                                const newY1 = Math.max(0, Math.min(100, draggedObjectOriginal.y1 + dy));
+                                updateDrawingObject(selectedDrawingId, { x1: Number(newX1.toFixed(2)), y1: Number(newY1.toFixed(2)) });
+                              } else if (drawingDragOperation === 'reshape-end' && draggedObjectOriginal.type === 'line') {
+                                // Move line end point
+                                const newX2 = Math.max(0, Math.min(100, draggedObjectOriginal.x2 + dx));
+                                const newY2 = Math.max(0, Math.min(100, draggedObjectOriginal.y2 + dy));
+                                updateDrawingObject(selectedDrawingId, { x2: Number(newX2.toFixed(2)), y2: Number(newY2.toFixed(2)) });
+                              }
+                            }
+                          }}
+                          onMouseUp={() => {
+                            if (isDraggingDrawing) {
+                              setIsDraggingDrawing(false);
+                              setDrawingDragOperation(null);
+                              setDrawingDragStart(null);
+                              setDraggedObjectOriginal(null);
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            if (isDraggingDrawing) {
+                              setIsDraggingDrawing(false);
+                              setDrawingDragOperation(null);
+                              setDrawingDragStart(null);
+                              setDraggedObjectOriginal(null);
+                            }
+                          }}
                           onClick={(e) => {
                             const div = e.currentTarget;
                             const img = div.querySelector('img');
@@ -4711,66 +4929,188 @@ export default function App(){
 
                             if (drawing.type === 'circle') {
                               return (
-                                <div
-                                  key={drawing.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (drawingTool === 'select') {
-                                      setSelectedDrawingId(isSelected ? null : drawing.id);
-                                    }
-                                  }}
-                                  style={{
-                                    position:'absolute',
-                                    left:`${drawing.x}%`,
-                                    top:`${drawing.y}%`,
-                                    transform:'translate(-50%, -50%)',
-                                    width:`${drawing.radius * 2}%`,
-                                    height:'auto',
-                                    aspectRatio:'1',
-                                    borderRadius:'50%',
-                                    border:`${drawing.strokeWidth}px solid ${drawing.strokeColor}`,
-                                    backgroundColor: drawing.fillColor || 'transparent',
-                                    cursor: drawingTool === 'select' ? 'pointer' : 'default',
-                                    ...selectionStyle
-                                  }}
-                                />
+                                <React.Fragment key={drawing.id}>
+                                  <div
+                                    onMouseDown={(e) => {
+                                      e.stopPropagation();
+                                      if (drawingTool === 'select' && isSelected) {
+                                        setIsDraggingDrawing(true);
+                                        setDrawingDragOperation('move');
+                                        const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                                        if (rect) {
+                                          const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                          const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                          setDrawingDragStart({x, y});
+                                          setDraggedObjectOriginal({...drawing});
+                                        }
+                                      }
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (drawingTool === 'select') {
+                                        setSelectedDrawingId(isSelected ? null : drawing.id);
+                                      }
+                                    }}
+                                    style={{
+                                      position:'absolute',
+                                      left:`${drawing.x}%`,
+                                      top:`${drawing.y}%`,
+                                      transform:'translate(-50%, -50%)',
+                                      width:`${drawing.radius * 2}%`,
+                                      height:'auto',
+                                      aspectRatio:'1',
+                                      borderRadius:'50%',
+                                      border:`${drawing.strokeWidth}px solid ${drawing.strokeColor}`,
+                                      backgroundColor: drawing.fillColor || 'transparent',
+                                      cursor: drawingTool === 'select' && isSelected ? 'move' : (drawingTool === 'select' ? 'pointer' : 'default'),
+                                      ...selectionStyle
+                                    }}
+                                  />
+                                  {/* Resize handle for selected circles */}
+                                  {isSelected && drawingTool === 'select' && (
+                                    <div
+                                      onMouseDown={(e) => {
+                                        e.stopPropagation();
+                                        setIsDraggingDrawing(true);
+                                        setDrawingDragOperation('resize');
+                                        const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                                        if (rect) {
+                                          const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                          const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                          setDrawingDragStart({x, y});
+                                          setDraggedObjectOriginal({...drawing});
+                                        }
+                                      }}
+                                      style={{
+                                        position:'absolute',
+                                        left:`${drawing.x + drawing.radius}%`,
+                                        top:`${drawing.y}%`,
+                                        transform:'translate(-50%, -50%)',
+                                        width:'12px',
+                                        height:'12px',
+                                        borderRadius:'50%',
+                                        backgroundColor:'#8b5cf6',
+                                        border:'2px solid white',
+                                        cursor:'nwse-resize',
+                                        zIndex:10
+                                      }}
+                                    />
+                                  )}
+                                </React.Fragment>
                               );
                             }
                             if (drawing.type === 'line') {
                               return (
-                                <svg
-                                  key={drawing.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (drawingTool === 'select') {
-                                      setSelectedDrawingId(isSelected ? null : drawing.id);
-                                    }
-                                  }}
-                                  style={{
-                                    position:'absolute',
-                                    inset:0,
-                                    width:'100%',
-                                    height:'100%',
-                                    cursor: drawingTool === 'select' ? 'pointer' : 'default'
-                                  }}
-                                >
-                                  <line
-                                    x1={`${drawing.x1}%`}
-                                    y1={`${drawing.y1}%`}
-                                    x2={`${drawing.x2}%`}
-                                    y2={`${drawing.y2}%`}
-                                    stroke={isSelected ? '#8b5cf6' : drawing.strokeColor}
-                                    strokeWidth={isSelected ? drawing.strokeWidth + 2 : drawing.strokeWidth}
-                                    strokeLinecap="round"
-                                    strokeDasharray={isSelected ? '5,5' : 'none'}
-                                  />
-                                </svg>
+                                <React.Fragment key={drawing.id}>
+                                  <svg
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (drawingTool === 'select') {
+                                        setSelectedDrawingId(isSelected ? null : drawing.id);
+                                      }
+                                    }}
+                                    style={{
+                                      position:'absolute',
+                                      inset:0,
+                                      width:'100%',
+                                      height:'100%',
+                                      cursor: drawingTool === 'select' ? 'pointer' : 'default',
+                                      pointerEvents: drawingTool === 'select' && isSelected ? 'none' : 'auto'
+                                    }}
+                                  >
+                                    <line
+                                      x1={`${drawing.x1}%`}
+                                      y1={`${drawing.y1}%`}
+                                      x2={`${drawing.x2}%`}
+                                      y2={`${drawing.y2}%`}
+                                      stroke={isSelected ? '#8b5cf6' : drawing.strokeColor}
+                                      strokeWidth={isSelected ? drawing.strokeWidth + 2 : drawing.strokeWidth}
+                                      strokeLinecap="round"
+                                      strokeDasharray={isSelected ? '5,5' : 'none'}
+                                    />
+                                  </svg>
+                                  {/* Endpoint handles for selected lines */}
+                                  {isSelected && drawingTool === 'select' && (
+                                    <>
+                                      {/* Start point handle */}
+                                      <div
+                                        onMouseDown={(e) => {
+                                          e.stopPropagation();
+                                          setIsDraggingDrawing(true);
+                                          setDrawingDragOperation('reshape-start');
+                                          const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                                          if (rect) {
+                                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                            setDrawingDragStart({x, y});
+                                            setDraggedObjectOriginal({...drawing});
+                                          }
+                                        }}
+                                        style={{
+                                          position:'absolute',
+                                          left:`${drawing.x1}%`,
+                                          top:`${drawing.y1}%`,
+                                          transform:'translate(-50%, -50%)',
+                                          width:'12px',
+                                          height:'12px',
+                                          borderRadius:'50%',
+                                          backgroundColor:'#10b981',
+                                          border:'2px solid white',
+                                          cursor:'move',
+                                          zIndex:10
+                                        }}
+                                      />
+                                      {/* End point handle */}
+                                      <div
+                                        onMouseDown={(e) => {
+                                          e.stopPropagation();
+                                          setIsDraggingDrawing(true);
+                                          setDrawingDragOperation('reshape-end');
+                                          const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                                          if (rect) {
+                                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                            setDrawingDragStart({x, y});
+                                            setDraggedObjectOriginal({...drawing});
+                                          }
+                                        }}
+                                        style={{
+                                          position:'absolute',
+                                          left:`${drawing.x2}%`,
+                                          top:`${drawing.y2}%`,
+                                          transform:'translate(-50%, -50%)',
+                                          width:'12px',
+                                          height:'12px',
+                                          borderRadius:'50%',
+                                          backgroundColor:'#ef4444',
+                                          border:'2px solid white',
+                                          cursor:'move',
+                                          zIndex:10
+                                        }}
+                                      />
+                                    </>
+                                  )}
+                                </React.Fragment>
                               );
                             }
                             if (drawing.type === 'brighten') {
                               return (
                                 <div
                                   key={drawing.id}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    if (drawingTool === 'select' && isSelected) {
+                                      setIsDraggingDrawing(true);
+                                      setDrawingDragOperation('move');
+                                      const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                                      if (rect) {
+                                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                        setDrawingDragStart({x, y});
+                                        setDraggedObjectOriginal({...drawing});
+                                      }
+                                    }
+                                  }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (drawingTool === 'select') {
@@ -4787,7 +5127,7 @@ export default function App(){
                                     aspectRatio:'1',
                                     borderRadius:'50%',
                                     backgroundColor:`rgba(255, 255, 255, ${drawing.intensity * 0.5})`,
-                                    cursor: drawingTool === 'select' ? 'pointer' : 'default',
+                                    cursor: drawingTool === 'select' && isSelected ? 'move' : (drawingTool === 'select' ? 'pointer' : 'default'),
                                     ...selectionStyle
                                   }}
                                 />
@@ -4797,6 +5137,20 @@ export default function App(){
                               return (
                                 <div
                                   key={drawing.id}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    if (drawingTool === 'select' && isSelected) {
+                                      setIsDraggingDrawing(true);
+                                      setDrawingDragOperation('move');
+                                      const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                                      if (rect) {
+                                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                        setDrawingDragStart({x, y});
+                                        setDraggedObjectOriginal({...drawing});
+                                      }
+                                    }
+                                  }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (drawingTool === 'select') {
@@ -4813,7 +5167,7 @@ export default function App(){
                                     aspectRatio:'1',
                                     borderRadius:'50%',
                                     backgroundColor:`rgba(0, 0, 0, ${drawing.intensity * 0.5})`,
-                                    cursor: drawingTool === 'select' ? 'pointer' : 'default',
+                                    cursor: drawingTool === 'select' && isSelected ? 'move' : (drawingTool === 'select' ? 'pointer' : 'default'),
                                     ...selectionStyle
                                   }}
                                 />
