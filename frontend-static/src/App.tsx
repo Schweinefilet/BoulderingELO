@@ -26,6 +26,8 @@ const COLOR_SWATCHES: Record<keyof Counts, string> = {
   black: '#d1d5db'
 };
 
+const VALID_COLORS: (keyof Counts)[] = ['green', 'blue', 'yellow', 'orange', 'red', 'black'];
+
 const CLIMB_CATEGORY_COLUMNS: Array<{ key: keyof Counts; label: string; color: string }> = [
   { key: 'black', label: 'BLACK', color: COLOR_SWATCHES.black },
   { key: 'red', label: 'RED', color: COLOR_SWATCHES.red },
@@ -1304,6 +1306,14 @@ export default function App(){
 
   // For dropdown mode - use first available wall section
   const availableWalls = Object.keys(wallTotals);
+
+  // Route mode states
+  const [routeMode, setRouteMode] = useState(false)
+  const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
+  const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
+  const [sessionRoutes, setSessionRoutes] = useState<Record<number, any[]>>({}) // sessionId -> routes[]
+  const [routeNumberInput, setRouteNumberInput] = useState('')
+  const [routeWallFilter, setRouteWallFilter] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
   const [dropdownWall, setDropdownWall] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
   const [dropdownColor, setDropdownColor] = useState<keyof Counts>('green')
   const [videoUrl, setVideoUrl] = useState('')
@@ -1338,9 +1348,14 @@ export default function App(){
     }
   })
   const [showGradeBoundaries, setShowGradeBoundaries] = useState(false)
-  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes' | 'audits'>('accounts')
+  const [adminTab, setAdminTab] = useState<'accounts' | 'sessions' | 'routes' | 'route-mgmt' | 'audits'>('accounts')
   const [adminAudits, setAdminAudits] = useState<any[]>([])
   const [auditsLoading, setAuditsLoading] = useState(false)
+  const [routes, setRoutes] = useState<api.Route[]>([])
+  const [routesLoading, setRoutesLoading] = useState(false)
+  const [routeFilter, setRouteFilter] = useState<{wall_section?: string; color?: string}>({})
+  const [editingRoute, setEditingRoute] = useState<number | null>(null)
+  const [newRoute, setNewRoute] = useState<{wall_section: string; color: string; notes: string}>({wall_section: '', color: 'yellow', notes: ''})
   // Admin notifications (latest first)
   const [notifications, setNotifications] = useState<any[]>([])
   const [notifLoading, setNotifLoading] = useState(false)
@@ -1599,7 +1614,16 @@ export default function App(){
       setDropdownWall(availableSections[0]);
     }
   }, [wallTotals]);
-  
+
+  // Load routes when route mode is enabled
+  useEffect(() => {
+    if (routeMode) {
+      api.getRoutes({ active: true })
+        .then(routes => setAvailableRoutes(routes))
+        .catch(err => console.error('Failed to load routes:', err));
+    }
+  }, [routeMode]);
+
   // Auto-expiry feature REMOVED - keeping useEffect stub to prevent issues
   useEffect(() => {
     // Feature removed
@@ -3100,22 +3124,317 @@ export default function App(){
             </div>
           )}
 
-          {user?.role === 'admin' && (
-            <div style={{marginBottom:16,display:'flex',alignItems:'center',gap:8}}>
-              <input 
-                type="checkbox" 
-                checked={manualMode} 
-                onChange={e=>setManualMode(e.target.checked)}
-                id="manual-mode"
+          <div style={{marginBottom:16,display:'flex',flexDirection:'column',gap:12}}>
+            {user?.role === 'admin' && (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <input
+                  type="checkbox"
+                  checked={manualMode}
+                  onChange={e=>setManualMode(e.target.checked)}
+                  id="manual-mode"
+                  style={{width:18,height:18,cursor:'pointer'}}
+                />
+                <label htmlFor="manual-mode" style={{fontWeight:'500',cursor:'pointer',userSelect:'none'}}>
+                  Manual Input Mode
+                </label>
+              </div>
+            )}
+
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input
+                type="checkbox"
+                checked={routeMode}
+                onChange={e=>setRouteMode(e.target.checked)}
+                id="route-mode"
                 style={{width:18,height:18,cursor:'pointer'}}
               />
-              <label htmlFor="manual-mode" style={{fontWeight:'500',cursor:'pointer',userSelect:'none'}}>
-                Manual Input Mode
+              <label htmlFor="route-mode" style={{fontWeight:'500',cursor:'pointer',userSelect:'none'}}>
+                Route Entry Mode (Individual Route Numbers)
               </label>
             </div>
-          )}
+          </div>
 
-          {!manualMode ? (
+          {routeMode ? (
+            // Route Entry Mode
+            <div>
+              {/* Wall Section Filter */}
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontWeight:'600',fontSize:14}}>Wall Section</label>
+                <select
+                  value={routeWallFilter}
+                  onChange={e=>setRouteWallFilter(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:'10px 12px',
+                    borderRadius:6,
+                    border:BLACK_PANEL_BORDER,
+                    backgroundColor:BLACK_ROW_BG,
+                    color:'white',
+                    fontSize:14
+                  }}
+                >
+                  {availableWalls.map(wall => (
+                    <option key={wall} value={wall}>{formatWallSectionName(wall)}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Number Input */}
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',marginBottom:8,fontWeight:'600',fontSize:14}}>
+                  Enter Route Number (1-999)
+                </label>
+                <div style={{display:'flex',gap:8}}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={routeNumberInput}
+                    onChange={e=>setRouteNumberInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const num = parseInt(routeNumberInput);
+                        if (!num || num < 1) return;
+                        const route = availableRoutes.find(r =>
+                          r.wall_section === routeWallFilter &&
+                          (r.section_number === num || r.global_number === num)
+                        );
+                        if (route && route.id && !selectedRoutes.includes(route.id)) {
+                          setSelectedRoutes(prev => [...prev, route.id!]);
+                          setRouteNumberInput('');
+                        }
+                      }
+                    }}
+                    placeholder="e.g., 5"
+                    style={{
+                      flex:1,
+                      padding:'10px 12px',
+                      borderRadius:6,
+                      border:BLACK_PANEL_BORDER,
+                      backgroundColor:BLACK_ROW_BG,
+                      color:'white',
+                      fontSize:16
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      const num = parseInt(routeNumberInput);
+                      if (!num || num < 1) return;
+                      const route = availableRoutes.find(r =>
+                        r.wall_section === routeWallFilter &&
+                        (r.section_number === num || r.global_number === num)
+                      );
+                      if (route && route.id && !selectedRoutes.includes(route.id)) {
+                        setSelectedRoutes(prev => [...prev, route.id!]);
+                        setRouteNumberInput('');
+                      }
+                    }}
+                    style={{
+                      padding:'10px 20px',
+                      backgroundColor:'#3b82f6',
+                      color:'white',
+                      border:'none',
+                      borderRadius:6,
+                      fontSize:14,
+                      fontWeight:'600',
+                      cursor:'pointer'
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                <div style={{marginTop:8,fontSize:12,color:'#94a3b8'}}>
+                  Enter section # or global # to add route
+                </div>
+              </div>
+
+              {/* Number Pad */}
+              <div style={{marginBottom:16}}>
+                <div style={{
+                  display:'grid',
+                  gridTemplateColumns:'repeat(3, 1fr)',
+                  gap:8,
+                  maxWidth:300
+                }}>
+                  {[1,2,3,4,5,6,7,8,9,'Clear',0,'⌫'].map(btn => (
+                    <button
+                      key={btn}
+                      onClick={() => {
+                        if (btn === 'Clear') {
+                          setRouteNumberInput('');
+                        } else if (btn === '⌫') {
+                          setRouteNumberInput(prev => prev.slice(0, -1));
+                        } else {
+                          setRouteNumberInput(prev => prev + btn);
+                        }
+                      }}
+                      style={{
+                        padding:'16px',
+                        backgroundColor: btn === 'Clear' || btn === '⌫' ? '#ef4444' : BLACK_PANEL_BG,
+                        color:'white',
+                        border:BLACK_PANEL_BORDER,
+                        borderRadius:8,
+                        fontSize:18,
+                        fontWeight:'600',
+                        cursor:'pointer',
+                        transition:'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (btn === 'Clear' || btn === '⌫') {
+                          e.currentTarget.style.backgroundColor = '#dc2626';
+                        } else {
+                          e.currentTarget.style.backgroundColor = '#1e293b';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (btn === 'Clear' || btn === '⌫') {
+                          e.currentTarget.style.backgroundColor = '#ef4444';
+                        } else {
+                          e.currentTarget.style.backgroundColor = BLACK_PANEL_BG;
+                        }
+                      }}
+                    >
+                      {btn}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected Routes Display */}
+              {selectedRoutes.length > 0 && (
+                <div style={{marginBottom:16}}>
+                  <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600'}}>
+                    Selected Routes ({selectedRoutes.length})
+                  </h4>
+                  <div style={{
+                    display:'flex',
+                    flexWrap:'wrap',
+                    gap:8,
+                    padding:12,
+                    backgroundColor:BLACK_PANEL_BG,
+                    borderRadius:8,
+                    border:BLACK_PANEL_BORDER
+                  }}>
+                    {selectedRoutes.map(routeId => {
+                      const route = availableRoutes.find(r => r.id === routeId);
+                      if (!route) return null;
+                      const colorStyles: Record<string, string> = {
+                        green: '#10b981',
+                        blue: '#3b82f6',
+                        yellow: '#eab308',
+                        orange: '#f97316',
+                        red: '#ef4444',
+                        black: '#000'
+                      };
+                      return (
+                        <div
+                          key={routeId}
+                          style={{
+                            display:'inline-flex',
+                            alignItems:'center',
+                            gap:6,
+                            padding:'6px 10px',
+                            backgroundColor:BLACK_ROW_BG,
+                            border:`2px solid ${colorStyles[route.color] || '#3b82f6'}`,
+                            borderRadius:6,
+                            fontSize:13
+                          }}
+                        >
+                          <span style={{fontWeight:'600'}}>
+                            #{route.section_number}
+                          </span>
+                          <span style={{color:'#94a3b8',fontSize:11}}>
+                            {formatWallSectionName(route.wall_section)}
+                          </span>
+                          <span style={{
+                            width:12,
+                            height:12,
+                            borderRadius:'50%',
+                            backgroundColor:colorStyles[route.color] || '#3b82f6',
+                            border:route.color === 'black' ? '1px solid white' : 'none'
+                          }} />
+                          <button
+                            onClick={() => setSelectedRoutes(prev => prev.filter(id => id !== routeId))}
+                            style={{
+                              marginLeft:4,
+                              padding:0,
+                              width:16,
+                              height:16,
+                              backgroundColor:'transparent',
+                              color:'#ef4444',
+                              border:'none',
+                              cursor:'pointer',
+                              fontSize:14,
+                              lineHeight:1
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                onClick={async () => {
+                  if (selectedRoutes.length === 0) {
+                    alert('Please select at least one route');
+                    return;
+                  }
+                  if (!selectedClimber) {
+                    alert('Please select a climber');
+                    return;
+                  }
+                  try {
+                    setLoading(true);
+                    await api.createRouteSession({
+                      climberId: selectedClimber,
+                      date: date,
+                      routeIds: selectedRoutes,
+                      notes: sessionNotes
+                    });
+                    alert('Route session saved!');
+                    setSelectedRoutes([]);
+                    setRouteNumberInput('');
+                    setSessionNotes('');
+                    await loadData();
+                  } catch (err: any) {
+                    alert('Failed to save session: ' + (err.message || err));
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading || selectedRoutes.length === 0}
+                style={{
+                  width:'100%',
+                  padding:'14px',
+                  backgroundColor:selectedRoutes.length === 0 ? '#374151' : '#10b981',
+                  color:'white',
+                  border:'none',
+                  borderRadius:8,
+                  fontSize:16,
+                  fontWeight:'600',
+                  cursor:selectedRoutes.length === 0 ? 'not-allowed' : 'pointer',
+                  transition:'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedRoutes.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedRoutes.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#10b981';
+                  }
+                }}
+              >
+                {loading ? 'Saving...' : `Save Session (${selectedRoutes.length} routes)`}
+              </button>
+            </div>
+          ) : !manualMode ? (
             // Dropdown mode
             <div>
               <div style={{marginBottom:16}}>
@@ -6301,8 +6620,53 @@ export default function App(){
                                       </div>
                                     </div>
                                   </div>
-                                  {/* Show gains grouped by wall */}
-                                  {hasGains ? (
+                                  {/* Show routes if this is a route-based session, otherwise show gains */}
+                                  {session.uses_route_tracking && session.routes ? (
+                                    <div style={{marginTop:12}}>
+                                      <div style={{fontSize:13,color:'#94a3b8',marginBottom:8}}>
+                                        Routes Completed ({session.routes.length})
+                                      </div>
+                                      <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                                        {session.routes.map((route: any, idx: number) => {
+                                          const colorStyles: Record<string, string> = {
+                                            green: '#10b981',
+                                            blue: '#3b82f6',
+                                            yellow: '#eab308',
+                                            orange: '#f97316',
+                                            red: '#ef4444',
+                                            black: '#000'
+                                          };
+                                          return (
+                                            <div
+                                              key={idx}
+                                              style={{
+                                                display:'inline-flex',
+                                                alignItems:'center',
+                                                gap:6,
+                                                padding:'4px 8px',
+                                                backgroundColor:BLACK_ROW_BG,
+                                                border:`1px solid ${colorStyles[route.color] || '#3b82f6'}`,
+                                                borderRadius:6,
+                                                fontSize:12
+                                              }}
+                                            >
+                                              <span style={{fontWeight:'600'}}>#{route.section_number}</span>
+                                              <span style={{color:'#94a3b8',fontSize:11}}>
+                                                {formatWallSectionName(route.wall_section)}
+                                              </span>
+                                              <span style={{
+                                                width:10,
+                                                height:10,
+                                                borderRadius:'50%',
+                                                backgroundColor:colorStyles[route.color] || '#3b82f6',
+                                                border:route.color === 'black' ? '1px solid white' : 'none'
+                                              }} />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ) : hasGains ? (
                                     <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:12}}>
                                       {Object.entries(groupedGains).map(([wall, colors]) => (
                                         <div key={wall} style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',fontSize:13}}>
@@ -6586,7 +6950,7 @@ export default function App(){
               borderBottom:'1px solid #475569',
               backgroundColor:'#1e293b'
             }}>
-              {(['accounts', 'sessions', 'routes', 'audits'] as const).map(tab => (
+              {(['accounts', 'sessions', 'routes', 'route-mgmt', 'audits'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setAdminTab(tab)}
@@ -6602,7 +6966,7 @@ export default function App(){
                     textTransform:'capitalize'
                   }}
                 >
-                  {tab}
+                  {tab === 'route-mgmt' ? 'Individual Routes' : tab}
                 </button>
               ))}
             </div>
@@ -7164,6 +7528,314 @@ export default function App(){
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {adminTab === 'route-mgmt' && (
+                <div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+                    <h3 style={{margin:0,fontSize:18,fontWeight:'600'}}>Individual Route Management</h3>
+                    <div style={{display:'flex',gap:8}}>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Generate routes from current Wall Totals? This will create individual route records based on your wallTotals settings.')) return;
+                          try {
+                            setRoutesLoading(true);
+                            const result = await api.bulkImportRoutes();
+                            alert(result.message || `Created ${result.routes.length} routes`);
+                            // Reload routes
+                            const allRoutes = await api.getRoutes({});
+                            setRoutes(allRoutes);
+                          } catch (err: any) {
+                            alert('Bulk import failed: ' + (err.message || err));
+                          } finally {
+                            setRoutesLoading(false);
+                          }
+                        }}
+                        disabled={routesLoading}
+                        style={{
+                          padding:'8px 16px',
+                          backgroundColor: routesLoading ? '#10b981' : '#10b981',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor: routesLoading ? 'not-allowed' : 'pointer',
+                          fontSize:14,
+                          fontWeight:'600',
+                          opacity: routesLoading ? 0.6 : 1
+                        }}
+                      >
+                        🚀 Bulk Import from Wall Totals
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            setRoutesLoading(true);
+                            const allRoutes = await api.getRoutes(routeFilter);
+                            setRoutes(allRoutes);
+                          } catch (err: any) {
+                            alert('Failed to load routes: ' + (err.message || err));
+                          } finally {
+                            setRoutesLoading(false);
+                          }
+                        }}
+                        style={{padding:'8px 16px',backgroundColor:'#3b82f6',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600}}
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+
+                  <p style={{color:'#94a3b8',fontSize:14,marginBottom:20}}>
+                    Manage individual routes with section numbers, global numbers, and position. Routes can be assigned to wall sections and annotated on reference images.
+                  </p>
+
+                  {/* Filters */}
+                  <div style={{
+                    backgroundColor:'#1e293b',
+                    padding:16,
+                    borderRadius:8,
+                    marginBottom:20,
+                    display:'flex',
+                    gap:12,
+                    flexWrap:'wrap'
+                  }}>
+                    <select
+                      value={routeFilter.wall_section || ''}
+                      onChange={(e) => setRouteFilter({...routeFilter, wall_section: e.target.value || undefined})}
+                      style={{
+                        padding:'8px 12px',
+                        backgroundColor:'#0f172a',
+                        border:'1px solid #475569',
+                        borderRadius:6,
+                        color:'white',
+                        fontSize:14
+                      }}
+                    >
+                      <option value="">All Wall Sections</option>
+                      {Object.keys(wallTotals).map(wall => (
+                        <option key={wall} value={wall}>{formatWallSectionName(wall)}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={routeFilter.color || ''}
+                      onChange={(e) => setRouteFilter({...routeFilter, color: e.target.value || undefined})}
+                      style={{
+                        padding:'8px 12px',
+                        backgroundColor:'#0f172a',
+                        border:'1px solid #475569',
+                        borderRadius:6,
+                        color:'white',
+                        fontSize:14
+                      }}
+                    >
+                      <option value="">All Colors</option>
+                      {VALID_COLORS.map((color: keyof Counts) => (
+                        <option key={color} value={color} style={{color: COLOR_SWATCHES[color]}}>
+                          {color.charAt(0).toUpperCase() + color.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        try {
+                          setRoutesLoading(true);
+                          const filtered = await api.getRoutes(routeFilter);
+                          setRoutes(filtered);
+                        } catch (err: any) {
+                          alert('Failed to filter: ' + (err.message || err));
+                        } finally {
+                          setRoutesLoading(false);
+                        }
+                      }}
+                      style={{padding:'8px 16px',backgroundColor:'#8b5cf6',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600}}
+                    >
+                      Apply Filter
+                    </button>
+                  </div>
+
+                  {/* Create New Route */}
+                  <div style={{
+                    backgroundColor:'#1e293b',
+                    padding:20,
+                    borderRadius:8,
+                    border:'2px dashed #475569',
+                    marginBottom:20
+                  }}>
+                    <h4 style={{marginTop:0,marginBottom:12,fontSize:16,fontWeight:'600'}}>Create New Route</h4>
+                    <div style={{display:'flex',gap:12,flexWrap:'wrap',alignItems:'center'}}>
+                      <select
+                        value={newRoute.wall_section}
+                        onChange={(e) => setNewRoute({...newRoute, wall_section: e.target.value})}
+                        style={{
+                          padding:'10px 12px',
+                          backgroundColor:'#0f172a',
+                          border:'1px solid #475569',
+                          borderRadius:6,
+                          color:'white',
+                          fontSize:14
+                        }}
+                      >
+                        <option value="">Select Wall Section</option>
+                        {Object.keys(wallTotals).map(wall => (
+                          <option key={wall} value={wall}>{formatWallSectionName(wall)}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={newRoute.color}
+                        onChange={(e) => setNewRoute({...newRoute, color: e.target.value})}
+                        style={{
+                          padding:'10px 12px',
+                          backgroundColor:'#0f172a',
+                          border:'1px solid #475569',
+                          borderRadius:6,
+                          color:'white',
+                          fontSize:14
+                        }}
+                      >
+                        {VALID_COLORS.map((color: keyof Counts) => (
+                          <option key={color} value={color} style={{color: COLOR_SWATCHES[color]}}>
+                            {color.charAt(0).toUpperCase() + color.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Notes (optional)"
+                        value={newRoute.notes}
+                        onChange={(e) => setNewRoute({...newRoute, notes: e.target.value})}
+                        style={{
+                          flex:1,
+                          minWidth:200,
+                          padding:'10px 12px',
+                          backgroundColor:'#0f172a',
+                          border:'1px solid #475569',
+                          borderRadius:6,
+                          color:'white',
+                          fontSize:14
+                        }}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!newRoute.wall_section) {
+                            alert('Please select a wall section');
+                            return;
+                          }
+                          try {
+                            setRoutesLoading(true);
+                            await api.createRoute({
+                              wall_section: newRoute.wall_section,
+                              color: newRoute.color,
+                              notes: newRoute.notes
+                            });
+                            setNewRoute({wall_section: '', color: 'yellow', notes: ''});
+                            // Reload routes
+                            const allRoutes = await api.getRoutes(routeFilter);
+                            setRoutes(allRoutes);
+                            alert('Route created successfully!');
+                          } catch (err: any) {
+                            alert('Failed to create route: ' + (err.message || err));
+                          } finally {
+                            setRoutesLoading(false);
+                          }
+                        }}
+                        style={{
+                          padding:'10px 20px',
+                          backgroundColor:'#10b981',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:14,
+                          fontWeight:'600'
+                        }}
+                      >
+                        + Create Route
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Routes Table */}
+                  {routesLoading ? (
+                    <div style={{color:'#94a3b8',padding:20,textAlign:'center'}}>Loading routes...</div>
+                  ) : routes.length === 0 ? (
+                    <div style={{color:'#94a3b8',padding:20,textAlign:'center'}}>
+                      No routes found. Use "Bulk Import from Wall Totals" to generate routes automatically.
+                    </div>
+                  ) : (
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse'}}>
+                        <thead>
+                          <tr style={{backgroundColor:'#1e293b',borderBottom:'2px solid #475569'}}>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Global #</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Wall Section</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Section #</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Color</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Position</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Notes</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {routes.map((route) => (
+                            <tr key={route.id} style={{borderBottom:'1px solid #475569'}}>
+                              <td style={{padding:'12px',color:'#fbbf24',fontWeight:'700',fontSize:14}}>{route.global_number}</td>
+                              <td style={{padding:'12px',color:'#e2e8f0',fontSize:14}}>{formatWallSectionName(route.wall_section)}</td>
+                              <td style={{padding:'12px',color:'#e2e8f0',fontSize:14}}>#{route.section_number}</td>
+                              <td style={{padding:'12px'}}>
+                                <span style={{
+                                  backgroundColor: COLOR_SWATCHES[route.color as keyof typeof COLOR_SWATCHES] || '#666',
+                                  color: route.color === 'yellow' || route.color === 'green' ? '#000' : '#fff',
+                                  padding:'4px 8px',
+                                  borderRadius:4,
+                                  fontSize:12,
+                                  fontWeight:'600'
+                                }}>
+                                  {route.color.toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{padding:'12px',color:'#94a3b8',fontSize:13}}>{route.position_order}</td>
+                              <td style={{padding:'12px',color:'#94a3b8',fontSize:13,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                {route.notes || '-'}
+                              </td>
+                              <td style={{padding:'12px'}}>
+                                <div style={{display:'flex',gap:8}}>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete route #${route.global_number} (${formatWallSectionName(route.wall_section)} #${route.section_number})?`)) return;
+                                      try {
+                                        await api.deleteRoute(route.id);
+                                        const allRoutes = await api.getRoutes(routeFilter);
+                                        setRoutes(allRoutes);
+                                        alert('Route deleted successfully!');
+                                      } catch (err: any) {
+                                        alert('Failed to delete: ' + (err.message || err));
+                                      }
+                                    }}
+                                    style={{
+                                      padding:'6px 12px',
+                                      backgroundColor:'#ef4444',
+                                      color:'white',
+                                      border:'none',
+                                      borderRadius:4,
+                                      cursor:'pointer',
+                                      fontSize:12,
+                                      fontWeight:'600'
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{marginTop:16,color:'#94a3b8',fontSize:14}}>
+                        Total: {routes.length} route{routes.length !== 1 ? 's' : ''}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -446,7 +446,7 @@ export async function getSessions(filter?: { from?: string; to?: string; climber
   `;
   const params: any[] = [];
   let paramCount = 1;
-  
+
   if (filter?.climberId) {
     query += ` AND s.climber_id = $${paramCount++}`;
     params.push(filter.climberId);
@@ -459,24 +459,54 @@ export async function getSessions(filter?: { from?: string; to?: string; climber
     query += ` AND s.date <= $${paramCount++}`;
     params.push(filter.to);
   }
-  
+
   query += ' ORDER BY s.date DESC';
-  
+
   const result = await pool.query(query, params);
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    climberId: row.climber_id,
-    date: row.date,
-    score: row.score,
-    notes: row.notes,
-    green: row.green,
-    blue: row.blue,
-    yellow: row.yellow,
-    orange: row.orange,
-    red: row.red,
-    black: row.black,
-    wallCounts: row.wall_counts || undefined
+
+  // Process each session and load route data if needed
+  const sessions = await Promise.all(result.rows.map(async (row: any) => {
+    const session: any = {
+      id: row.id,
+      climberId: row.climber_id,
+      date: row.date,
+      score: row.score,
+      notes: row.notes,
+      green: row.green,
+      blue: row.blue,
+      yellow: row.yellow,
+      orange: row.orange,
+      red: row.red,
+      black: row.black,
+      wallCounts: row.wall_counts || undefined,
+      uses_route_tracking: row.uses_route_tracking || false
+    };
+
+    // If this is a route-based session, load the routes
+    if (row.uses_route_tracking) {
+      const routesResult = await pool.query(`
+        SELECT r.*, rc.completed_at
+        FROM route_completions rc
+        JOIN routes r ON rc.route_id = r.id
+        WHERE rc.session_id = $1
+        ORDER BY r.wall_section, r.section_number
+      `, [row.id]);
+
+      session.routes = routesResult.rows.map((r: any) => ({
+        id: r.id,
+        wall_section: r.wall_section,
+        section_number: r.section_number,
+        global_number: r.global_number,
+        color: r.color,
+        notes: r.notes,
+        completed_at: r.completed_at
+      }));
+    }
+
+    return session;
   }));
+
+  return sessions;
 }
 
 export async function getSessionById(id: number) {
@@ -488,11 +518,11 @@ export async function getSessionById(id: number) {
     LEFT JOIN wall_counts w ON s.id = w.session_id
     WHERE s.id = $1
   `, [id]);
-  
+
   if (result.rows.length === 0) return null;
-  
+
   const row = result.rows[0];
-  return {
+  const session: any = {
     id: row.id,
     climberId: row.climber_id,
     date: row.date,
@@ -504,8 +534,32 @@ export async function getSessionById(id: number) {
     orange: row.orange,
     red: row.red,
     black: row.black,
-    wallCounts: row.wall_counts || undefined
+    wallCounts: row.wall_counts || undefined,
+    uses_route_tracking: row.uses_route_tracking || false
   };
+
+  // If this is a route-based session, load the routes
+  if (row.uses_route_tracking) {
+    const routesResult = await pool.query(`
+      SELECT r.*, rc.completed_at
+      FROM route_completions rc
+      JOIN routes r ON rc.route_id = r.id
+      WHERE rc.session_id = $1
+      ORDER BY r.wall_section, r.section_number
+    `, [id]);
+
+    session.routes = routesResult.rows.map((r: any) => ({
+      id: r.id,
+      wall_section: r.wall_section,
+      section_number: r.section_number,
+      global_number: r.global_number,
+      color: r.color,
+      notes: r.notes,
+      completed_at: r.completed_at
+    }));
+  }
+
+  return session;
 }
 
 export async function leaderboard(from?: string, to?: string, includeHidden: boolean = false) {

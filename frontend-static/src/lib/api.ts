@@ -65,6 +65,8 @@ export interface Session {
   red: number;
   black: number;
   wallCounts?: any;
+  uses_route_tracking?: boolean;
+  routes?: any[];
 }
 
 export interface LeaderboardEntry {
@@ -508,4 +510,111 @@ export async function saveWallSectionImages(wallSectionImages: Record<string, st
     body: JSON.stringify(wallSectionImages),
   });
   await handleResponse(response);
+}
+
+// Route management
+
+export interface Route {
+  id: number;
+  wall_section: string;
+  section_number: number;
+  global_number: number;
+  color: string;
+  position_order: number;
+  label_x?: number;
+  label_y?: number;
+  notes?: string;
+  active: boolean;
+  created_at?: string;
+  archived_at?: string;
+}
+
+export async function getRoutes(filter?: { wall_section?: string; color?: string; active?: boolean }): Promise<Route[]> {
+  const params = new URLSearchParams();
+  if (filter?.wall_section) params.append('wall_section', filter.wall_section);
+  if (filter?.color) params.append('color', filter.color);
+  if (filter?.active !== undefined) params.append('active', filter.active.toString());
+
+  const response = await fetch(`${API_URL}/api/routes?${params.toString()}`);
+  const result = await handleResponse<{ data: Route[] }>(response);
+  return result.data || [];
+}
+
+export async function getRoute(id: number): Promise<Route> {
+  const response = await fetch(`${API_URL}/api/routes/${id}`);
+  const result = await handleResponse<{ data: Route }>(response);
+  return result.data;
+}
+
+export async function createRoute(route: {
+  wall_section: string;
+  color: string;
+  section_number?: number;
+  position_order?: number;
+  label_x?: number;
+  label_y?: number;
+  notes?: string;
+}): Promise<Route> {
+  const response = await fetch(`${API_URL}/api/routes`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify(route),
+  });
+  const result = await handleResponse<{ data: Route }>(response);
+  return result.data;
+}
+
+export async function updateRoute(id: number, updates: {
+  section_number?: number;
+  color?: string;
+  position_order?: number;
+  label_x?: number;
+  label_y?: number;
+  notes?: string;
+}): Promise<Route> {
+  const response = await fetch(`${API_URL}/api/routes/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(true),
+    body: JSON.stringify(updates),
+  });
+  const result = await handleResponse<{ data: Route }>(response);
+  return result.data;
+}
+
+export async function deleteRoute(id: number): Promise<void> {
+  const response = await fetch(`${API_URL}/api/routes/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(true),
+  });
+  await handleResponse(response);
+}
+
+export async function bulkImportRoutes(): Promise<{ message: string; routes: Route[] }> {
+  const response = await fetchWithTimeout(`${API_URL}/api/routes/bulk-import`, {
+    method: 'POST',
+    headers: getHeaders(true),
+  });
+  const result = await handleResponse<{ message: string; routes: Route[] }>(response);
+  return result;
+}
+
+export async function createRouteSession(data: {
+  climberId: number;
+  date: string;
+  routeIds: number[];
+  notes?: string;
+}): Promise<any> {
+  const response = await fetch(`${API_URL}/api/sessions/routes`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+  const result = await handleResponse(response);
+  return result.data;
+}
+
+export async function getSessionRoutes(sessionId: number): Promise<any[]> {
+  const response = await fetch(`${API_URL}/api/sessions/${sessionId}/routes`);
+  const result = await handleResponse<{ data: any[] }>(response);
+  return result.data || [];
 }
