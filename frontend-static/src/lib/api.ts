@@ -521,9 +521,9 @@ export interface Route {
   global_number: number;
   color: string;
   position_order: number;
-  label_x?: number;
-  label_y?: number;
-   label_positions?: Record<number, { x: number; y: number }>;
+  label_x?: number | null;
+  label_y?: number | null;
+  label_positions?: Record<number, { x: number; y: number }> | null;
   notes?: string;
   dropbox_link?: string;
   active: boolean;
@@ -572,9 +572,9 @@ export async function updateRoute(id: number, updates: {
   section_number?: number;
   color?: string;
   position_order?: number;
-  label_x?: number;
-  label_y?: number;
-  label_positions?: Record<number, { x: number; y: number }>;
+  label_x?: number | null;
+  label_y?: number | null;
+  label_positions?: Record<number, { x: number; y: number }> | null;
   notes?: string;
   dropbox_link?: string;
 }): Promise<Route> {

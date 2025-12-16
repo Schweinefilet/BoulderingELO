@@ -1327,6 +1327,38 @@ export default function App(){
     } as Record<number, { x: number; y: number }>;
   };
 
+  const clearRoutePosition = async (route: api.Route, imageIndex: number) => {
+    const existing = route.label_positions || {};
+    const updated = { ...existing };
+    delete updated[imageIndex];
+
+    // If clearing the only position on image 0, also clear legacy label_x/label_y
+    const shouldClearLegacy = imageIndex === 0 && Object.keys(updated).length === 0;
+
+    try {
+      await api.updateRoute(route.id!, {
+        label_positions: Object.keys(updated).length > 0 ? updated : null,
+        ...(shouldClearLegacy ? { label_x: null, label_y: null } : {})
+      });
+
+      setAvailableRoutes(prev => prev.map(r =>
+        r.id === route.id
+          ? {
+              ...r,
+              label_positions: Object.keys(updated).length > 0 ? updated : null,
+              ...(shouldClearLegacy ? { label_x: null, label_y: null } : {})
+            }
+          : r
+      ));
+
+      setToast({message: `Position cleared for Route #${route.section_number}`, type: 'success'});
+      setTimeout(() => setToast(null), 2000);
+    } catch (err: any) {
+      setToast({message: err.message, type: 'error'});
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
   const getDropboxDisplayUrl = (link?: string) => {
     if (!link) return '';
     return link.replace('dl=0', 'raw=1');
@@ -3680,7 +3712,68 @@ export default function App(){
                               >
                                 {positionEditMode ? '✓ Position Edit Mode (Click to Exit)' : 'Edit Route Positions'}
                               </button>
-                              {routesNeedingPositions.length > 0 && (
+
+                              {/* Routes needing positions list */}
+                              {positionEditMode && routesNeedingPositions.length > 0 && (
+                                <div style={{
+                                  backgroundColor:'#1e293b',
+                                  padding:12,
+                                  borderRadius:6,
+                                  marginBottom:8,
+                                  border:'1px solid #334155'
+                                }}>
+                                  <div style={{fontSize:12,color:'#94a3b8',marginBottom:8,fontWeight:'600'}}>
+                                    {routesNeedingPositions.length} route{routesNeedingPositions.length > 1 ? 's' : ''} need{routesNeedingPositions.length === 1 ? 's' : ''} position on this image:
+                                  </div>
+                                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                    {routesNeedingPositions.map(route => {
+                                      const colorStyles: Record<string, string> = {
+                                        green: '#10b981',
+                                        blue: '#3b82f6',
+                                        yellow: '#eab308',
+                                        orange: '#f97316',
+                                        red: '#ef4444',
+                                        black: '#1f2937'
+                                      };
+                                      const isSelected = routeToPosition === route.id;
+                                      return (
+                                        <button
+                                          key={route.id}
+                                          onClick={() => setRouteToPosition(route.id!)}
+                                          style={{
+                                            padding:'4px 10px',
+                                            backgroundColor: isSelected ? colorStyles[route.color] : '#374151',
+                                            color: isSelected && route.color === 'yellow' ? '#000' : '#fff',
+                                            border: `2px solid ${colorStyles[route.color]}`,
+                                            borderRadius:4,
+                                            cursor:'pointer',
+                                            fontSize:12,
+                                            fontWeight:'600',
+                                            opacity: isSelected ? 1 : 0.8,
+                                            transition:'all 0.2s'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            if (!isSelected) {
+                                              e.currentTarget.style.opacity = '1';
+                                              e.currentTarget.style.backgroundColor = colorStyles[route.color];
+                                            }
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            if (!isSelected) {
+                                              e.currentTarget.style.opacity = '0.8';
+                                              e.currentTarget.style.backgroundColor = '#374151';
+                                            }
+                                          }}
+                                        >
+                                          #{route.section_number}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {!positionEditMode && routesNeedingPositions.length > 0 && (
                                 <div style={{fontSize:12,color:'#94a3b8',marginBottom:8}}>
                                   {routesNeedingPositions.length} route{routesNeedingPositions.length > 1 ? 's' : ''} need{routesNeedingPositions.length === 1 ? 's' : ''} position on this image
                                 </div>
@@ -3692,9 +3785,16 @@ export default function App(){
                         <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
                           {positionEditMode ? (() => {
                             const nextRoute = routeToPosition ? routesForWall.find(r => r.id === routeToPosition) : null;
-                            return nextRoute 
-                              ? `Click to place Route #${nextRoute.section_number} (${nextRoute.color})`
-                              : 'Click on a route marker to reposition it, or click here to exit';
+                            return (
+                              <div>
+                                <div>{nextRoute
+                                  ? `Click to place Route #${nextRoute.section_number} (${nextRoute.color})`
+                                  : 'Select a route above or click a marker to reposition it'}</div>
+                                <div style={{fontSize:11,color:'#64748b',marginTop:4}}>
+                                  Right-click on a marker to delete its position
+                                </div>
+                              </div>
+                            );
                           })() : 'Click on routes in the image to select them'}
                         </div>
 
@@ -3831,6 +3931,15 @@ export default function App(){
                                     } else {
                                       setSelectedRoutes(prev => [...prev, route.id!]);
                                       setOverlayRouteId(route.id!);
+                                    }
+                                  }
+                                }}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (positionEditMode && user?.role === 'admin') {
+                                    if (confirm(`Delete position for Route #${route.section_number} on this image?`)) {
+                                      clearRoutePosition(route, safeIndex);
                                     }
                                   }
                                 }}
