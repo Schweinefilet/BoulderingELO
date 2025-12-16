@@ -3209,7 +3209,7 @@ export default function App(){
                 style={{width:18,height:18,cursor:'pointer'}}
               />
               <label htmlFor="route-mode" style={{fontWeight:'500',cursor:'pointer',userSelect:'none'}}>
-                Route Entry Mode (Individual Route Numbers)
+                Route Entry Mode (Individual Route Numbers (In testing(do not use)))
               </label>
             </div>
 
@@ -3719,10 +3719,6 @@ export default function App(){
                                   setToast({message: err.message, type: 'error'});
                                   setTimeout(() => setToast(null), 3000);
                                 });
-                            } else {
-                              // Normal mode: clicking outside markers clears overlay highlight
-                              setOverlayRouteId(null);
-                              setSelectedRoutes([]);
                             }
                           }}
                         >
@@ -3802,11 +3798,14 @@ export default function App(){
                                     setTimeout(() => setToast(null), 2500);
                                   } else {
                                     // Normal selection mode
-                                    setOverlayRouteId(route.id!);
                                     if (isSelected) {
-                                      setSelectedRoutes([]);
+                                      setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+                                      if (overlayRouteId === route.id) {
+                                        setOverlayRouteId(null);
+                                      }
                                     } else {
-                                      setSelectedRoutes([route.id!]);
+                                      setSelectedRoutes(prev => [...prev, route.id!]);
+                                      setOverlayRouteId(route.id!);
                                     }
                                   }
                                 }}
