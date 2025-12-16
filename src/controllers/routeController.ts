@@ -141,9 +141,13 @@ export async function bulkImportRoutes(req: AuthRequest, res: Response) {
       const counts = colorCounts as any;
       let sectionNumber = await db.getNextSectionNumber(wallSection);
 
-      // Iterate through each color
-      for (const [color, count] of Object.entries(counts)) {
-        const numRoutes = count as number;
+      // Define color order: green -> blue -> yellow -> orange -> red -> black
+      const colorOrder = ['green', 'blue', 'yellow', 'orange', 'red', 'black'];
+
+      // Iterate through colors in the specified order
+      for (const color of colorOrder) {
+        const numRoutes = counts[color] as number;
+        if (!numRoutes || numRoutes === 0) continue;
 
         // Create N routes for this color
         for (let i = 0; i < numRoutes; i++) {

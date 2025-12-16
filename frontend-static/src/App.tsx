@@ -1309,7 +1309,7 @@ export default function App(){
 
   // Route mode states
   const [routeMode, setRouteMode] = useState(false)
-  const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid'>('number')
+  const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid' | 'image'>('number')
   const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
   const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
   const [sessionRoutes, setSessionRoutes] = useState<Record<number, any[]>>({}) // sessionId -> routes[]
@@ -3201,6 +3201,21 @@ export default function App(){
                 >
                   Grid View
                 </button>
+                <button
+                  onClick={() => setRouteEntryMethod('image')}
+                  style={{
+                    padding:'6px 12px',
+                    backgroundColor: routeEntryMethod === 'image' ? '#3b82f6' : '#374151',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:13,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Image Overlay
+                </button>
               </div>
             )}
           </div>
@@ -3232,11 +3247,11 @@ export default function App(){
 
               {routeEntryMethod === 'number' ? (
                 <>
-              {/* Number Input */}
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',marginBottom:8,fontWeight:'600',fontSize:14}}>
-                  Enter Route Number (1-999)
-                </label>
+                  {/* Number Input */}
+                  <div style={{marginBottom:16}}>
+                    <label style={{display:'block',marginBottom:8,fontWeight:'600',fontSize:14}}>
+                      Enter Route Number (1-999)
+                    </label>
                 <div style={{display:'flex',gap:8}}>
                   <input
                     type="number"
@@ -3353,7 +3368,7 @@ export default function App(){
                 </div>
               </div>
                 </>
-              ) : (
+              ) : routeEntryMethod === 'grid' ? (
                 // Grid View Mode
                 <div style={{marginBottom:16}}>
                   <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
@@ -3481,9 +3496,196 @@ export default function App(){
                     </div>
                   )}
                 </div>
-              )}
+              ) : routeEntryMethod === 'image' ? (
+                // Image Overlay Mode
+                <div style={{marginBottom:16}}>
+                  {(() => {
+                    const images = wallSectionImages[routeWallFilter] || [];
+                    const routesForWall = availableRoutes.filter(r => r.wall_section === routeWallFilter);
 
-              {/* Selected Routes Display - shared between both modes */}
+                    if (images.length === 0) {
+                      return (
+                        <div style={{
+                          padding:40,
+                          textAlign:'center',
+                          color:'#64748b',
+                          fontSize:14,
+                          backgroundColor:BLACK_PANEL_BG,
+                          borderRadius:8,
+                          border:BLACK_PANEL_BORDER
+                        }}>
+                          No reference images uploaded for this wall section. Admin can upload images in the wall sections settings.
+                        </div>
+                      );
+                    }
+
+                    if (routesForWall.length === 0) {
+                      return (
+                        <div style={{
+                          padding:40,
+                          textAlign:'center',
+                          color:'#64748b',
+                          fontSize:14,
+                          backgroundColor:BLACK_PANEL_BG,
+                          borderRadius:8,
+                          border:BLACK_PANEL_BORDER
+                        }}>
+                          No routes found for this wall section. Use the admin panel to create routes.
+                        </div>
+                      );
+                    }
+
+                    const safeIndex = Math.min(currentImageIndex, images.length - 1);
+                    const sources = buildImageSources(images[safeIndex]);
+
+                    return (
+                      <div>
+                        <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
+                          Click on routes in the image to select them
+                        </div>
+
+                        {/* Image Container with Route Markers */}
+                        <div style={{position:'relative',marginBottom:16}}>
+                          <picture>
+                            {sources.webp && <source srcSet={sources.webp} type="image/webp" />}
+                            {sources.avif && <source srcSet={sources.avif} type="image/avif" />}
+                            <img
+                              src={sources.fallback}
+                              alt={`${formatWallSectionName(routeWallFilter)} reference`}
+                              style={{
+                                width:'100%',
+                                height:'auto',
+                                borderRadius:8,
+                                display:'block'
+                              }}
+                              onLoad={(e) => {
+                                // Store image dimensions for calculating click positions
+                                const img = e.currentTarget;
+                                img.dataset.width = String(img.naturalWidth);
+                                img.dataset.height = String(img.naturalHeight);
+                              }}
+                            />
+                          </picture>
+
+                          {/* Route Markers Overlay */}
+                          {routesForWall.map(route => {
+                            if (!route.label_x || !route.label_y) return null;
+                            const isSelected = selectedRoutes.includes(route.id!);
+
+                            const colorStyles: Record<string, string> = {
+                              green: '#10b981',
+                              blue: '#3b82f6',
+                              yellow: '#eab308',
+                              orange: '#f97316',
+                              red: '#ef4444',
+                              black: '#1f2937'
+                            };
+
+                            return (
+                              <button
+                                key={route.id}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+                                  } else {
+                                    setSelectedRoutes(prev => [...prev, route.id!]);
+                                  }
+                                }}
+                                style={{
+                                  position:'absolute',
+                                  left:`${route.label_x}%`,
+                                  top:`${route.label_y}%`,
+                                  transform:'translate(-50%, -50%)',
+                                  width:40,
+                                  height:40,
+                                  borderRadius:'50%',
+                                  backgroundColor: isSelected ? colorStyles[route.color] : 'rgba(0,0,0,0.6)',
+                                  color: isSelected ? (route.color === 'yellow' ? '#000' : '#fff') : '#fff',
+                                  border: `3px solid ${colorStyles[route.color]}`,
+                                  fontSize:13,
+                                  fontWeight:'700',
+                                  cursor:'pointer',
+                                  display:'flex',
+                                  alignItems:'center',
+                                  justifyContent:'center',
+                                  transition:'all 0.2s',
+                                  boxShadow: isSelected ? `0 0 12px ${colorStyles[route.color]}` : '0 2px 4px rgba(0,0,0,0.5)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                                  e.currentTarget.style.zIndex = '10';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
+                                  e.currentTarget.style.zIndex = '1';
+                                }}
+                              >
+                                #{route.section_number}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Image Navigation */}
+                        {images.length > 1 && (
+                          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:12,marginBottom:16}}>
+                            <button
+                              onClick={() => setCurrentImageIndex(prev => Math.max(0, prev - 1))}
+                              disabled={currentImageIndex === 0}
+                              style={{
+                                padding:'8px 16px',
+                                backgroundColor:currentImageIndex === 0 ? '#374151' : '#3b82f6',
+                                color:'white',
+                                border:'none',
+                                borderRadius:6,
+                                cursor:currentImageIndex === 0 ? 'not-allowed' : 'pointer',
+                                fontSize:14,
+                                fontWeight:'600'
+                              }}
+                            >
+                              ← Previous
+                            </button>
+                            <span style={{color:'#94a3b8',fontSize:14}}>
+                              Image {currentImageIndex + 1} of {images.length}
+                            </span>
+                            <button
+                              onClick={() => setCurrentImageIndex(prev => Math.min(images.length - 1, prev + 1))}
+                              disabled={currentImageIndex >= images.length - 1}
+                              style={{
+                                padding:'8px 16px',
+                                backgroundColor:currentImageIndex >= images.length - 1 ? '#374151' : '#3b82f6',
+                                color:'white',
+                                border:'none',
+                                borderRadius:6,
+                                cursor:currentImageIndex >= images.length - 1 ? 'not-allowed' : 'pointer',
+                                fontSize:14,
+                                fontWeight:'600'
+                              }}
+                            >
+                              Next →
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Legend */}
+                        <div style={{
+                          padding:12,
+                          backgroundColor:BLACK_PANEL_BG,
+                          borderRadius:8,
+                          border:BLACK_PANEL_BORDER,
+                          fontSize:12,
+                          color:'#94a3b8'
+                        }}>
+                          <div style={{marginBottom:4}}>💡 <strong>Tip:</strong> Click route markers on the image to toggle selection</div>
+                          <div>Routes without markers need label positions to be set in the admin panel</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : null}
+
+              {/* Selected Routes Display - shared between all modes */}
               {selectedRoutes.length > 0 && (
                 <div style={{marginBottom:16}}>
                   <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600'}}>

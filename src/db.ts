@@ -953,7 +953,7 @@ export async function getRoutes(filter?: { wall_section?: string; color?: string
     query += ' AND active = TRUE';
   }
 
-  query += ' ORDER BY wall_section, color, position_order';
+  query += ' ORDER BY global_number ASC';
 
   const result = await pool.query(query, params);
   return result.rows;
