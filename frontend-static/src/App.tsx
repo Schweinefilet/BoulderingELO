@@ -1627,9 +1627,14 @@ export default function App(){
   // Load routes when admin opens route-mgmt tab
   useEffect(() => {
     if (adminTab === 'route-mgmt' && user?.role === 'admin') {
+      console.log('[Route Management] Loading routes with filter:', routeFilter);
       api.getRoutes(routeFilter)
-        .then(allRoutes => setRoutes(allRoutes))
-        .catch(err => console.error('Failed to load routes:', err));
+        .then(allRoutes => {
+          console.log('[Route Management] Loaded routes:', allRoutes.length, 'routes');
+          console.log('[Route Management] First route:', allRoutes[0]);
+          setRoutes(allRoutes);
+        })
+        .catch(err => console.error('[Route Management] Failed to load routes:', err));
     }
   }, [adminTab, routeFilter, user]);
 
@@ -7552,12 +7557,20 @@ export default function App(){
                           if (!confirm('Generate routes from current Wall Totals? This will create individual route records based on your wallTotals settings.')) return;
                           try {
                             setRoutesLoading(true);
+                            console.log('[Bulk Import] Starting bulk import...');
                             const result = await api.bulkImportRoutes();
+                            console.log('[Bulk Import] Result:', result);
+                            console.log('[Bulk Import] Routes created:', result.routes?.length);
                             alert(result.message || `Created ${result.routes.length} routes`);
                             // Reload routes
+                            console.log('[Bulk Import] Reloading all routes...');
                             const allRoutes = await api.getRoutes({});
+                            console.log('[Bulk Import] Fetched routes:', allRoutes.length);
+                            console.log('[Bulk Import] First route:', allRoutes[0]);
                             setRoutes(allRoutes);
+                            console.log('[Bulk Import] Routes state updated');
                           } catch (err: any) {
+                            console.error('[Bulk Import] Error:', err);
                             alert('Bulk import failed: ' + (err.message || err));
                           } finally {
                             setRoutesLoading(false);

@@ -16,7 +16,7 @@ export async function getRoutes(req: AuthRequest, res: Response) {
     if (active !== undefined) filter.active = active === 'true';
 
     const routes = await db.getRoutes(filter);
-    return sendSuccess(res, routes);
+    return sendSuccess(res, { data: routes });
   } catch (err: any) {
     return sendError(res, err.message, 500);
   }
@@ -34,7 +34,7 @@ export async function getRoute(req: AuthRequest, res: Response) {
       return sendError(res, 'Route not found', 404);
     }
 
-    return sendSuccess(res, route);
+    return sendSuccess(res, { data: route });
   } catch (err: any) {
     return sendError(res, err.message, 500);
   }
@@ -70,7 +70,7 @@ export async function createRoute(req: AuthRequest, res: Response) {
       notes
     });
 
-    return sendSuccess(res, route, 201);
+    return sendSuccess(res, { data: route }, 201);
   } catch (err: any) {
     return sendError(res, err.message, 400);
   }
@@ -98,7 +98,7 @@ export async function updateRoute(req: AuthRequest, res: Response) {
       return sendError(res, 'Route not found', 404);
     }
 
-    return sendSuccess(res, route);
+    return sendSuccess(res, { data: route });
   } catch (err: any) {
     return sendError(res, err.message, 400);
   }
