@@ -1359,6 +1359,72 @@ export default function App(){
     }
   };
 
+  // Drawing overlay helper functions
+  const generateDrawingId = () => `drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const getRouteDrawingsForImage = (route: api.Route, imageIndex: number): api.DrawingObject[] => {
+    if (!route.route_drawings) return [];
+    return route.route_drawings[imageIndex] || [];
+  };
+
+  const loadRouteDrawings = (route: api.Route, imageIndex: number) => {
+    const drawings = getRouteDrawingsForImage(route, imageIndex);
+    setPendingDrawings(drawings);
+  };
+
+  const saveRouteDrawings = async (routeId: number, imageIndex: number, drawings: api.DrawingObject[]) => {
+    const route = availableRoutes.find(r => r.id === routeId);
+    if (!route) return;
+
+    const existing = route.route_drawings || {};
+    const updated = {
+      ...existing,
+      [imageIndex]: drawings
+    };
+
+    try {
+      await api.updateRoute(routeId, { route_drawings: updated });
+      setAvailableRoutes(prev => prev.map(r =>
+        r.id === routeId ? { ...r, route_drawings: updated } : r
+      ));
+      setToast({ message: `Drawings saved for Route #${route.section_number}`, type: 'success' });
+      setTimeout(() => setToast(null), 2000);
+    } catch (err: any) {
+      setToast({ message: err.message, type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const addDrawingObject = (obj: api.DrawingObject) => {
+    setPendingDrawings(prev => [...prev, obj]);
+  };
+
+  const deleteDrawingObject = (id: string) => {
+    setPendingDrawings(prev => prev.filter(d => d.id !== id));
+    setSelectedDrawingId(null);
+  };
+
+  const clearAllDrawings = () => {
+    setPendingDrawings([]);
+    setSelectedDrawingId(null);
+  };
+
+  // Calculate route mode score based on selected routes
+  const routeModeScore = useMemo(() => {
+    const counts: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+    selectedRoutes.forEach(routeId => {
+      const route = availableRoutes.find(r => r.id === routeId);
+      if (route && route.color in counts) {
+        counts[route.color as keyof Counts]++;
+      }
+    });
+    return {
+      counts,
+      score: computeWeeklyScore(counts),
+      grade: getGradeForScore(computeWeeklyScore(counts))
+    };
+  }, [selectedRoutes, availableRoutes]);
+
   const getDropboxDisplayUrl = (link?: string) => {
     if (!link) return '';
     return link.replace('dl=0', 'raw=1');
@@ -1400,7 +1466,19 @@ export default function App(){
   const [error, setError] = useState<string|null>(null)
   const [bootStatus, setBootStatus] = useState<string | null>(null)
   const [positionEditMode, setPositionEditMode] = useState(false)
-  
+
+  // Drawing overlay state for route marking
+  const [drawingEditMode, setDrawingEditMode] = useState(false)
+  const [drawingTool, setDrawingTool] = useState<'circle' | 'line' | 'brighten' | 'darken' | 'select'>('circle')
+  const [drawingRouteId, setDrawingRouteId] = useState<number | null>(null)
+  const [pendingDrawings, setPendingDrawings] = useState<api.DrawingObject[]>([])
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
+  const [drawingLineStart, setDrawingLineStart] = useState<{x: number; y: number} | null>(null)
+  const [drawingStrokeColor, setDrawingStrokeColor] = useState('#ff0000')
+  const [drawingStrokeWidth, setDrawingStrokeWidth] = useState(3)
+  const [drawingRadius, setDrawingRadius] = useState(5)
+  const [drawingIntensity, setDrawingIntensity] = useState(0.5)
+
   // Track last edited cell for highlighting
   const [lastEditedCell, setLastEditedCell] = useState<{wall: string, color: string} | null>(null)
   
@@ -3307,6 +3385,35 @@ export default function App(){
                 </select>
               </div>
 
+              {/* Route Mode Score/Grade/Marginal Gains Display */}
+              <div style={{
+                marginBottom:16,
+                padding:12,
+                backgroundColor:BLACK_PANEL_BG,
+                borderRadius:8,
+                border:BLACK_PANEL_BORDER
+              }}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    <div
+                      style={{
+                        display:'inline-flex',
+                        alignItems:'center',
+                        gap:8,
+                        padding:'8px 12px',
+                        border:'1px solid #3b82f6',
+                        borderRadius:10,
+                        backgroundColor:'rgba(59, 130, 246, 0.08)'
+                      }}
+                    >
+                      <span style={{color:'#a5b4fc',fontWeight:800,fontSize:16}}>Score: {routeModeScore.score.toFixed(2)}</span>
+                      <GradeBadge grade={routeModeScore.grade} size="md" />
+                    </div>
+                  </div>
+                  <MarginalGainsButton counts={routeModeScore.counts} isTouchDevice={isTouchDevice} />
+                </div>
+              </div>
+
               {routeEntryMethod === 'number' ? (
                 <>
                   {/* Number Input */}
@@ -3433,6 +3540,211 @@ export default function App(){
               ) : routeEntryMethod === 'grid' ? (
                 // Grid View Mode
                 <div style={{marginBottom:16}}>
+                  {/* Reference Image at Top */}
+                  {(() => {
+                    const images = wallSectionImages[routeWallFilter] || [];
+                    if (images.length === 0) return null;
+                    const safeIndex = Math.min(currentImageIndex, images.length - 1);
+                    const sources = buildImageSources(images[safeIndex]);
+                    return (
+                      <div style={{marginBottom:16}}>
+                        <div style={{fontSize:13,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                          {formatWallSectionName(routeWallFilter)} Reference
+                        </div>
+                        {(() => {
+                          const annotation = getWallSectionAnnotation(routeWallFilter);
+                          return annotation ? (
+                            <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>
+                              {annotation}
+                            </div>
+                          ) : null;
+                        })()}
+                        <div style={{position:'relative'}}>
+                          <picture>
+                            {sources.webp && <source srcSet={sources.webp} type="image/webp" />}
+                            {sources.avif && <source srcSet={sources.avif} type="image/avif" />}
+                            <img
+                              src={sources.fallback}
+                              alt={`${formatWallSectionName(routeWallFilter)} reference`}
+                              style={{
+                                width:'100%',
+                                height:'auto',
+                                borderRadius:8,
+                                display:'block'
+                              }}
+                            />
+                          </picture>
+                          {/* Show route markers if we have a selected route */}
+                          {selectedRoutes.length > 0 && (() => {
+                            const lastSelectedRoute = availableRoutes.find(r => r.id === selectedRoutes[selectedRoutes.length - 1]);
+                            if (!lastSelectedRoute) return null;
+                            const position = getRoutePositionForImage(lastSelectedRoute, safeIndex);
+                            if (!position) return null;
+                            const colorStyles: Record<string, string> = {
+                              green: '#10b981',
+                              blue: '#3b82f6',
+                              yellow: '#eab308',
+                              orange: '#f97316',
+                              red: '#ef4444',
+                              black: '#1f2937'
+                            };
+                            return (
+                              <>
+                                {/* Show marker for selected route */}
+                                <div
+                                  style={{
+                                    position:'absolute',
+                                    left:`${position.x}%`,
+                                    top:`${position.y}%`,
+                                    transform:'translate(-50%, -50%)',
+                                    width:36,
+                                    height:36,
+                                    borderRadius:'50%',
+                                    backgroundColor:colorStyles[lastSelectedRoute.color] || '#3b82f6',
+                                    color: lastSelectedRoute.color === 'yellow' ? '#000' : '#fff',
+                                    border:'3px solid white',
+                                    fontSize:12,
+                                    fontWeight:'700',
+                                    display:'flex',
+                                    alignItems:'center',
+                                    justifyContent:'center',
+                                    boxShadow:`0 0 16px ${colorStyles[lastSelectedRoute.color] || '#3b82f6'}`
+                                  }}
+                                >
+                                  #{lastSelectedRoute.section_number}
+                                </div>
+                                {/* Show drawings for this route */}
+                                {lastSelectedRoute.route_drawings?.[safeIndex]?.map((drawing: api.DrawingObject) => {
+                                  if (drawing.type === 'circle') {
+                                    return (
+                                      <div
+                                        key={drawing.id}
+                                        style={{
+                                          position:'absolute',
+                                          left:`${drawing.x}%`,
+                                          top:`${drawing.y}%`,
+                                          transform:'translate(-50%, -50%)',
+                                          width:`${drawing.radius * 2}%`,
+                                          height:'auto',
+                                          aspectRatio:'1',
+                                          borderRadius:'50%',
+                                          border:`${drawing.strokeWidth}px solid ${drawing.strokeColor}`,
+                                          backgroundColor: drawing.fillColor || 'transparent',
+                                          pointerEvents:'none'
+                                        }}
+                                      />
+                                    );
+                                  }
+                                  if (drawing.type === 'line') {
+                                    return (
+                                      <svg
+                                        key={drawing.id}
+                                        style={{
+                                          position:'absolute',
+                                          inset:0,
+                                          width:'100%',
+                                          height:'100%',
+                                          pointerEvents:'none'
+                                        }}
+                                      >
+                                        <line
+                                          x1={`${drawing.x1}%`}
+                                          y1={`${drawing.y1}%`}
+                                          x2={`${drawing.x2}%`}
+                                          y2={`${drawing.y2}%`}
+                                          stroke={drawing.strokeColor}
+                                          strokeWidth={drawing.strokeWidth}
+                                          strokeLinecap="round"
+                                        />
+                                      </svg>
+                                    );
+                                  }
+                                  if (drawing.type === 'brighten') {
+                                    return (
+                                      <div
+                                        key={drawing.id}
+                                        style={{
+                                          position:'absolute',
+                                          left:`${drawing.x}%`,
+                                          top:`${drawing.y}%`,
+                                          transform:'translate(-50%, -50%)',
+                                          width:`${drawing.radius * 2}%`,
+                                          height:'auto',
+                                          aspectRatio:'1',
+                                          borderRadius:'50%',
+                                          backgroundColor:`rgba(255, 255, 255, ${drawing.intensity * 0.5})`,
+                                          pointerEvents:'none'
+                                        }}
+                                      />
+                                    );
+                                  }
+                                  if (drawing.type === 'darken') {
+                                    return (
+                                      <div
+                                        key={drawing.id}
+                                        style={{
+                                          position:'absolute',
+                                          left:`${drawing.x}%`,
+                                          top:`${drawing.y}%`,
+                                          transform:'translate(-50%, -50%)',
+                                          width:`${drawing.radius * 2}%`,
+                                          height:'auto',
+                                          aspectRatio:'1',
+                                          borderRadius:'50%',
+                                          backgroundColor:`rgba(0, 0, 0, ${drawing.intensity * 0.5})`,
+                                          pointerEvents:'none'
+                                        }}
+                                      />
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </>
+                            );
+                          })()}
+                        </div>
+                        {/* Image Navigation */}
+                        {images.length > 1 && (
+                          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
+                            <button
+                              onClick={() => setCurrentImageIndex(prev => Math.max(0, prev - 1))}
+                              disabled={currentImageIndex === 0}
+                              style={{
+                                padding:'4px 12px',
+                                backgroundColor:currentImageIndex === 0 ? '#374151' : '#3b82f6',
+                                color:'white',
+                                border:'none',
+                                borderRadius:4,
+                                cursor:currentImageIndex === 0 ? 'not-allowed' : 'pointer',
+                                fontSize:12
+                              }}
+                            >
+                              ←
+                            </button>
+                            <span style={{color:'#94a3b8',fontSize:12}}>
+                              {currentImageIndex + 1} / {images.length}
+                            </span>
+                            <button
+                              onClick={() => setCurrentImageIndex(prev => Math.min(images.length - 1, prev + 1))}
+                              disabled={currentImageIndex >= images.length - 1}
+                              style={{
+                                padding:'4px 12px',
+                                backgroundColor:currentImageIndex >= images.length - 1 ? '#374151' : '#3b82f6',
+                                color:'white',
+                                border:'none',
+                                borderRadius:4,
+                                cursor:currentImageIndex >= images.length - 1 ? 'not-allowed' : 'pointer',
+                                fontSize:12
+                              }}
+                            >
+                              →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
                     Select routes by clicking on the grid
                   </div>
@@ -3782,6 +4094,269 @@ export default function App(){
                           );
                         })()}
 
+                        {/* Drawing Edit Mode Toggle and Tools - Admin Only */}
+                        {user?.role === 'admin' && !positionEditMode && (
+                          <div style={{marginBottom:12}}>
+                            <div style={{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap'}}>
+                              <button
+                                onClick={() => {
+                                  if (drawingEditMode) {
+                                    // Exiting drawing mode - prompt to save if there are unsaved changes
+                                    if (drawingRouteId && pendingDrawings.length > 0) {
+                                      if (confirm('Save drawings before exiting?')) {
+                                        saveRouteDrawings(drawingRouteId, safeIndex, pendingDrawings);
+                                      }
+                                    }
+                                    setDrawingEditMode(false);
+                                    setDrawingRouteId(null);
+                                    setPendingDrawings([]);
+                                    setSelectedDrawingId(null);
+                                    setDrawingLineStart(null);
+                                  } else {
+                                    setDrawingEditMode(true);
+                                  }
+                                }}
+                                style={{
+                                  padding:'8px 16px',
+                                  backgroundColor: drawingEditMode ? '#f59e0b' : '#8b5cf6',
+                                  color:'white',
+                                  border:'none',
+                                  borderRadius:6,
+                                  cursor:'pointer',
+                                  fontSize:14,
+                                  fontWeight:'600'
+                                }}
+                              >
+                                {drawingEditMode ? '✓ Drawing Mode (Click to Exit)' : 'Draw Route Markers'}
+                              </button>
+                            </div>
+
+                            {/* Drawing Mode UI */}
+                            {drawingEditMode && (
+                              <div style={{
+                                backgroundColor:'#1e293b',
+                                padding:12,
+                                borderRadius:6,
+                                marginBottom:12,
+                                border:'1px solid #8b5cf6'
+                              }}>
+                                {/* Route Selection for Drawing */}
+                                <div style={{marginBottom:12}}>
+                                  <label style={{display:'block',fontSize:12,color:'#94a3b8',marginBottom:6,fontWeight:'600'}}>
+                                    Select Route to Draw On:
+                                  </label>
+                                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                    {routesForWall.map(route => {
+                                      const colorStyles: Record<string, string> = {
+                                        green: '#10b981',
+                                        blue: '#3b82f6',
+                                        yellow: '#eab308',
+                                        orange: '#f97316',
+                                        red: '#ef4444',
+                                        black: '#1f2937'
+                                      };
+                                      const isSelected = drawingRouteId === route.id;
+                                      return (
+                                        <button
+                                          key={route.id}
+                                          onClick={() => {
+                                            if (drawingRouteId && drawingRouteId !== route.id && pendingDrawings.length > 0) {
+                                              if (confirm('Save current drawings before switching routes?')) {
+                                                saveRouteDrawings(drawingRouteId, safeIndex, pendingDrawings);
+                                              }
+                                            }
+                                            setDrawingRouteId(route.id!);
+                                            loadRouteDrawings(route, safeIndex);
+                                            setSelectedDrawingId(null);
+                                            setDrawingLineStart(null);
+                                          }}
+                                          style={{
+                                            padding:'4px 10px',
+                                            backgroundColor: isSelected ? colorStyles[route.color] : '#374151',
+                                            color: isSelected && route.color === 'yellow' ? '#000' : '#fff',
+                                            border: `2px solid ${colorStyles[route.color]}`,
+                                            borderRadius:4,
+                                            cursor:'pointer',
+                                            fontSize:12,
+                                            fontWeight:'600'
+                                          }}
+                                        >
+                                          #{route.section_number}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Drawing Tools */}
+                                {drawingRouteId && (
+                                  <>
+                                    <div style={{marginBottom:12}}>
+                                      <label style={{display:'block',fontSize:12,color:'#94a3b8',marginBottom:6,fontWeight:'600'}}>
+                                        Drawing Tools:
+                                      </label>
+                                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                        {[
+                                          {id: 'circle', label: '○ Circle', color: '#ef4444'},
+                                          {id: 'line', label: '— Line', color: '#3b82f6'},
+                                          {id: 'brighten', label: '☀ Brighten', color: '#fbbf24'},
+                                          {id: 'darken', label: '● Darken', color: '#374151'},
+                                          {id: 'select', label: '↖ Select', color: '#8b5cf6'}
+                                        ].map(tool => (
+                                          <button
+                                            key={tool.id}
+                                            onClick={() => {
+                                              setDrawingTool(tool.id as any);
+                                              setDrawingLineStart(null);
+                                              setSelectedDrawingId(null);
+                                            }}
+                                            style={{
+                                              padding:'6px 12px',
+                                              backgroundColor: drawingTool === tool.id ? tool.color : '#475569',
+                                              color:'white',
+                                              border:'none',
+                                              borderRadius:4,
+                                              cursor:'pointer',
+                                              fontSize:12,
+                                              fontWeight:'600'
+                                            }}
+                                          >
+                                            {tool.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Tool Options */}
+                                    <div style={{display:'flex',gap:16,flexWrap:'wrap',marginBottom:12}}>
+                                      {(drawingTool === 'circle' || drawingTool === 'line') && (
+                                        <>
+                                          <div>
+                                            <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Color:</label>
+                                            <input
+                                              type="color"
+                                              value={drawingStrokeColor}
+                                              onChange={(e) => setDrawingStrokeColor(e.target.value)}
+                                              style={{width:40,height:28,cursor:'pointer',border:'none',borderRadius:4}}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Width: {drawingStrokeWidth}px</label>
+                                            <input
+                                              type="range"
+                                              min="1"
+                                              max="10"
+                                              value={drawingStrokeWidth}
+                                              onChange={(e) => setDrawingStrokeWidth(Number(e.target.value))}
+                                              style={{width:80}}
+                                            />
+                                          </div>
+                                        </>
+                                      )}
+                                      {(drawingTool === 'circle' || drawingTool === 'brighten' || drawingTool === 'darken') && (
+                                        <div>
+                                          <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Radius: {drawingRadius}%</label>
+                                          <input
+                                            type="range"
+                                            min="1"
+                                            max="20"
+                                            value={drawingRadius}
+                                            onChange={(e) => setDrawingRadius(Number(e.target.value))}
+                                            style={{width:80}}
+                                          />
+                                        </div>
+                                      )}
+                                      {(drawingTool === 'brighten' || drawingTool === 'darken') && (
+                                        <div>
+                                          <label style={{display:'block',fontSize:11,color:'#94a3b8',marginBottom:4}}>Intensity: {(drawingIntensity * 100).toFixed(0)}%</label>
+                                          <input
+                                            type="range"
+                                            min="10"
+                                            max="100"
+                                            value={drawingIntensity * 100}
+                                            onChange={(e) => setDrawingIntensity(Number(e.target.value) / 100)}
+                                            style={{width:80}}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                                      <button
+                                        onClick={() => {
+                                          if (drawingRouteId) {
+                                            saveRouteDrawings(drawingRouteId, safeIndex, pendingDrawings);
+                                          }
+                                        }}
+                                        style={{
+                                          padding:'6px 12px',
+                                          backgroundColor:'#10b981',
+                                          color:'white',
+                                          border:'none',
+                                          borderRadius:4,
+                                          cursor:'pointer',
+                                          fontSize:12,
+                                          fontWeight:'600'
+                                        }}
+                                      >
+                                        Save Drawings
+                                      </button>
+                                      {selectedDrawingId && (
+                                        <button
+                                          onClick={() => deleteDrawingObject(selectedDrawingId)}
+                                          style={{
+                                            padding:'6px 12px',
+                                            backgroundColor:'#ef4444',
+                                            color:'white',
+                                            border:'none',
+                                            borderRadius:4,
+                                            cursor:'pointer',
+                                            fontSize:12,
+                                            fontWeight:'600'
+                                          }}
+                                        >
+                                          Delete Selected
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => {
+                                          if (confirm('Clear all drawings for this route on this image?')) {
+                                            clearAllDrawings();
+                                          }
+                                        }}
+                                        style={{
+                                          padding:'6px 12px',
+                                          backgroundColor:'#6b7280',
+                                          color:'white',
+                                          border:'none',
+                                          borderRadius:4,
+                                          cursor:'pointer',
+                                          fontSize:12,
+                                          fontWeight:'600'
+                                        }}
+                                      >
+                                        Clear All
+                                      </button>
+                                    </div>
+
+                                    {/* Drawing Status */}
+                                    <div style={{marginTop:8,fontSize:11,color:'#94a3b8'}}>
+                                      {drawingTool === 'line' && drawingLineStart && 'Click to set line end point'}
+                                      {drawingTool === 'line' && !drawingLineStart && 'Click to set line start point'}
+                                      {drawingTool === 'circle' && 'Click to place a circle'}
+                                      {drawingTool === 'brighten' && 'Click to add a bright spot'}
+                                      {drawingTool === 'darken' && 'Click to add a dark spot'}
+                                      {drawingTool === 'select' && 'Click on a drawing to select it for deletion'}
+                                      {pendingDrawings.length > 0 && ` • ${pendingDrawings.length} drawing(s)`}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
                           {positionEditMode ? (() => {
                             const nextRoute = routeToPosition ? routesForWall.find(r => r.id === routeToPosition) : null;
@@ -3800,19 +4375,74 @@ export default function App(){
 
                         {/* Image Container with Route Markers */}
                         <div
-                          style={{position:'relative',marginBottom:16,cursor:positionEditMode?'crosshair':'default'}}
+                          style={{position:'relative',marginBottom:16,cursor:positionEditMode ? 'crosshair' : (drawingEditMode && drawingRouteId && drawingTool !== 'select') ? 'crosshair' : 'default'}}
                           onClick={(e) => {
+                            const div = e.currentTarget;
+                            const img = div.querySelector('img');
+                            if (!img) return;
+
+                            const rect = img.getBoundingClientRect();
+                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+                            const snappedX = Number(x.toFixed(2));
+                            const snappedY = Number(y.toFixed(2));
+
+                            // Handle drawing mode clicks
+                            if (drawingEditMode && drawingRouteId && user?.role === 'admin') {
+                              if (drawingTool === 'circle') {
+                                const newCircle: api.DrawingCircle = {
+                                  type: 'circle',
+                                  id: generateDrawingId(),
+                                  x: snappedX,
+                                  y: snappedY,
+                                  radius: drawingRadius,
+                                  strokeColor: drawingStrokeColor,
+                                  strokeWidth: drawingStrokeWidth
+                                };
+                                addDrawingObject(newCircle);
+                              } else if (drawingTool === 'line') {
+                                if (!drawingLineStart) {
+                                  setDrawingLineStart({x: snappedX, y: snappedY});
+                                } else {
+                                  const newLine: api.DrawingLine = {
+                                    type: 'line',
+                                    id: generateDrawingId(),
+                                    x1: drawingLineStart.x,
+                                    y1: drawingLineStart.y,
+                                    x2: snappedX,
+                                    y2: snappedY,
+                                    strokeColor: drawingStrokeColor,
+                                    strokeWidth: drawingStrokeWidth
+                                  };
+                                  addDrawingObject(newLine);
+                                  setDrawingLineStart(null);
+                                }
+                              } else if (drawingTool === 'brighten') {
+                                const newBrighten: api.DrawingBrighten = {
+                                  type: 'brighten',
+                                  id: generateDrawingId(),
+                                  x: snappedX,
+                                  y: snappedY,
+                                  radius: drawingRadius,
+                                  intensity: drawingIntensity
+                                };
+                                addDrawingObject(newBrighten);
+                              } else if (drawingTool === 'darken') {
+                                const newDarken: api.DrawingDarken = {
+                                  type: 'darken',
+                                  id: generateDrawingId(),
+                                  x: snappedX,
+                                  y: snappedY,
+                                  radius: drawingRadius,
+                                  intensity: drawingIntensity
+                                };
+                                addDrawingObject(newDarken);
+                              }
+                              return;
+                            }
+
+                            // Handle position edit mode clicks
                             if (positionEditMode && user?.role === 'admin') {
-                              const div = e.currentTarget;
-                              const img = div.querySelector('img');
-                              if (!img) return;
-
-                              const rect = img.getBoundingClientRect();
-                              const x = ((e.clientX - rect.left) / rect.width) * 100;
-                              const y = ((e.clientY - rect.top) / rect.height) * 100;
-                              const snappedX = Number(x.toFixed(2));
-                              const snappedY = Number(y.toFixed(2));
-
                               const targetRoute = routeToPosition
                                 ? routesForWall.find(r => r.id === routeToPosition)
                                 : routesForWall.find(r => !getRoutePositionForImage(r, safeIndex));
@@ -3833,7 +4463,7 @@ export default function App(){
                                       : r
                                   ));
                                   // Auto-advance to next route without position on this image
-                                  const nextUnpositioned = routesForWall.find(r => 
+                                  const nextUnpositioned = routesForWall.find(r =>
                                     r.id !== targetRoute.id && !getRoutePositionForImage(r, safeIndex)
                                   );
                                   setRouteToPosition(nextUnpositioned?.id || null);
@@ -3978,6 +4608,237 @@ export default function App(){
                               </button>
                             );
                           })}
+
+                          {/* Render drawings for the selected/overlay route (when not in drawing mode) */}
+                          {!drawingEditMode && overlayRouteId && (() => {
+                            const route = availableRoutes.find(r => r.id === overlayRouteId);
+                            const drawings = route?.route_drawings?.[safeIndex] || [];
+                            return drawings.map((drawing: api.DrawingObject) => {
+                              const isSelected = selectedDrawingId === drawing.id;
+                              if (drawing.type === 'circle') {
+                                return (
+                                  <div
+                                    key={drawing.id}
+                                    style={{
+                                      position:'absolute',
+                                      left:`${drawing.x}%`,
+                                      top:`${drawing.y}%`,
+                                      transform:'translate(-50%, -50%)',
+                                      width:`${drawing.radius * 2}%`,
+                                      height:'auto',
+                                      aspectRatio:'1',
+                                      borderRadius:'50%',
+                                      border:`${drawing.strokeWidth}px solid ${drawing.strokeColor}`,
+                                      backgroundColor: drawing.fillColor || 'transparent',
+                                      pointerEvents:'none'
+                                    }}
+                                  />
+                                );
+                              }
+                              if (drawing.type === 'line') {
+                                return (
+                                  <svg
+                                    key={drawing.id}
+                                    style={{
+                                      position:'absolute',
+                                      inset:0,
+                                      width:'100%',
+                                      height:'100%',
+                                      pointerEvents:'none'
+                                    }}
+                                  >
+                                    <line
+                                      x1={`${drawing.x1}%`}
+                                      y1={`${drawing.y1}%`}
+                                      x2={`${drawing.x2}%`}
+                                      y2={`${drawing.y2}%`}
+                                      stroke={drawing.strokeColor}
+                                      strokeWidth={drawing.strokeWidth}
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                );
+                              }
+                              if (drawing.type === 'brighten') {
+                                return (
+                                  <div
+                                    key={drawing.id}
+                                    style={{
+                                      position:'absolute',
+                                      left:`${drawing.x}%`,
+                                      top:`${drawing.y}%`,
+                                      transform:'translate(-50%, -50%)',
+                                      width:`${drawing.radius * 2}%`,
+                                      height:'auto',
+                                      aspectRatio:'1',
+                                      borderRadius:'50%',
+                                      backgroundColor:`rgba(255, 255, 255, ${drawing.intensity * 0.5})`,
+                                      pointerEvents:'none'
+                                    }}
+                                  />
+                                );
+                              }
+                              if (drawing.type === 'darken') {
+                                return (
+                                  <div
+                                    key={drawing.id}
+                                    style={{
+                                      position:'absolute',
+                                      left:`${drawing.x}%`,
+                                      top:`${drawing.y}%`,
+                                      transform:'translate(-50%, -50%)',
+                                      width:`${drawing.radius * 2}%`,
+                                      height:'auto',
+                                      aspectRatio:'1',
+                                      borderRadius:'50%',
+                                      backgroundColor:`rgba(0, 0, 0, ${drawing.intensity * 0.5})`,
+                                      pointerEvents:'none'
+                                    }}
+                                  />
+                                );
+                              }
+                              return null;
+                            });
+                          })()}
+
+                          {/* Render pending drawings (when in drawing mode) */}
+                          {drawingEditMode && pendingDrawings.map((drawing: api.DrawingObject) => {
+                            const isSelected = selectedDrawingId === drawing.id;
+                            const selectionStyle = isSelected ? {
+                              outline: '3px dashed #8b5cf6',
+                              outlineOffset: '2px'
+                            } : {};
+
+                            if (drawing.type === 'circle') {
+                              return (
+                                <div
+                                  key={drawing.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (drawingTool === 'select') {
+                                      setSelectedDrawingId(isSelected ? null : drawing.id);
+                                    }
+                                  }}
+                                  style={{
+                                    position:'absolute',
+                                    left:`${drawing.x}%`,
+                                    top:`${drawing.y}%`,
+                                    transform:'translate(-50%, -50%)',
+                                    width:`${drawing.radius * 2}%`,
+                                    height:'auto',
+                                    aspectRatio:'1',
+                                    borderRadius:'50%',
+                                    border:`${drawing.strokeWidth}px solid ${drawing.strokeColor}`,
+                                    backgroundColor: drawing.fillColor || 'transparent',
+                                    cursor: drawingTool === 'select' ? 'pointer' : 'default',
+                                    ...selectionStyle
+                                  }}
+                                />
+                              );
+                            }
+                            if (drawing.type === 'line') {
+                              return (
+                                <svg
+                                  key={drawing.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (drawingTool === 'select') {
+                                      setSelectedDrawingId(isSelected ? null : drawing.id);
+                                    }
+                                  }}
+                                  style={{
+                                    position:'absolute',
+                                    inset:0,
+                                    width:'100%',
+                                    height:'100%',
+                                    cursor: drawingTool === 'select' ? 'pointer' : 'default'
+                                  }}
+                                >
+                                  <line
+                                    x1={`${drawing.x1}%`}
+                                    y1={`${drawing.y1}%`}
+                                    x2={`${drawing.x2}%`}
+                                    y2={`${drawing.y2}%`}
+                                    stroke={isSelected ? '#8b5cf6' : drawing.strokeColor}
+                                    strokeWidth={isSelected ? drawing.strokeWidth + 2 : drawing.strokeWidth}
+                                    strokeLinecap="round"
+                                    strokeDasharray={isSelected ? '5,5' : 'none'}
+                                  />
+                                </svg>
+                              );
+                            }
+                            if (drawing.type === 'brighten') {
+                              return (
+                                <div
+                                  key={drawing.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (drawingTool === 'select') {
+                                      setSelectedDrawingId(isSelected ? null : drawing.id);
+                                    }
+                                  }}
+                                  style={{
+                                    position:'absolute',
+                                    left:`${drawing.x}%`,
+                                    top:`${drawing.y}%`,
+                                    transform:'translate(-50%, -50%)',
+                                    width:`${drawing.radius * 2}%`,
+                                    height:'auto',
+                                    aspectRatio:'1',
+                                    borderRadius:'50%',
+                                    backgroundColor:`rgba(255, 255, 255, ${drawing.intensity * 0.5})`,
+                                    cursor: drawingTool === 'select' ? 'pointer' : 'default',
+                                    ...selectionStyle
+                                  }}
+                                />
+                              );
+                            }
+                            if (drawing.type === 'darken') {
+                              return (
+                                <div
+                                  key={drawing.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (drawingTool === 'select') {
+                                      setSelectedDrawingId(isSelected ? null : drawing.id);
+                                    }
+                                  }}
+                                  style={{
+                                    position:'absolute',
+                                    left:`${drawing.x}%`,
+                                    top:`${drawing.y}%`,
+                                    transform:'translate(-50%, -50%)',
+                                    width:`${drawing.radius * 2}%`,
+                                    height:'auto',
+                                    aspectRatio:'1',
+                                    borderRadius:'50%',
+                                    backgroundColor:`rgba(0, 0, 0, ${drawing.intensity * 0.5})`,
+                                    cursor: drawingTool === 'select' ? 'pointer' : 'default',
+                                    ...selectionStyle
+                                  }}
+                                />
+                              );
+                            }
+                            return null;
+                          })}
+
+                          {/* Line start indicator */}
+                          {drawingEditMode && drawingTool === 'line' && drawingLineStart && (
+                            <div
+                              style={{
+                                position:'absolute',
+                                left:`${drawingLineStart.x}%`,
+                                top:`${drawingLineStart.y}%`,
+                                transform:'translate(-50%, -50%)',
+                                width:12,
+                                height:12,
+                                borderRadius:'50%',
+                                backgroundColor:drawingStrokeColor,
+                                border:'2px solid white',
+                                pointerEvents:'none'
+                              }}
+                            />
+                          )}
                         </div>
 
                         {/* Image Navigation */}
