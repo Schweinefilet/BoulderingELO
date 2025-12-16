@@ -89,6 +89,7 @@ export type Route = {
   label_x?: number;
   label_y?: number;
   notes?: string;
+  dropbox_link?: string;
   active?: boolean;
   created_at?: Date;
   archived_at?: Date;

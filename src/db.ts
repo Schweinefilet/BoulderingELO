@@ -249,11 +249,25 @@ export async function initDB() {
       label_x DECIMAL(5,2),
       label_y DECIMAL(5,2),
       notes TEXT,
+      dropbox_link TEXT,
       active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT NOW(),
       archived_at TIMESTAMP,
       UNIQUE(wall_section, section_number)
     )
+  `);
+
+  // Add dropbox_link column if it doesn't exist (migration)
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'routes' AND column_name = 'dropbox_link'
+      ) THEN
+        ALTER TABLE routes ADD COLUMN dropbox_link TEXT;
+      END IF;
+    END $$;
   `);
 
   // Create indexes for routes table
@@ -917,12 +931,13 @@ export async function createRoute(route: {
   label_x?: number;
   label_y?: number;
   notes?: string;
+  dropbox_link?: string;
 }) {
   const result = await pool.query(
-    `INSERT INTO routes (wall_section, section_number, global_number, color, position_order, label_x, label_y, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO routes (wall_section, section_number, global_number, color, position_order, label_x, label_y, notes, dropbox_link)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [route.wall_section, route.section_number, route.global_number, route.color, route.position_order, route.label_x || null, route.label_y || null, route.notes || null]
+    [route.wall_section, route.section_number, route.global_number, route.color, route.position_order, route.label_x || null, route.label_y || null, route.notes || null, route.dropbox_link || null]
   );
   return result.rows[0];
 }
@@ -971,6 +986,7 @@ export async function updateRoute(id: number, updates: {
   label_x?: number;
   label_y?: number;
   notes?: string;
+  dropbox_link?: string;
 }) {
   const fields: string[] = [];
   const values: any[] = [];
@@ -1004,6 +1020,11 @@ export async function updateRoute(id: number, updates: {
   if (updates.notes !== undefined) {
     fields.push(`notes = $${paramIndex}`);
     values.push(updates.notes);
+    paramIndex++;
+  }
+  if (updates.dropbox_link !== undefined) {
+    fields.push(`dropbox_link = $${paramIndex}`);
+    values.push(updates.dropbox_link);
     paramIndex++;
   }
 

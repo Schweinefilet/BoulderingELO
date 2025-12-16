@@ -40,7 +40,7 @@ async function clearExpiredSections() {
     }
     
     console.log('\n✅ Done! The expired sections feature has been completely removed.');
-    console.log('   Mini Overhang and Mini Garage Wall should now count normally.');
+    console.log('   Mini Overhang and Mini Garage should now count normally.');
     
   } catch (error) {
     console.error('❌ Error:', error.message);

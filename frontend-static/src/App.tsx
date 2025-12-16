@@ -273,7 +273,7 @@ const DEFAULT_wallTotals = {
   'UMass Logo': { green: 1, blue: 2, yellow: 4, orange: 3, red: 1, black: 1 },
   'Garage Wall': { green: 3, blue: 1, yellow: 7, orange: 3, red: 2, black: 0 },
   'Mini Overhang': { green: 1, blue: 1, yellow: 5, orange: 3, red: 3, black: 0 },
-  'Mini Garage Wall': { green: 2, blue: 1, yellow: 5, orange: 2, red: 1, black: 0 }
+  'Mini Garage': { green: 2, blue: 1, yellow: 5, orange: 2, red: 1, black: 0 }
 };
 
 // Load wall totals from localStorage or use defaults
@@ -1277,7 +1277,10 @@ export default function App(){
       'tvwall': 'TV Wall',
       'tvWall': 'TV Wall',
       'TVWall': 'TV Wall',
-      'UMassLogo': 'UMass Logo'
+      'UMassLogo': 'UMass Logo',
+      'Mini Garage Wall': 'Mini Garage',
+      'miniGarageWall': 'Mini Garage',
+      'MiniGarageWall': 'Mini Garage'
     };
     
     if (specialCases[section]) {
@@ -1289,6 +1292,21 @@ export default function App(){
     return section
       .charAt(0).toUpperCase() + 
       section.slice(1).replace(/([A-Z])/g, ' $1').trim();
+  };
+
+  // Mapping for relative location annotations between wall sections
+  const getWallSectionAnnotation = (section: string): string | null => {
+    const name = formatWallSectionName(section);
+    const map: Record<string, string> = {
+      'Bend': 'to the right of UMass Logo and left of Slab',
+      'Slab': 'to the right of Bend and left of Garage Wall',
+      'TV Wall': 'to the right of Mini Overhang',
+      'UMass Logo': 'to the right of Overhang and left of Bend',
+      'Garage Wall': 'to the right of Slab and left of Overhang',
+      'Mini Overhang': 'to the right of Mini Garage and left of TV Wall',
+      'Mini Garage': 'to the left of Mini Overhang'
+    };
+    return map[name] || null;
   };
   
   // Initialize wallCounts dynamically based on wallTotals
@@ -1309,7 +1327,7 @@ export default function App(){
 
   // Route mode states
   const [routeMode, setRouteMode] = useState(false)
-  const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid' | 'image'>('number')
+  const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid' | 'image'>('grid')
   const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
   const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
   const [sessionRoutes, setSessionRoutes] = useState<Record<number, any[]>>({}) // sessionId -> routes[]
@@ -1324,6 +1342,7 @@ export default function App(){
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [bootStatus, setBootStatus] = useState<string | null>(null)
+  const [positionEditMode, setPositionEditMode] = useState(false)
   
   // Track last edited cell for highlighting
   const [lastEditedCell, setLastEditedCell] = useState<{wall: string, color: string} | null>(null)
@@ -1356,7 +1375,8 @@ export default function App(){
   const [routesLoading, setRoutesLoading] = useState(false)
   const [routeFilter, setRouteFilter] = useState<{wall_section?: string; color?: string}>({})
   const [editingRoute, setEditingRoute] = useState<number | null>(null)
-  const [newRoute, setNewRoute] = useState<{wall_section: string; color: string; notes: string}>({wall_section: '', color: 'yellow', notes: ''})
+  const [editingRouteDropbox, setEditingRouteDropbox] = useState<{[key: number]: string}>({})
+  const [newRoute, setNewRoute] = useState<{wall_section: string; color: string; notes: string; dropbox_link: string}>({wall_section: '', color: 'yellow', notes: '', dropbox_link: ''})
   // Admin notifications (latest first)
   const [notifications, setNotifications] = useState<any[]>([])
   const [notifLoading, setNotifLoading] = useState(false)
@@ -3172,21 +3192,6 @@ export default function App(){
             {routeMode && (
               <div style={{display:'flex',gap:8,marginTop:8}}>
                 <button
-                  onClick={() => setRouteEntryMethod('number')}
-                  style={{
-                    padding:'6px 12px',
-                    backgroundColor: routeEntryMethod === 'number' ? '#3b82f6' : '#374151',
-                    color:'white',
-                    border:'none',
-                    borderRadius:6,
-                    fontSize:13,
-                    fontWeight:'600',
-                    cursor:'pointer'
-                  }}
-                >
-                  Number Pad
-                </button>
-                <button
                   onClick={() => setRouteEntryMethod('grid')}
                   style={{
                     padding:'6px 12px',
@@ -3495,6 +3500,85 @@ export default function App(){
                       No routes found for this wall section. Use the admin panel to create routes.
                     </div>
                   )}
+
+                  {/* Show wall section reference and route dropbox image when routes are selected */}
+                  {selectedRoutes.length > 0 && (() => {
+                    const images = wallSectionImages[routeWallFilter] || [];
+                    const selectedRoute = availableRoutes.find(r => r.id === selectedRoutes[selectedRoutes.length - 1]);
+
+                    return (
+                      <div style={{marginTop:20,padding:16,backgroundColor:BLACK_PANEL_BG,borderRadius:8,border:BLACK_PANEL_BORDER}}>
+                        <h4 style={{marginTop:0,marginBottom:12,fontSize:15,fontWeight:'600',color:'#cbd5e1'}}>
+                          Selected Route Preview
+                        </h4>
+
+                        {/* Wall Section Reference Image */}
+                        {images.length > 0 && (
+                          <div style={{marginBottom:16}}>
+                            <div style={{fontSize:13,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                              Wall Section Reference
+                            </div>
+                            {(() => {
+                              const annotation = getWallSectionAnnotation(routeWallFilter);
+                              return annotation ? (
+                                <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>
+                                  {annotation}
+                                </div>
+                              ) : null;
+                            })()}
+                            {(() => {
+                              const sources = buildImageSources(images[0]);
+                              return (
+                                <picture>
+                                  {sources.webp && <source srcSet={sources.webp} type="image/webp" />}
+                                  {sources.avif && <source srcSet={sources.avif} type="image/avif" />}
+                                  <img
+                                    src={sources.fallback}
+                                    alt={`${formatWallSectionName(routeWallFilter)} reference`}
+                                    style={{
+                                      width:'100%',
+                                      height:'auto',
+                                      borderRadius:6,
+                                      display:'block'
+                                    }}
+                                  />
+                                </picture>
+                              );
+                            })()}
+                          </div>
+                        )}
+
+                        {/* Route Dropbox Image */}
+                        {selectedRoute?.dropbox_link && (
+                          <div>
+                            <div style={{fontSize:13,fontWeight:'600',marginBottom:8,color:'#94a3b8'}}>
+                              Route #{selectedRoute.section_number} Image
+                            </div>
+                            <img
+                              src={selectedRoute.dropbox_link.replace('dl=0', 'raw=1')}
+                              alt={`Route ${selectedRoute.section_number}`}
+                              style={{
+                                width:'100%',
+                                height:'auto',
+                                borderRadius:6,
+                                display:'block'
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.insertAdjacentHTML('afterend', `<div style="padding:20px;text-align:center;color:#6b7280;fontSize:13;backgroundColor:#1e293b;borderRadius:6px">Failed to load image. Make sure the Dropbox link is a direct share link.</div>`);
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {!selectedRoute?.dropbox_link && (
+                          <div style={{padding:20,textAlign:'center',color:'#6b7280',fontSize:13}}>
+                            This route doesn't have a Dropbox image set. Admins can add one in the route management panel.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : routeEntryMethod === 'image' ? (
                 // Image Overlay Mode
@@ -3540,12 +3624,68 @@ export default function App(){
 
                     return (
                       <div>
+                        {/* Position Edit Mode Toggle */}
+                        {user?.role === 'admin' && (
+                          <button
+                            onClick={() => setPositionEditMode(!positionEditMode)}
+                            style={{
+                              padding:'8px 16px',
+                              backgroundColor: positionEditMode ? '#10b981' : '#3b82f6',
+                              color:'white',
+                              border:'none',
+                              borderRadius:6,
+                              cursor:'pointer',
+                              fontSize:14,
+                              fontWeight:'600',
+                              marginBottom:12
+                            }}
+                          >
+                            {positionEditMode ? '✓ Position Edit Mode (Click to Exit)' : 'Edit Route Positions'}
+                          </button>
+                        )}
+
                         <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
-                          Click on routes in the image to select them
+                          {positionEditMode ? 'Click on the image where you want to place a route marker' : 'Click on routes in the image to select them'}
                         </div>
 
                         {/* Image Container with Route Markers */}
-                        <div style={{position:'relative',marginBottom:16}}>
+                        <div
+                          style={{position:'relative',marginBottom:16,cursor:positionEditMode?'crosshair':'default'}}
+                          onClick={(e) => {
+                            if (!positionEditMode || user?.role !== 'admin') return;
+
+                            const div = e.currentTarget;
+                            const img = div.querySelector('img');
+                            if (!img) return;
+
+                            const rect = img.getBoundingClientRect();
+                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                            // Find route without position or ask which route to update
+                            const routeWithoutPos = routesForWall.find(r => !r.label_x || !r.label_y);
+                            if (routeWithoutPos) {
+                              // Auto-assign to first route without position
+                              api.updateRoute(routeWithoutPos.id!, { label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2)) })
+                                .then(() => {
+                                  setAvailableRoutes(prev => prev.map(r =>
+                                    r.id === routeWithoutPos.id
+                                      ? {...r, label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2))}
+                                      : r
+                                  ));
+                                  setToast({message: `Route #${routeWithoutPos.section_number} position set`, type: 'success'});
+                                  setTimeout(() => setToast(null), 3000);
+                                })
+                                .catch(err => {
+                                  setToast({message: err.message, type: 'error'});
+                                  setTimeout(() => setToast(null), 3000);
+                                });
+                            } else {
+                              setToast({message: 'All routes have positions. Click a marker to reposition it.', type: 'error'});
+                              setTimeout(() => setToast(null), 3000);
+                            }
+                          }}
+                        >
                           <picture>
                             {sources.webp && <source srcSet={sources.webp} type="image/webp" />}
                             {sources.avif && <source srcSet={sources.avif} type="image/avif" />}
@@ -3584,11 +3724,49 @@ export default function App(){
                             return (
                               <button
                                 key={route.id}
-                                onClick={() => {
-                                  if (isSelected) {
-                                    setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (positionEditMode && user?.role === 'admin') {
+                                    // In edit mode, clicking marker allows repositioning
+                                    const confirmed = confirm(`Click OK, then click on the image to set new position for Route #${route.section_number} (${route.color})`);
+                                    if (confirmed) {
+                                      const handler = (clickEvent: Event) => {
+                                        const div = document.querySelector('[style*="cursor:crosshair"]');
+                                        if (!div) return;
+                                        const img = div.querySelector('img');
+                                        if (!img) return;
+
+                                        const rect = img.getBoundingClientRect();
+                                        const me = clickEvent as MouseEvent;
+                                        const x = ((me.clientX - rect.left) / rect.width) * 100;
+                                        const y = ((me.clientY - rect.top) / rect.height) * 100;
+
+                                        api.updateRoute(route.id!, { label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2)) })
+                                          .then(() => {
+                                            setAvailableRoutes(prev => prev.map(r =>
+                                              r.id === route.id
+                                                ? {...r, label_x: Number(x.toFixed(2)), label_y: Number(y.toFixed(2))}
+                                                : r
+                                            ));
+                                            setToast({message: `Route #${route.section_number} repositioned`, type: 'success'});
+                                            setTimeout(() => setToast(null), 3000);
+                                            div.removeEventListener('click', handler);
+                                          })
+                                          .catch(err => {
+                                            setToast({message: err.message, type: 'error'});
+                                            setTimeout(() => setToast(null), 3000);
+                                            div.removeEventListener('click', handler);
+                                          });
+                                      };
+                                      document.querySelector('[style*="cursor:crosshair"]')?.addEventListener('click', handler, { once: true });
+                                    }
                                   } else {
-                                    setSelectedRoutes(prev => [...prev, route.id!]);
+                                    // Normal selection mode
+                                    if (isSelected) {
+                                      setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+                                    } else {
+                                      setSelectedRoutes(prev => [...prev, route.id!]);
+                                    }
                                   }
                                 }}
                                 style={{
@@ -3604,7 +3782,7 @@ export default function App(){
                                   border: `3px solid ${colorStyles[route.color]}`,
                                   fontSize:13,
                                   fontWeight:'700',
-                                  cursor:'pointer',
+                                  cursor: positionEditMode ? 'move' : 'pointer',
                                   display:'flex',
                                   alignItems:'center',
                                   justifyContent:'center',
@@ -3857,6 +4035,14 @@ export default function App(){
                         )}
                       </div>
                       <div style={{position:'relative'}}>
+                        {(() => {
+                          const annotation = getWallSectionAnnotation(dropdownWall);
+                          return annotation ? (
+                            <div style={{fontSize:12,color:'#94a3b8',padding:'8px 12px',borderBottom:'1px solid #1f2937'}}>
+                              {annotation}
+                            </div>
+                          ) : null;
+                        })()}
                           <picture>
                             <source
                               type="image/avif"
@@ -4229,6 +4415,14 @@ export default function App(){
                                 )}
                               </div>
                               <div style={{position:'relative'}}>
+                                {(() => {
+                                  const annotation = getWallSectionAnnotation(section);
+                                  return annotation ? (
+                                    <div style={{fontSize:12,color:'#94a3b8',padding:'8px 12px',borderBottom:'1px solid #1f2937'}}>
+                                      {annotation}
+                                    </div>
+                                  ) : null;
+                                })()}
                                 <picture>
                                   <source
                                     type="image/avif"
@@ -8140,6 +8334,22 @@ export default function App(){
                           fontSize:14
                         }}
                       />
+                      <input
+                        type="text"
+                        placeholder="Dropbox Link (optional)"
+                        value={newRoute.dropbox_link}
+                        onChange={(e) => setNewRoute({...newRoute, dropbox_link: e.target.value})}
+                        style={{
+                          flex:1,
+                          minWidth:200,
+                          padding:'10px 12px',
+                          backgroundColor:'#0f172a',
+                          border:'1px solid #475569',
+                          borderRadius:6,
+                          color:'white',
+                          fontSize:14
+                        }}
+                      />
                       <button
                         onClick={async () => {
                           if (!newRoute.wall_section) {
@@ -8151,9 +8361,10 @@ export default function App(){
                             await api.createRoute({
                               wall_section: newRoute.wall_section,
                               color: newRoute.color,
-                              notes: newRoute.notes
+                              notes: newRoute.notes,
+                              dropbox_link: newRoute.dropbox_link
                             });
-                            setNewRoute({wall_section: '', color: 'yellow', notes: ''});
+                            setNewRoute({wall_section: '', color: 'yellow', notes: '', dropbox_link: ''});
                             // Reload routes
                             const allRoutes = await api.getRoutes(routeFilter);
                             setRoutes(allRoutes);
@@ -8197,6 +8408,8 @@ export default function App(){
                             <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Section #</th>
                             <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Color</th>
                             <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Position</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Label Pos</th>
+                            <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Dropbox Link</th>
                             <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Notes</th>
                             <th style={{padding:'12px',textAlign:'left',fontWeight:'600',fontSize:13,color:'#cbd5e1'}}>Actions</th>
                           </tr>
@@ -8220,6 +8433,117 @@ export default function App(){
                                 </span>
                               </td>
                               <td style={{padding:'12px',color:'#94a3b8',fontSize:13}}>{route.position_order}</td>
+                              <td style={{padding:'12px',color:'#94a3b8',fontSize:12}}>
+                                {route.label_x && route.label_y ? `${route.label_x}%, ${route.label_y}%` : '-'}
+                              </td>
+                              <td style={{padding:'12px'}}>
+                                {editingRouteDropbox[route.id!] !== undefined ? (
+                                  <div style={{display:'flex',gap:4}}>
+                                    <input
+                                      type="text"
+                                      value={editingRouteDropbox[route.id!]}
+                                      onChange={(e) => setEditingRouteDropbox({...editingRouteDropbox, [route.id!]: e.target.value})}
+                                      style={{
+                                        padding:'4px 8px',
+                                        backgroundColor:'#0f172a',
+                                        border:'1px solid #475569',
+                                        borderRadius:4,
+                                        color:'white',
+                                        fontSize:12,
+                                        minWidth:150
+                                      }}
+                                      placeholder="Dropbox share link"
+                                    />
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await api.updateRoute(route.id!, { dropbox_link: editingRouteDropbox[route.id!] });
+                                          const updated = {...editingRouteDropbox};
+                                          delete updated[route.id!];
+                                          setEditingRouteDropbox(updated);
+                                          const allRoutes = await api.getRoutes(routeFilter);
+                                          setRoutes(allRoutes);
+                                          setToast({message: 'Dropbox link updated', type: 'success'});
+                                          setTimeout(() => setToast(null), 3000);
+                                        } catch (err: any) {
+                                          setToast({message: err.message, type: 'error'});
+                                          setTimeout(() => setToast(null), 3000);
+                                        }
+                                      }}
+                                      style={{
+                                        padding:'4px 8px',
+                                        backgroundColor:'#10b981',
+                                        color:'white',
+                                        border:'none',
+                                        borderRadius:4,
+                                        cursor:'pointer',
+                                        fontSize:11,
+                                        fontWeight:'600'
+                                      }}
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const updated = {...editingRouteDropbox};
+                                        delete updated[route.id!];
+                                        setEditingRouteDropbox(updated);
+                                      }}
+                                      style={{
+                                        padding:'4px 8px',
+                                        backgroundColor:'#6b7280',
+                                        color:'white',
+                                        border:'none',
+                                        borderRadius:4,
+                                        cursor:'pointer',
+                                        fontSize:11,
+                                        fontWeight:'600'
+                                      }}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div style={{display:'flex',gap:4,alignItems:'center'}}>
+                                    {route.dropbox_link ? (
+                                      <a
+                                        href={route.dropbox_link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          color:'#3b82f6',
+                                          fontSize:12,
+                                          textDecoration:'none',
+                                          maxWidth:100,
+                                          overflow:'hidden',
+                                          textOverflow:'ellipsis',
+                                          whiteSpace:'nowrap',
+                                          display:'inline-block'
+                                        }}
+                                      >
+                                        View
+                                      </a>
+                                    ) : (
+                                      <span style={{color:'#6b7280',fontSize:12}}>-</span>
+                                    )}
+                                    <button
+                                      onClick={() => setEditingRouteDropbox({...editingRouteDropbox, [route.id!]: route.dropbox_link || ''})}
+                                      style={{
+                                        padding:'2px 6px',
+                                        backgroundColor:'#3b82f6',
+                                        color:'white',
+                                        border:'none',
+                                        borderRadius:3,
+                                        cursor:'pointer',
+                                        fontSize:10,
+                                        fontWeight:'600'
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
                               <td style={{padding:'12px',color:'#94a3b8',fontSize:13,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                                 {route.notes || '-'}
                               </td>

@@ -1,6 +1,6 @@
 import { Counts, WallCounts } from './scoring';
 import * as api from './api';
-import type { Climber, Session } from './api';
+// Using local lightweight types for export helpers to avoid type conflicts with API models
 
 type Climber = { id:number; name:string };
 type Session = { id:number; climberId:number; date:string; notes?:string; score:number; wallCounts?: WallCounts } & Counts;

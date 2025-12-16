@@ -45,7 +45,7 @@ export async function getRoute(req: AuthRequest, res: Response) {
  */
 export async function createRoute(req: AuthRequest, res: Response) {
   try {
-    const { wall_section, section_number, color, position_order, label_x, label_y, notes } = req.body;
+    const { wall_section, section_number, color, position_order, label_x, label_y, notes, dropbox_link } = req.body;
 
     if (!wall_section || !color) {
       return sendError(res, 'wall_section and color are required', 400);
@@ -67,7 +67,8 @@ export async function createRoute(req: AuthRequest, res: Response) {
       position_order: posOrder,
       label_x,
       label_y,
-      notes
+      notes,
+      dropbox_link
     });
 
     return sendSuccess(res, { data: route }, 201);
@@ -82,7 +83,7 @@ export async function createRoute(req: AuthRequest, res: Response) {
 export async function updateRoute(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { section_number, color, position_order, label_x, label_y, notes } = req.body;
+    const { section_number, color, position_order, label_x, label_y, notes, dropbox_link } = req.body;
 
     const updates: any = {};
     if (section_number !== undefined) updates.section_number = section_number;
@@ -91,6 +92,7 @@ export async function updateRoute(req: AuthRequest, res: Response) {
     if (label_x !== undefined) updates.label_x = label_x;
     if (label_y !== undefined) updates.label_y = label_y;
     if (notes !== undefined) updates.notes = notes;
+    if (dropbox_link !== undefined) updates.dropbox_link = dropbox_link;
 
     const route = await db.updateRoute(Number(id), updates);
 

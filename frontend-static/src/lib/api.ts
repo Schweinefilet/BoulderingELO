@@ -524,6 +524,7 @@ export interface Route {
   label_x?: number;
   label_y?: number;
   notes?: string;
+  dropbox_link?: string;
   active: boolean;
   created_at?: string;
   archived_at?: string;
@@ -554,6 +555,7 @@ export async function createRoute(route: {
   label_x?: number;
   label_y?: number;
   notes?: string;
+  dropbox_link?: string;
 }): Promise<Route> {
   const response = await fetch(`${API_URL}/api/routes`, {
     method: 'POST',
@@ -571,6 +573,7 @@ export async function updateRoute(id: number, updates: {
   label_x?: number;
   label_y?: number;
   notes?: string;
+  dropbox_link?: string;
 }): Promise<Route> {
   const response = await fetch(`${API_URL}/api/routes/${id}`, {
     method: 'PUT',
@@ -618,7 +621,7 @@ export async function createRouteSession(data: {
     headers: getHeaders(true),
     body: JSON.stringify(data),
   });
-  const result = await handleResponse(response);
+  const result = await handleResponse<{ data: any }>(response);
   return result.data;
 }
 
