@@ -598,6 +598,15 @@ export async function bulkImportRoutes(): Promise<{ message: string; routes: Rou
   return result;
 }
 
+export async function deleteAllRoutes(): Promise<{ message: string; deletedCount: number }> {
+  const response = await fetchWithTimeout(`${API_URL}/api/routes/all/delete-all`, {
+    method: 'DELETE',
+    headers: getHeaders(true),
+  });
+  const result = await handleResponse<{ message: string; deletedCount: number }>(response);
+  return result;
+}
+
 export async function createRouteSession(data: {
   climberId: number;
   date: string;

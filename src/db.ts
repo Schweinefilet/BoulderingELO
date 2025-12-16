@@ -1023,6 +1023,11 @@ export async function archiveRoute(id: number) {
   return result.rows[0] || null;
 }
 
+export async function deleteAllRoutes() {
+  const result = await pool.query('DELETE FROM routes');
+  return result.rowCount || 0;
+}
+
 export async function getNextSectionNumber(wallSection: string): Promise<number> {
   const result = await pool.query(
     'SELECT MAX(section_number) as max FROM routes WHERE wall_section = $1 AND active = TRUE',

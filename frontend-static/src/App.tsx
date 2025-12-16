@@ -1309,6 +1309,7 @@ export default function App(){
 
   // Route mode states
   const [routeMode, setRouteMode] = useState(false)
+  const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid'>('number')
   const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
   const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
   const [sessionRoutes, setSessionRoutes] = useState<Record<number, any[]>>({}) // sessionId -> routes[]
@@ -3166,6 +3167,42 @@ export default function App(){
                 Route Entry Mode (Individual Route Numbers)
               </label>
             </div>
+
+            {/* Route Entry Method Toggle */}
+            {routeMode && (
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button
+                  onClick={() => setRouteEntryMethod('number')}
+                  style={{
+                    padding:'6px 12px',
+                    backgroundColor: routeEntryMethod === 'number' ? '#3b82f6' : '#374151',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:13,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Number Pad
+                </button>
+                <button
+                  onClick={() => setRouteEntryMethod('grid')}
+                  style={{
+                    padding:'6px 12px',
+                    backgroundColor: routeEntryMethod === 'grid' ? '#3b82f6' : '#374151',
+                    color:'white',
+                    border:'none',
+                    borderRadius:6,
+                    fontSize:13,
+                    fontWeight:'600',
+                    cursor:'pointer'
+                  }}
+                >
+                  Grid View
+                </button>
+              </div>
+            )}
           </div>
 
           {routeMode ? (
@@ -3193,6 +3230,8 @@ export default function App(){
                 </select>
               </div>
 
+              {routeEntryMethod === 'number' ? (
+                <>
               {/* Number Input */}
               <div style={{marginBottom:16}}>
                 <label style={{display:'block',marginBottom:8,fontWeight:'600',fontSize:14}}>
@@ -3313,8 +3352,138 @@ export default function App(){
                   ))}
                 </div>
               </div>
+                </>
+              ) : (
+                // Grid View Mode
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:'600',marginBottom:12,color:'#94a3b8'}}>
+                    Select routes by clicking on the grid
+                  </div>
 
-              {/* Selected Routes Display */}
+                  {/* Group routes by color */}
+                  {(() => {
+                    const routesForWall = availableRoutes.filter(r => r.wall_section === routeWallFilter);
+                    const routesByColor: Record<string, api.Route[]> = {};
+
+                    routesForWall.forEach(route => {
+                      if (!routesByColor[route.color]) routesByColor[route.color] = [];
+                      routesByColor[route.color].push(route);
+                    });
+
+                    // Sort routes within each color by section_number
+                    Object.keys(routesByColor).forEach(color => {
+                      routesByColor[color].sort((a, b) => a.section_number - b.section_number);
+                    });
+
+                    const colorOrder = ['green', 'blue', 'yellow', 'orange', 'red', 'black'];
+                    const colorStyles: Record<string, string> = {
+                      green: '#10b981',
+                      blue: '#3b82f6',
+                      yellow: '#eab308',
+                      orange: '#f97316',
+                      red: '#ef4444',
+                      black: '#1f2937'
+                    };
+
+                    return colorOrder.map(color => {
+                      const routes = routesByColor[color] || [];
+                      if (routes.length === 0) return null;
+
+                      return (
+                        <div key={color} style={{marginBottom:20}}>
+                          <div style={{
+                            display:'flex',
+                            alignItems:'center',
+                            gap:8,
+                            marginBottom:8
+                          }}>
+                            <div style={{
+                              width:16,
+                              height:16,
+                              borderRadius:'50%',
+                              backgroundColor:colorStyles[color],
+                              border: color === 'black' ? '2px solid white' : 'none'
+                            }} />
+                            <span style={{
+                              fontWeight:'600',
+                              fontSize:15,
+                              color:colorStyles[color],
+                              textTransform:'capitalize'
+                            }}>
+                              {color} ({routes.length})
+                            </span>
+                          </div>
+
+                          <div style={{
+                            display:'grid',
+                            gridTemplateColumns:'repeat(auto-fill, minmax(50px, 1fr))',
+                            gap:6
+                          }}>
+                            {routes.map(route => {
+                              const isSelected = selectedRoutes.includes(route.id!);
+                              return (
+                                <button
+                                  key={route.id}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedRoutes(prev => prev.filter(id => id !== route.id));
+                                    } else {
+                                      setSelectedRoutes(prev => [...prev, route.id!]);
+                                    }
+                                  }}
+                                  style={{
+                                    padding:'12px 8px',
+                                    backgroundColor: isSelected ? colorStyles[color] : BLACK_PANEL_BG,
+                                    color: isSelected ? (color === 'yellow' ? '#000' : '#fff') : '#94a3b8',
+                                    border: isSelected ? `2px solid ${colorStyles[color]}` : BLACK_PANEL_BORDER,
+                                    borderRadius:6,
+                                    fontSize:13,
+                                    fontWeight:'700',
+                                    cursor:'pointer',
+                                    transition:'all 0.15s',
+                                    display:'flex',
+                                    flexDirection:'column',
+                                    alignItems:'center',
+                                    gap:2
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.backgroundColor = '#1e293b';
+                                      e.currentTarget.style.borderColor = colorStyles[color];
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.backgroundColor = BLACK_PANEL_BG;
+                                      e.currentTarget.style.borderColor = '#475569';
+                                    }
+                                  }}
+                                >
+                                  <span>#{route.section_number}</span>
+                                  <span style={{fontSize:10,opacity:0.7}}>({route.global_number})</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+
+                  {availableRoutes.filter(r => r.wall_section === routeWallFilter).length === 0 && (
+                    <div style={{
+                      padding:40,
+                      textAlign:'center',
+                      color:'#64748b',
+                      fontSize:14
+                    }}>
+                      No routes found for this wall section. Use the admin panel to create routes.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Selected Routes Display - shared between both modes */}
               {selectedRoutes.length > 0 && (
                 <div style={{marginBottom:16}}>
                   <h4 style={{marginBottom:12,fontSize:16,fontWeight:'600'}}>
@@ -7606,6 +7775,36 @@ export default function App(){
                         style={{padding:'8px 16px',backgroundColor:'#3b82f6',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600}}
                       >
                         Refresh
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('⚠️ DELETE ALL ROUTES? This will permanently delete all individual routes and cannot be undone!')) return;
+                          if (!confirm('Are you absolutely sure? This will delete ALL routes in the database!')) return;
+                          try {
+                            setRoutesLoading(true);
+                            const result = await api.deleteAllRoutes();
+                            alert(result.message + ` (${result.deletedCount} routes deleted)`);
+                            setRoutes([]);
+                          } catch (err: any) {
+                            alert('Failed to delete routes: ' + (err.message || err));
+                          } finally {
+                            setRoutesLoading(false);
+                          }
+                        }}
+                        disabled={routesLoading}
+                        style={{
+                          padding:'8px 16px',
+                          backgroundColor: routesLoading ? '#991b1b' : '#dc2626',
+                          color:'white',
+                          border:'none',
+                          borderRadius:6,
+                          cursor: routesLoading ? 'not-allowed' : 'pointer',
+                          fontSize:14,
+                          fontWeight:'600',
+                          opacity: routesLoading ? 0.6 : 1
+                        }}
+                      >
+                        🗑️ Delete All Routes
                       </button>
                     </div>
                   </div>

@@ -172,6 +172,21 @@ export async function bulkImportRoutes(req: AuthRequest, res: Response) {
 }
 
 /**
+ * Delete all routes (admin only)
+ */
+export async function deleteAllRoutes(req: AuthRequest, res: Response) {
+  try {
+    const result = await db.deleteAllRoutes();
+    return sendSuccess(res, {
+      message: `Successfully deleted all routes`,
+      deletedCount: result
+    });
+  } catch (err: any) {
+    return sendError(res, err.message, 500);
+  }
+}
+
+/**
  * Create a route-based session
  */
 export async function createRouteSession(req: AuthRequest, res: Response) {

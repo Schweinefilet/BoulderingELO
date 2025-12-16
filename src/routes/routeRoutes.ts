@@ -20,5 +20,6 @@ router.post('/', authenticateToken, requireAdmin, routeController.createRoute);
 router.put('/:id', authenticateToken, requireAdmin, routeController.updateRoute);
 router.delete('/:id', authenticateToken, requireAdmin, routeController.deleteRoute);
 router.post('/bulk-import', authenticateToken, requireAdmin, routeController.bulkImportRoutes);
+router.delete('/all/delete-all', authenticateToken, requireAdmin, routeController.deleteAllRoutes);
 
 export default router;
