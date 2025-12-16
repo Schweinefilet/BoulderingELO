@@ -4547,7 +4547,7 @@ export default function App(){
                                   ? `Click to place Route #${nextRoute.section_number} (${nextRoute.color})`
                                   : 'Select a route above or click a marker to reposition it'}</div>
                                 <div style={{fontSize:11,color:'#64748b',marginTop:4}}>
-                                  Right-click on a marker to delete its position
+                                  Shift/Alt + Click to delete a marker • Right-click also deletes
                                 </div>
                               </div>
                             );
@@ -4815,10 +4815,19 @@ export default function App(){
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (positionEditMode && user?.role === 'admin') {
-                                    // In edit mode, select this route to reposition on next image click
+                                    // Shift/Alt click = delete position
+                                    if (e.shiftKey || e.altKey) {
+                                      if (confirm(`Delete position for Route #${route.section_number} on this image?`)) {
+                                        clearRoutePosition(route, safeIndex);
+                                        setRouteToPosition(route.id!); // keep selected for quick re-place
+                                      }
+                                      return;
+                                    }
+
+                                    // Otherwise select this route to reposition on next image click
                                     setDrawingEditMode(false);
                                     setRouteToPosition(route.id!);
-                                    setToast({message: `Click on the image to reposition Route #${route.section_number}`, type: 'success'});
+                                    setToast({message: `Click on the image to reposition Route #${route.section_number} (Shift/Alt+Click to delete)`, type: 'success'});
                                     setTimeout(() => setToast(null), 2500);
                                   } else {
                                     // Normal selection mode
@@ -4839,6 +4848,7 @@ export default function App(){
                                   if (positionEditMode && user?.role === 'admin') {
                                     if (confirm(`Delete position for Route #${route.section_number} on this image?`)) {
                                       clearRoutePosition(route, safeIndex);
+                                      setRouteToPosition(route.id!); // keep selected for quick re-place
                                     }
                                   }
                                 }}
