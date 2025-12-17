@@ -1349,6 +1349,8 @@ export default function App(){
       if (overlayRouteId === route.id) {
         setOverlayRouteId(null);
       }
+      // Clear routeToPosition so user can immediately re-place it
+      setRouteToPosition(null);
 
       setToast({message: `Position cleared for Route #${route.section_number}`, type: 'success'});
       setTimeout(() => setToast(null), 2000);
@@ -1507,6 +1509,7 @@ export default function App(){
   const [drawingDragOperation, setDrawingDragOperation] = useState<'move' | 'resize' | 'reshape-start' | 'reshape-end' | null>(null)
   const [drawingDragStart, setDrawingDragStart] = useState<{x: number; y: number} | null>(null)
   const [draggedObjectOriginal, setDraggedObjectOriginal] = useState<any>(null) // Store original object state
+  const [imageRetryCount, setImageRetryCount] = useState(0) // Retry count for image loading
 
   // Track last edited cell for highlighting
   const [lastEditedCell, setLastEditedCell] = useState<{wall: string, color: string} | null>(null)
@@ -4594,7 +4597,7 @@ export default function App(){
                               }
                             }
                           }}
-                          onMouseUp={() => {
+                          onMouseUp={(e) => {
                             if (isDraggingDrawing) {
                               setIsDraggingDrawing(false);
                               setDrawingDragOperation(null);
@@ -4767,6 +4770,15 @@ export default function App(){
                                 const img = e.currentTarget;
                                 img.dataset.width = String(img.naturalWidth);
                                 img.dataset.height = String(img.naturalHeight);
+                                setImageRetryCount(0); // Reset on success
+                              }}
+                              onError={(e) => {
+                                // Retry loading image on error (mobile/slow connection)
+                                const img = e.currentTarget;
+                                setTimeout(() => {
+                                  setImageRetryCount(prev => prev + 1);
+                                  img.src = img.src; // Force reload
+                                }, 2000);
                               }}
                             />
                           </picture>
@@ -4791,6 +4803,13 @@ export default function App(){
                                   filter: `brightness(${baseImageBrightness})`,
                                   pointerEvents:'none',
                                   transition:'opacity 0.25s ease, filter 0.25s ease'
+                                }}
+                                onError={(e) => {
+                                  // Retry loading overlay image on error
+                                  const img = e.currentTarget;
+                                  setTimeout(() => {
+                                    img.src = img.src; // Force reload
+                                  }, 2000);
                                 }}
                               />
                             );
@@ -4956,9 +4975,9 @@ export default function App(){
                                       aspectRatio:'1',
                                       borderRadius:'50%',
                                       background:`radial-gradient(circle, rgba(255,255,255, ${Math.min(1, drawing.intensity)}) 0%, rgba(255,255,255,0) 70%)`,
-                                      mixBlendMode:'screen',
+                                      mixBlendMode:'lighten',
                                       pointerEvents:'none',
-                                      zIndex: 3
+                                      isolation:'isolate'
                                     }}
                                   />
                                 );
@@ -4977,9 +4996,9 @@ export default function App(){
                                       aspectRatio:'1',
                                       borderRadius:'50%',
                                       background:`radial-gradient(circle, rgba(0,0,0, ${Math.min(1, drawing.intensity)}) 0%, rgba(0,0,0,0) 70%)`,
-                                      mixBlendMode:'multiply',
+                                      mixBlendMode:'darken',
                                       pointerEvents:'none',
-                                      zIndex: 3
+                                      isolation:'isolate'
                                     }}
                                   />
                                 );
