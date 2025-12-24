@@ -514,6 +514,52 @@ export async function saveWallSectionImages(wallSectionImages: Record<string, st
 
 // Route management
 
+// Drawing object types for route overlay drawings
+export interface DrawingCircle {
+  type: 'circle';
+  id: string;
+  x: number;        // percentage 0-100
+  y: number;        // percentage 0-100
+  radius: number;   // percentage of image width
+  strokeColor: string;
+  strokeWidth: number;
+  fillColor?: string;
+}
+
+export interface DrawingLine {
+  type: 'line';
+  id: string;
+  x1: number;       // percentage 0-100
+  y1: number;       // percentage 0-100
+  x2: number;       // percentage 0-100
+  y2: number;       // percentage 0-100
+  strokeColor: string;
+  strokeWidth: number;
+}
+
+export interface DrawingBrighten {
+  type: 'brighten';
+  id: string;
+  x: number;        // percentage 0-100
+  y: number;        // percentage 0-100
+  radius: number;   // percentage of image width
+  intensity: number; // 0-1, how much to brighten
+}
+
+export interface DrawingDarken {
+  type: 'darken';
+  id: string;
+  x: number;        // percentage 0-100
+  y: number;        // percentage 0-100
+  radius: number;   // percentage of image width
+  intensity: number; // 0-1, how much to darken
+}
+
+export type DrawingObject = DrawingCircle | DrawingLine | DrawingBrighten | DrawingDarken;
+
+// Drawings are stored per image index (similar to label_positions)
+export type RouteDrawings = Record<number, DrawingObject[]>;
+
 export interface Route {
   id: number;
   wall_section: string;
@@ -524,6 +570,7 @@ export interface Route {
   label_x?: number | null;
   label_y?: number | null;
   label_positions?: Record<number, { x: number; y: number }> | null;
+  route_drawings?: RouteDrawings | null;
   notes?: string;
   dropbox_link?: string;
   active: boolean;
@@ -575,6 +622,7 @@ export async function updateRoute(id: number, updates: {
   label_x?: number | null;
   label_y?: number | null;
   label_positions?: Record<number, { x: number; y: number }> | null;
+  route_drawings?: RouteDrawings | null;
   notes?: string;
   dropbox_link?: string;
 }): Promise<Route> {

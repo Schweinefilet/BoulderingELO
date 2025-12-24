@@ -1394,6 +1394,98 @@ export default function App() {
     }
   };
 
+  // Drawing overlay helper functions
+  const generateDrawingId = () => `drawing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const getRouteDrawingsForImage = (route: api.Route, imageIndex: number): api.DrawingObject[] => {
+    if (!route.route_drawings) return [];
+    return route.route_drawings[imageIndex] || [];
+  };
+
+  const loadRouteDrawings = (route: api.Route, imageIndex: number) => {
+    const drawings = getRouteDrawingsForImage(route, imageIndex);
+    setPendingDrawings(drawings);
+  };
+
+  const saveRouteDrawings = async (routeId: number, imageIndex: number, drawings: api.DrawingObject[]) => {
+    const route = availableRoutes.find(r => r.id === routeId);
+    if (!route) return;
+
+    const existing = route.route_drawings || {};
+    const updated = {
+      ...existing,
+      [imageIndex]: drawings
+    };
+
+    try {
+      await api.updateRoute(routeId, { route_drawings: updated });
+      setAvailableRoutes(prev => prev.map(r =>
+        r.id === routeId ? { ...r, route_drawings: updated } : r
+      ));
+      setToast({ message: `Drawings saved for Route #${route.section_number}`, type: 'success' });
+      setTimeout(() => setToast(null), 2000);
+    } catch (err: any) {
+      setToast({ message: err.message, type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const addDrawingObject = (obj: api.DrawingObject) => {
+    setPendingDrawings(prev => [...prev, obj]);
+  };
+
+  const deleteDrawingObject = (id: string) => {
+    setPendingDrawings(prev => prev.filter(d => d.id !== id));
+    setSelectedDrawingId(null);
+  };
+
+  const clearAllDrawings = () => {
+    setPendingDrawings([]);
+    setSelectedDrawingId(null);
+  };
+
+  type DrawingUpdate = Partial<
+    Omit<api.DrawingCircle, 'type'> &
+    Omit<api.DrawingLine, 'type'> &
+    Omit<api.DrawingBrighten, 'type'> &
+    Omit<api.DrawingDarken, 'type'>
+  >;
+
+  const updateDrawingObject = (id: string, updates: DrawingUpdate) => {
+    setPendingDrawings(prev => prev.map(d => d.id === id ? ({ ...d, ...updates } as api.DrawingObject) : d));
+  };
+
+  const updateDrawingColor = (id: string, color: string) => {
+    setPendingDrawings(prev => prev.map(d => {
+      if (d.id === id) {
+        if (d.type === 'circle' || d.type === 'line') {
+          return { ...d, strokeColor: color };
+        }
+      }
+      return d;
+    }));
+  };
+
+  // Route mode states (must be declared before routeModeScore useMemo)
+  const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
+  const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
+
+  // Calculate route mode score based on selected routes
+  const routeModeScore = useMemo(() => {
+    const counts: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
+    selectedRoutes.forEach(routeId => {
+      const route = availableRoutes.find(r => r.id === routeId);
+      if (route && route.color in counts) {
+        counts[route.color as keyof Counts]++;
+      }
+    });
+    return {
+      counts,
+      score: computeWeeklyScore(counts),
+      grade: getGradeForScore(computeWeeklyScore(counts))
+    };
+  }, [selectedRoutes, availableRoutes]);
+
   const getDropboxDisplayUrl = (link?: string) => {
     if (!link) return '';
     return link.replace('dl=0', 'raw=1');
@@ -1418,8 +1510,6 @@ export default function App() {
   // Route mode states
   const [routeMode, setRouteMode] = useState(false)
   const [routeEntryMethod, setRouteEntryMethod] = useState<'number' | 'grid' | 'image'>('grid')
-  const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
-  const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
   const [sessionRoutes, setSessionRoutes] = useState<Record<number, any[]>>({}) // sessionId -> routes[]
   const [routeNumberInput, setRouteNumberInput] = useState('')
   const [routeWallFilter, setRouteWallFilter] = useState<string>(availableWalls.includes('Bend') ? 'Bend' : (availableWalls[0] || 'midWall'))
