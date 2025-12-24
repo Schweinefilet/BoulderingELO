@@ -1470,6 +1470,10 @@ export default function App() {
   const [selectedRoutes, setSelectedRoutes] = useState<number[]>([])
   const [availableRoutes, setAvailableRoutes] = useState<api.Route[]>([])
 
+  // Drawing state
+  const [pendingDrawings, setPendingDrawings] = useState<api.DrawingObject[]>([])
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
+
   // Calculate route mode score based on selected routes
   const routeModeScore = useMemo(() => {
     const counts: Counts = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0, black: 0 };
